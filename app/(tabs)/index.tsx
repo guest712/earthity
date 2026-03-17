@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import MapView, { Marker } from 'react-native-maps';
 import { StyleSheet, View, Text, TouchableOpacity, ScrollView, SafeAreaView } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Location from 'expo-location';
 
 const LANGS: Record<string, any> = {
   ru: {
@@ -58,6 +59,20 @@ export default function HomeScreen() {
   const [completed, setCompleted] = useState<number[]>([]);
   const [selected, setSelected] = useState<any>(null);
   const [confirming, setConfirming] = useState(false);
+  const [location, setLocation] = useState<{latitude: number, longitude: number} | null>(null);
+
+  useEffect(() => {
+    Location.requestForegroundPermissionsAsync().then(({ status }) => {
+      if (status === 'granted') {
+        Location.getCurrentPositionAsync({}).then(loc => {
+          setLocation({
+            latitude: loc.coords.latitude,
+            longitude: loc.coords.longitude,
+          });
+        });
+      }
+    });
+  }, []);
 
   useEffect(() => {
     AsyncStorage.getItem('earthity_save').then(data => {
@@ -173,14 +188,16 @@ export default function HomeScreen() {
       ) : (
         <>
           <MapView
-            style={{ height: 220, margin: 12, borderRadius: 16 }}
-            initialRegion={{
-              latitude: 52.52,
-              longitude: 13.405,
-              latitudeDelta: 0.02,
-              longitudeDelta: 0.02,
-            }}
-          >
+  style={{ height: 220, margin: 12, borderRadius: 16 }}
+  initialRegion={{
+    latitude: location?.latitude ?? 52.52,
+    longitude: location?.longitude ?? 13.405,
+    latitudeDelta: 0.02,
+    longitudeDelta: 0.02,
+  }}
+  showsUserLocation={true}
+  showsMyLocationButton={true}
+>
             {activeQuests.map(q => (
               <Marker
                 key={q.id}
