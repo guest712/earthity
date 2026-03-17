@@ -56,6 +56,7 @@ const FLAG: Record<string, string> = { ru: '🇷🇺', de: '🇩🇪', uk: '🇺
 export default function HomeScreen() {
   const [lang, setLang] = useState<'ru' | 'de' | 'uk' | 'ar' | null>(null);
   const [dobri, setDobri] = useState(0);
+  const [xp, setXp] = useState(0);
   const [deeds, setDeeds] = useState(0);
   const [completed, setCompleted] = useState<number[]>([]);
   const [selected, setSelected] = useState<any>(null);
@@ -119,12 +120,16 @@ if (!onboarded) {
 
   const t = LANGS[lang];
   const activeQuests = QUESTS.filter(q => !completed.includes(q.id));
-  const level = dobri < 50 ? t.level1 : dobri < 150 ? t.level2 : dobri < 300 ? t.level3 : t.level4;
+  const level = xp < 50 ? t.level1 : xp < 150 ? t.level2 : xp < 300 ? t.level3 : t.level4;
+  const nextXp = xp < 50 ? 50 : xp < 150 ? 150 : xp < 300 ? 300 : 500;
+  const prevXp = xp < 50 ? 0 : xp < 150 ? 50 : xp < 300 ? 150 : 300;
+  const xpProgress = Math.min(100, ((xp - prevXp) / (nextXp - prevXp)) * 100);
 
   function complete() {
     if (!selected) return;
     setCompleted(prev => [...prev, selected.id]);
     setDobri(prev => prev + selected.reward);
+    setXp(prev => prev + selected.reward);
     setDeeds(prev => prev + 1);
     setSelected(null);
     setConfirming(false);
@@ -132,23 +137,29 @@ if (!onboarded) {
 
   return (
     <SafeAreaView style={styles.container}>
+      <View>
       <View style={styles.header}>
-        <View>
-          <Text style={styles.brand}>Earth<Text style={styles.brandGreen}>ity</Text></Text>
-          <Text style={styles.level}>{level}</Text>
+          <View>
+            <Text style={styles.brand}>Earth<Text style={styles.brandGreen}>ity</Text></Text>
+            <Text style={styles.level}>{level}</Text>
+          </View>
+          <View style={styles.stats}>
+            <View style={styles.stat}>
+              <Text style={styles.statNum}>{dobri}</Text>
+              <Text style={styles.statLabel}>{t.dobriki}</Text>
+            </View>
+            <View style={styles.stat}>
+              <Text style={styles.statNumGreen}>{deeds}</Text>
+              <Text style={styles.statLabel}>{t.deeds}</Text>
+            </View>
+            <TouchableOpacity onPress={() => setLang(null)} style={{ padding: 10 }}>
+              <Text style={{ fontSize: 22 }}>{FLAG[lang]}</Text>
+            </TouchableOpacity>
+          </View>
         </View>
-        <View style={styles.stats}>
-          <View style={styles.stat}>
-            <Text style={styles.statNum}>{dobri}</Text>
-            <Text style={styles.statLabel}>{t.dobriki}</Text>
-          </View>
-          <View style={styles.stat}>
-            <Text style={styles.statNumGreen}>{deeds}</Text>
-            <Text style={styles.statLabel}>{t.deeds}</Text>
-          </View>
-          <TouchableOpacity onPress={() => setLang(null)} style={{ padding: 10 }}>
-            <Text style={{ fontSize: 22 }}>{FLAG[lang]}</Text>
-          </TouchableOpacity>
+        <View style={styles.xpBarBg}>
+          <View style={[styles.xpBarFill, { width: `${xpProgress}%` }]} />
+          <Text style={styles.xpLabel}>{xp} / {nextXp} XP</Text>
         </View>
       </View>
 
@@ -229,8 +240,16 @@ if (!onboarded) {
               </TouchableOpacity>
             ))}
             {activeQuests.length === 0 && (
-              <Text style={styles.empty}>{t.empty}</Text>
-            )}
+  <View style={{ alignItems: 'center', marginTop: 40, gap: 16 }}>
+    <Text style={styles.empty}>{t.empty}</Text>
+    <TouchableOpacity
+      style={{ padding: 14, borderRadius: 12, borderWidth: 1, borderColor: '#1e3020' }}
+      onPress={() => setCompleted([])}
+    >
+      <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 13 }}>🔄 Новые квесты</Text>
+    </TouchableOpacity>
+  </View>
+)}
           </ScrollView>
         </>
       )}
@@ -288,4 +307,7 @@ const styles = StyleSheet.create({
   btnBack: { padding: 12 },
   btnBackText: { color: 'rgba(255,255,255,0.4)', fontSize: 14 },
   empty: { color: 'rgba(255,255,255,0.4)', textAlign: 'center', marginTop: 40, fontSize: 14, lineHeight: 22 },
+  xpBarBg: { height: 18, backgroundColor: '#0f1a0f', marginHorizontal: 12, borderRadius: 9, overflow: 'hidden', justifyContent: 'center' },
+  xpBarFill: { position: 'absolute', left: 0, top: 0, bottom: 0, backgroundColor: '#3d8b52', borderRadius: 9 },
+  xpLabel: { fontSize: 10, color: 'rgba(255,255,255,0.5)', textAlign: 'center', letterSpacing: 1 },
 });
