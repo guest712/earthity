@@ -3,6 +3,7 @@ import MapView, { Marker } from 'react-native-maps';
 import { StyleSheet, View, Text, TouchableOpacity, ScrollView, SafeAreaView } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Location from 'expo-location';
+import Onboarding from './onboarding';
 
 const LANGS: Record<string, any> = {
   ru: {
@@ -59,6 +60,7 @@ export default function HomeScreen() {
   const [completed, setCompleted] = useState<number[]>([]);
   const [selected, setSelected] = useState<any>(null);
   const [confirming, setConfirming] = useState(false);
+  const [onboarded, setOnboarded] = useState(false);
   const [location, setLocation] = useState<{latitude: number, longitude: number} | null>(null);
 
   useEffect(() => {
@@ -83,17 +85,18 @@ export default function HomeScreen() {
           if (save.deeds) setDeeds(save.deeds);
           if (save.completed) setCompleted(save.completed);
           if (save.lang) setLang(save.lang as 'ru' | 'de' | 'uk' | 'ar');
+          if (save.onboarded) setOnboarded(true);
         } catch (e) { }
       }
     });
   }, []);
 
-  useEffect(() => {
-    if (lang !== null) {
-      AsyncStorage.setItem('earthity_save', JSON.stringify({ dobri, deeds, completed, lang }));
-    }
-  }, [dobri, deeds, completed, lang]);
-
+ useEffect(() => {
+    AsyncStorage.setItem('earthity_save', JSON.stringify({ dobri, deeds, completed, lang, onboarded }));
+  }, [dobri, deeds, completed, lang, onboarded]);
+if (!onboarded) {
+    return <Onboarding onDone={() => setOnboarded(true)} />;
+  }
   if (!lang) {
     return (
       <SafeAreaView style={styles.container}>
@@ -201,7 +204,10 @@ export default function HomeScreen() {
             {activeQuests.map(q => (
               <Marker
                 key={q.id}
-                coordinate={{ latitude: 52.52 + (q.id * 0.003), longitude: 13.405 + (q.id * 0.002) }}
+                coordinate={{ 
+  latitude: (location?.latitude ?? 52.52) + (q.id * 0.003), 
+  longitude: (location?.longitude ?? 13.405) + (q.id * 0.002) 
+}}
                 title={q.title[lang]}
                 description={`+${q.reward} ${t.reward}`}
                 onPress={() => setSelected(q)}
