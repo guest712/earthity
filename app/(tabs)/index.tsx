@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import MapView, { Marker } from 'react-native-maps';
 import { StyleSheet, View, Text, TouchableOpacity, ScrollView, SafeAreaView } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -49,9 +49,21 @@ const QUESTS = [
   { id: 2, title: { ru: 'Пакет у урны', de: 'Tüte am Mülleimer', uk: 'Пакет біля урни', ar: 'كيس عند السلة' }, desc: { ru: 'Главная улица', de: 'Hauptstraße', uk: 'Головна вулиця', ar: 'الشارع الرئيسي' }, reward: 20, emoji: '🛍', type: 'trash' },
   { id: 3, title: { ru: 'Помочь донести сумку', de: 'Tasche tragen helfen', uk: 'Допомогти нести сумку', ar: 'مساعدة في حمل الحقيبة' }, desc: { ru: 'Рядом с метро', de: 'U-Bahn-Nähe', uk: 'Біля метро', ar: 'بالقرب من المترو' }, reward: 40, emoji: '🤝', type: 'help' },
   { id: 4, title: { ru: 'Бутылки у входа', de: 'Flaschen am Eingang', uk: 'Пляшки біля входу', ar: 'زجاجات عند المدخل' }, desc: { ru: 'Центральная площадь', de: 'Zentralplatz', uk: 'Центральна площа', ar: 'الساحة المركزية' }, reward: 25, emoji: '🍾', type: 'trash' },
+  { id: 5, title: { ru: 'Вынести мусор', de: 'Müll rausbringen', uk: 'Винести сміття', ar: 'إخراج القمامة' }, desc: { ru: 'Домашний квест', de: 'Heimquest', uk: 'Домашнє завдання', ar: 'مهمة منزلية' }, reward: 5, emoji: '🗑️', type: 'home' },
+  { id: 6, title: { ru: 'Полить цветы', de: 'Blumen gießen', uk: 'Полити квіти', ar: 'سقي الزهور' }, desc: { ru: 'Домашний квест', de: 'Heimquest', uk: 'Домашнє завдання', ar: 'مهمة منزلية' }, reward: 5, emoji: '🌸', type: 'home' },
+  { id: 7, title: { ru: 'Спортивные упражнения', de: 'Sport machen', uk: 'Спортивні вправи', ar: 'تمارين رياضية' }, desc: { ru: 'Домашний квест', de: 'Heimquest', uk: 'Домашнє завдання', ar: 'مهمة منزلية' }, reward: 8, emoji: '💪', type: 'home' },
+  { id: 8, title: { ru: 'Нарисовать что-нибудь', de: 'Etwas zeichnen', uk: 'Намалювати щось', ar: 'رسم شيء ما' }, desc: { ru: 'Для творцов', de: 'Für Kreative', uk: 'Для творців', ar: 'للمبدعين' }, reward: 10, emoji: '🎨', type: 'home' },
+  { id: 9, title: { ru: 'Не накричать на питомца', de: 'Nicht auf Haustier schreien', uk: 'Не накричати на улюбленця', ar: 'عدم الصراخ على الحيوان' }, desc: { ru: 'Ахимса дома', de: 'Ahimsa zuhause', uk: 'Ахімса вдома', ar: 'أهيمسا في المنزل' }, reward: 15, emoji: '🐾', type: 'home' },
+  { id: 10, title: { ru: 'Отсортировать мусор', de: 'Müll sortieren', uk: 'Відсортувати сміття', ar: 'فرز القمامة' }, desc: { ru: 'Домашний квест', de: 'Heimquest', uk: 'Домашнє завдання', ar: 'مهمة منزلية' }, reward: 8, emoji: '♻️', type: 'home' },
 ];
 
 const FLAG: Record<string, string> = { ru: '🇷🇺', de: '🇩🇪', uk: '🇺🇦', ar: '🇸🇦' };
+
+const getLevelName = (xp: number, t: any) =>
+  xp < 50 ? t.level1 : xp < 150 ? t.level2 : xp < 300 ? t.level3 : t.level4;
+
+const getLevelKey = (xp: number) =>
+  xp < 50 ? 'level1' : xp < 150 ? 'level2' : xp < 300 ? 'level3' : 'level4';
 
 export default function HomeScreen() {
   const [lang, setLang] = useState<'ru' | 'de' | 'uk' | 'ar' | null>(null);
@@ -62,16 +74,14 @@ export default function HomeScreen() {
   const [selected, setSelected] = useState<any>(null);
   const [confirming, setConfirming] = useState(false);
   const [onboarded, setOnboarded] = useState(false);
-  const [location, setLocation] = useState<{latitude: number, longitude: number} | null>(null);
+  const [location, setLocation] = useState<{ latitude: number; longitude: number } | null>(null);
+  const prevLevelKey = useRef('');
 
   useEffect(() => {
     Location.requestForegroundPermissionsAsync().then(({ status }) => {
       if (status === 'granted') {
         Location.getCurrentPositionAsync({}).then(loc => {
-          setLocation({
-            latitude: loc.coords.latitude,
-            longitude: loc.coords.longitude,
-          });
+          setLocation({ latitude: loc.coords.latitude, longitude: loc.coords.longitude });
         });
       }
     });
@@ -83,6 +93,7 @@ export default function HomeScreen() {
         try {
           const save = JSON.parse(data);
           if (save.dobri) setDobri(save.dobri);
+          if (save.xp) setXp(save.xp);
           if (save.deeds) setDeeds(save.deeds);
           if (save.completed) setCompleted(save.completed);
           if (save.lang) setLang(save.lang as 'ru' | 'de' | 'uk' | 'ar');
@@ -92,12 +103,22 @@ export default function HomeScreen() {
     });
   }, []);
 
- useEffect(() => {
-    AsyncStorage.setItem('earthity_save', JSON.stringify({ dobri, deeds, completed, lang, onboarded }));
-  }, [dobri, deeds, completed, lang, onboarded]);
-if (!onboarded) {
+  useEffect(() => {
+    AsyncStorage.setItem('earthity_save', JSON.stringify({ dobri, xp, deeds, completed, lang, onboarded }));
+  }, [dobri, xp, deeds, completed, lang, onboarded]);
+
+  useEffect(() => {
+    const currentKey = getLevelKey(xp);
+    if (prevLevelKey.current && prevLevelKey.current !== currentKey) {
+      setDobri(prev => prev + 50);
+    }
+    prevLevelKey.current = currentKey;
+  }, [xp]);
+
+  if (!onboarded) {
     return <Onboarding onDone={() => setOnboarded(true)} />;
   }
+
   if (!lang) {
     return (
       <SafeAreaView style={styles.container}>
@@ -120,7 +141,7 @@ if (!onboarded) {
 
   const t = LANGS[lang];
   const activeQuests = QUESTS.filter(q => !completed.includes(q.id));
-  const level = xp < 50 ? t.level1 : xp < 150 ? t.level2 : xp < 300 ? t.level3 : t.level4;
+  const level = getLevelName(xp, t);
   const nextXp = xp < 50 ? 50 : xp < 150 ? 150 : xp < 300 ? 300 : 500;
   const prevXp = xp < 50 ? 0 : xp < 150 ? 50 : xp < 300 ? 150 : 300;
   const xpProgress = Math.min(100, ((xp - prevXp) / (nextXp - prevXp)) * 100);
@@ -138,7 +159,7 @@ if (!onboarded) {
   return (
     <SafeAreaView style={styles.container}>
       <View>
-      <View style={styles.header}>
+        <View style={styles.header}>
           <View>
             <Text style={styles.brand}>Earth<Text style={styles.brandGreen}>ity</Text></Text>
             <Text style={styles.level}>{level}</Text>
@@ -202,23 +223,23 @@ if (!onboarded) {
       ) : (
         <>
           <MapView
-  style={{ height: 220, margin: 12, borderRadius: 16 }}
-  initialRegion={{
-    latitude: location?.latitude ?? 52.52,
-    longitude: location?.longitude ?? 13.405,
-    latitudeDelta: 0.02,
-    longitudeDelta: 0.02,
-  }}
-  showsUserLocation={true}
-  showsMyLocationButton={true}
->
+            style={{ height: 220, margin: 12, borderRadius: 16 }}
+            initialRegion={{
+              latitude: location?.latitude ?? 52.52,
+              longitude: location?.longitude ?? 13.405,
+              latitudeDelta: 0.02,
+              longitudeDelta: 0.02,
+            }}
+            showsUserLocation={true}
+            showsMyLocationButton={true}
+          >
             {activeQuests.map(q => (
               <Marker
                 key={q.id}
-                coordinate={{ 
-  latitude: (location?.latitude ?? 52.52) + (q.id * 0.003), 
-  longitude: (location?.longitude ?? 13.405) + (q.id * 0.002) 
-}}
+                coordinate={{
+                  latitude: (location?.latitude ?? 52.52) + (q.id * 0.003),
+                  longitude: (location?.longitude ?? 13.405) + (q.id * 0.002),
+                }}
                 title={q.title[lang]}
                 description={`+${q.reward} ${t.reward}`}
                 onPress={() => setSelected(q)}
@@ -240,16 +261,16 @@ if (!onboarded) {
               </TouchableOpacity>
             ))}
             {activeQuests.length === 0 && (
-  <View style={{ alignItems: 'center', marginTop: 40, gap: 16 }}>
-    <Text style={styles.empty}>{t.empty}</Text>
-    <TouchableOpacity
-      style={{ padding: 14, borderRadius: 12, borderWidth: 1, borderColor: '#1e3020' }}
-      onPress={() => setCompleted([])}
-    >
-      <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 13 }}>🔄 Новые квесты</Text>
-    </TouchableOpacity>
-  </View>
-)}
+              <View style={{ alignItems: 'center', marginTop: 40, gap: 16 }}>
+                <Text style={styles.empty}>{t.empty}</Text>
+                <TouchableOpacity
+                  style={{ padding: 14, borderRadius: 12, borderWidth: 1, borderColor: '#1e3020' }}
+                  onPress={() => setCompleted([])}
+                >
+                  <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 13 }}>🔄 Новые квесты</Text>
+                </TouchableOpacity>
+              </View>
+            )}
           </ScrollView>
         </>
       )}
