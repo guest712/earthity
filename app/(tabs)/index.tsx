@@ -1,10 +1,12 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Audio } from 'expo-av';
 import * as Location from 'expo-location';
 import { useEffect, useRef, useState } from 'react';
 import { SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
 import Animated, { useAnimatedStyle, useSharedValue, withSequence, withSpring, withTiming } from 'react-native-reanimated';
 import Onboarding from './onboarding';
+
 
 
 const LANGS: Record<string, any> = {
@@ -79,6 +81,12 @@ export default function HomeScreen() {
   const [category, setCategory] = useState<'all' | 'outdoor' | 'home'>('all');
   const [onboarded, setOnboarded] = useState(false);
   const [location, setLocation] = useState<{ latitude: number; longitude: number } | null>(null);
+  const playRewardSound = async () => {
+    const { sound } = await Audio.Sound.createAsync(
+      require('../../assets/sounds/reward.mp3')
+    );
+    await sound.playAsync();
+  };
   const prevLevelKey = useRef('');const rewardScale = useSharedValue(1);
   const rewardOpacity = useSharedValue(1);
 
@@ -195,6 +203,7 @@ export default function HomeScreen() {
       if (id === 9) setPetDeeds(prev => prev + 1);
     }
     animateReward();
+    playRewardSound();
     setSelected(null);
     setConfirming(false);
   }
