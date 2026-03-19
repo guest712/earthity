@@ -24,10 +24,11 @@ const ACHIEVEMENTS = [
   // Легендарные
   { id: 'legend', title: 'Легенда Earthity', desc: '100 добрых дел', emoji: '⭐', reward: 500, category: '⭐ Легендарные', condition: (s: any) => s.deeds >= 100 },
   { id: 'universal', title: 'Универсал', desc: 'Квесты всех категорий', emoji: '🌍', reward: 300, category: '⭐ Легендарные', condition: (s: any) => s.outdoorDeeds >= 1 && s.homeDeeds >= 1 },
+  { id: 'dobri_2500', title: 'Добрый', desc: 'Заработать 2500 добриков за всё время', emoji: '💛', reward: 100, category: '⭐ Легендарные', condition: (s: any) => s.totalDobri >= 2500 },
 ];
 
 export default function AchievementsScreen() {
-  const [stats, setStats] = useState<any>({ deeds: 0, xp: 0, outdoorDeeds: 0, homeDeeds: 0, petDeeds: 0 });
+  const [stats, setStats] = useState<any>({ deeds: 0, xp: 0, outdoorDeeds: 0, homeDeeds: 0, petDeeds: 0, totalDobri: 0 });
   const [unlocked, setUnlocked] = useState<string[]>([]);
 
   useEffect(() => {
@@ -42,15 +43,14 @@ export default function AchievementsScreen() {
               outdoorDeeds: save.outdoorDeeds ?? 0,
               homeDeeds: save.homeDeeds ?? 0,
               petDeeds: save.petDeeds ?? 0,
+              totalDobri: save.totalDobri ?? 0,
+          });
           
-            });
-            console.log('STATS:', save.outdoorDeeds, save.homeDeeds);
             setUnlocked(save.unlocked ?? []);
           } catch (e) { }
         }
       });
     };
-    console.log('LOADING ACHIEVEMENTS...');
     load();
     const interval = setInterval(load, 3000);
     return () => clearInterval(interval);

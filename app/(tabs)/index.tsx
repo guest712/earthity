@@ -68,6 +68,7 @@ const getLevelKey = (xp: number) =>
 export default function HomeScreen() {
   const [lang, setLang] = useState<'ru' | 'de' | 'uk' | 'ar' | null>(null);
   const [dobri, setDobri] = useState(0);
+  const [totalDobri, setTotalDobri] = useState(0);
   const [xp, setXp] = useState(0);
   const [deeds, setDeeds] = useState(0);
   const [completed, setCompleted] = useState<number[]>([]);
@@ -105,14 +106,15 @@ export default function HomeScreen() {
           if (save.outdoorDeeds) setOutdoorDeeds(save.outdoorDeeds);
           if (save.homeDeeds) setHomeDeeds(save.homeDeeds);
           if (save.petDeeds) setPetDeeds(save.petDeeds);
+         setTotalDobri(save.totalDobri || save.dobri || 0);
         } catch (e) { }
       }
     });
   }, []);
 
   useEffect(() => {
-    AsyncStorage.setItem('earthity_save', JSON.stringify({ dobri, xp, deeds, completed, lang, onboarded, outdoorDeeds, homeDeeds, petDeeds }));
-  }, [dobri, xp, deeds, completed, lang, onboarded, outdoorDeeds, homeDeeds, petDeeds]);
+    AsyncStorage.setItem('earthity_save', JSON.stringify({ dobri, totalDobri, xp, deeds, completed, lang, onboarded, outdoorDeeds, homeDeeds, petDeeds }));
+  }, [dobri, totalDobri, xp, deeds, completed, lang, onboarded, outdoorDeeds, homeDeeds, petDeeds]);
 
   useEffect(() => {
     const currentKey = getLevelKey(xp);
@@ -164,6 +166,7 @@ export default function HomeScreen() {
     const id = selected.id;
     setCompleted(prev => [...prev, id]);
     setDobri(prev => prev + selected.reward);
+    setTotalDobri(prev => prev + selected.reward);
     setXp(prev => prev + selected.reward);
     setDeeds(prev => prev + 1);
     if (type === 'trash' || type === 'help') {
