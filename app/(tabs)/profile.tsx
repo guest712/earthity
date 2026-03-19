@@ -20,6 +20,8 @@ export default function ProfileScreen() {
   const [deeds, setDeeds] = useState(0);
   const [avatar, setAvatar] = useState('🌱');
   const [name, setName] = useState('Earthling');
+  const [title, setTitle] = useState('');
+  const [titleEmoji, setTitleEmoji] = useState('');
   const [pickingAvatar, setPickingAvatar] = useState(false);
 
   useEffect(() => {
@@ -32,6 +34,8 @@ export default function ProfileScreen() {
           if (save.deeds) setDeeds(save.deeds);
           if (save.avatar) setAvatar(save.avatar);
           if (save.name) setName(save.name);
+          if (save.selectedTitleName) setTitle(save.selectedTitleName);
+          if (save.selectedTitleEmoji) setTitleEmoji(save.selectedTitleEmoji);
         } catch (e) { }
       }
     });
@@ -78,6 +82,9 @@ export default function ProfileScreen() {
         {/* Name */}
         <Text style={styles.name}>{name}</Text>
         <Text style={styles.levelName}>{levelName}</Text>
+        {title ? (
+          <Text style={styles.titleBadge}>{titleEmoji} {title}</Text>
+        ) : null}
 
         {/* XP bar */}
         <View style={styles.xpSection}>
@@ -162,4 +169,5 @@ const styles = StyleSheet.create({
   },
   mottoSymbol: { fontSize: 28, marginBottom: 10 },
   mottoText: { fontSize: 13, color: 'rgba(255,255,255,0.4)', textAlign: 'center', lineHeight: 20, letterSpacing: 0.5 },
+  titleBadge: { fontSize: 13, color: '#e8c97a', marginTop: 4, letterSpacing: 0.5 },
 });

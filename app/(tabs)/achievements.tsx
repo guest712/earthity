@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { StyleSheet, View, Text, ScrollView, SafeAreaView } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { StyleSheet, View, Text, ScrollView, SafeAreaView, TouchableOpacity } from 'react-native';
 
 const ACHIEVEMENTS = [
   // Первые шаги
@@ -30,6 +30,15 @@ const ACHIEVEMENTS = [
 export default function AchievementsScreen() {
   const [stats, setStats] = useState<any>({ deeds: 0, xp: 0, outdoorDeeds: 0, homeDeeds: 0, petDeeds: 0, totalDobri: 0 });
   const [unlocked, setUnlocked] = useState<string[]>([]);
+  const [selectedTitle, setSelectedTitle] = useState('');
+
+  function selectTitle(a: any) {
+    setSelectedTitle(a.id);
+    AsyncStorage.getItem('earthity_save').then(data => {
+      const save = data ? JSON.parse(data) : {};
+      AsyncStorage.setItem('earthity_save', JSON.stringify({ ...save, selectedTitle: a.id, selectedTitleEmoji: a.emoji, selectedTitleName: a.title }));
+    });
+  }
 
   useEffect(() => {
     const load = () => {
@@ -75,7 +84,7 @@ export default function AchievementsScreen() {
             {ACHIEVEMENTS.filter(a => a.category === cat).map(a => {
               const done = a.condition(stats);
               return (
-                <View key={a.id} style={[styles.card, done && styles.cardDone]}>
+                <TouchableOpacity key={a.id} style={[styles.card, done && styles.cardDone, selectedTitle === a.id && styles.cardSelected]} onPress={() => done && selectTitle(a)} activeOpacity={done ? 0.7 : 1}>
                   <Text style={[styles.cardEmoji, !done && styles.locked]}>{done ? a.emoji : '🔒'}</Text>
                   <View style={styles.cardBody}>
                     <Text style={[styles.cardTitle, done && styles.cardTitleDone]}>{a.title}</Text>
@@ -85,7 +94,10 @@ export default function AchievementsScreen() {
                     <Text style={styles.rewardNum}>+{a.reward}</Text>
                     <Text style={styles.rewardLabel}>🪙</Text>
                   </View>
-                </View>
+                  {done && selectedTitle === a.id && (
+  <Text style={{ fontSize: 11, color: '#e8c97a', marginLeft: 8 }}>✓</Text>
+)}
+                 </TouchableOpacity>
               );
             })}
           </View>
@@ -111,6 +123,7 @@ const styles = StyleSheet.create({
   card: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#0f1a0f', borderRadius: 12, padding: 14, marginBottom: 8, borderWidth: 1, borderColor: '#1e3020', opacity: 0.5 },
   cardDone: { opacity: 1, borderColor: '#2d6a3f' },
   cardEmoji: { fontSize: 28, marginRight: 14 },
+  cardSelected: { borderColor: '#e8c97a', borderWidth: 2 },
   locked: { opacity: 0.4 },
   cardBody: { flex: 1 },
   cardTitle: { fontSize: 15, color: 'rgba(255,255,255,0.4)', fontWeight: '500' },
