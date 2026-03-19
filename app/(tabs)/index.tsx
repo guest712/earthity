@@ -77,6 +77,9 @@ export default function HomeScreen() {
   const [onboarded, setOnboarded] = useState(false);
   const [location, setLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const prevLevelKey = useRef('');
+  const [outdoorDeeds, setOutdoorDeeds] = useState(0);
+  const [homeDeeds, setHomeDeeds] = useState(0);
+  const [petDeeds, setPetDeeds] = useState(0);
 
   useEffect(() => {
     Location.requestForegroundPermissionsAsync().then(({ status }) => {
@@ -99,14 +102,17 @@ export default function HomeScreen() {
           if (save.completed) setCompleted(save.completed);
           if (save.lang) setLang(save.lang as 'ru' | 'de' | 'uk' | 'ar');
           if (save.onboarded) setOnboarded(true);
+          if (save.outdoorDeeds) setOutdoorDeeds(save.outdoorDeeds);
+          if (save.homeDeeds) setHomeDeeds(save.homeDeeds);
+          if (save.petDeeds) setPetDeeds(save.petDeeds);
         } catch (e) { }
       }
     });
   }, []);
 
   useEffect(() => {
-    AsyncStorage.setItem('earthity_save', JSON.stringify({ dobri, xp, deeds, completed, lang, onboarded }));
-  }, [dobri, xp, deeds, completed, lang, onboarded]);
+    AsyncStorage.setItem('earthity_save', JSON.stringify({ dobri, xp, deeds, completed, lang, onboarded, outdoorDeeds, homeDeeds, petDeeds }));
+  }, [dobri, xp, deeds, completed, lang, onboarded, outdoorDeeds, homeDeeds, petDeeds]);
 
   useEffect(() => {
     const currentKey = getLevelKey(xp);
@@ -152,12 +158,20 @@ export default function HomeScreen() {
   const prevXp = xp < 50 ? 0 : xp < 150 ? 50 : xp < 300 ? 150 : 300;
   const xpProgress = Math.min(100, ((xp - prevXp) / (nextXp - prevXp)) * 100);
 
-  function complete() {
+ function complete() {
     if (!selected) return;
-    setCompleted(prev => [...prev, selected.id]);
+    const type = selected.type;
+    const id = selected.id;
+    setCompleted(prev => [...prev, id]);
     setDobri(prev => prev + selected.reward);
     setXp(prev => prev + selected.reward);
     setDeeds(prev => prev + 1);
+    if (type === 'trash' || type === 'help') {
+      setOutdoorDeeds(prev => prev + 1);
+    } else if (type === 'home') {
+      setHomeDeeds(prev => prev + 1);
+      if (id === 9) setPetDeeds(prev => prev + 1);
+    }
     setSelected(null);
     setConfirming(false);
   }

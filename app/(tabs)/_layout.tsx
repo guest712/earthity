@@ -38,6 +38,13 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="achievements"
+        options={{
+          title: 'Awards',
+          tabBarIcon: ({ color }) => <Text style={{ fontSize: 22 }}>🏆</Text>,
+        }}
+      />
+      <Tabs.Screen
         name="onboarding"
         options={{
           href: null,
