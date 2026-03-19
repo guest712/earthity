@@ -1,9 +1,11 @@
-import { useState, useEffect, useRef } from 'react';
-import MapView, { Marker } from 'react-native-maps';
-import { StyleSheet, View, Text, TouchableOpacity, ScrollView, SafeAreaView } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Location from 'expo-location';
+import { useEffect, useRef, useState } from 'react';
+import { SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import MapView, { Marker } from 'react-native-maps';
+import Animated, { useAnimatedStyle, useSharedValue, withSequence, withSpring, withTiming } from 'react-native-reanimated';
 import Onboarding from './onboarding';
+
 
 const LANGS: Record<string, any> = {
   ru: {
@@ -77,7 +79,24 @@ export default function HomeScreen() {
   const [category, setCategory] = useState<'all' | 'outdoor' | 'home'>('all');
   const [onboarded, setOnboarded] = useState(false);
   const [location, setLocation] = useState<{ latitude: number; longitude: number } | null>(null);
-  const prevLevelKey = useRef('');
+  const prevLevelKey = useRef('');const rewardScale = useSharedValue(1);
+  const rewardOpacity = useSharedValue(1);
+
+  const rewardAnimStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: rewardScale.value }],
+    opacity: rewardOpacity.value,
+  }));
+
+  function animateReward() {
+    rewardOpacity.value = withTiming(1, { duration: 100 });
+    rewardScale.value = withSequence(
+      withSpring(1.5),
+      withSpring(1),
+    );
+    setTimeout(() => {
+      rewardOpacity.value = withTiming(1, { duration: 500 });
+    }, 800);
+  }
   const [outdoorDeeds, setOutdoorDeeds] = useState(0);
   const [homeDeeds, setHomeDeeds] = useState(0);
   const [petDeeds, setPetDeeds] = useState(0);
@@ -175,6 +194,7 @@ export default function HomeScreen() {
       setHomeDeeds(prev => prev + 1);
       if (id === 9) setPetDeeds(prev => prev + 1);
     }
+    animateReward();
     setSelected(null);
     setConfirming(false);
   }
@@ -189,8 +209,10 @@ export default function HomeScreen() {
           </View>
           <View style={styles.stats}>
             <View style={styles.stat}>
-              <Text style={styles.statNum}>{dobri}</Text>
-              <Text style={styles.statLabel}>{t.dobriki}</Text>
+             <Animated.View style={rewardAnimStyle}>
+                <Text style={styles.statNum}>{dobri}</Text>
+                <Text style={styles.statLabel}>{t.dobriki}</Text>
+              </Animated.View>
             </View>
             <View style={styles.stat}>
               <Text style={styles.statNumGreen}>{deeds}</Text>
