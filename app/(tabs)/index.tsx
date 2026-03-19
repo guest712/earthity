@@ -73,6 +73,7 @@ export default function HomeScreen() {
   const [completed, setCompleted] = useState<number[]>([]);
   const [selected, setSelected] = useState<any>(null);
   const [confirming, setConfirming] = useState(false);
+  const [category, setCategory] = useState<'all' | 'outdoor' | 'home'>('all');
   const [onboarded, setOnboarded] = useState(false);
   const [location, setLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const prevLevelKey = useRef('');
@@ -141,6 +142,11 @@ export default function HomeScreen() {
 
   const t = LANGS[lang];
   const activeQuests = QUESTS.filter(q => !completed.includes(q.id));
+  const filteredQuests = activeQuests.filter(q => {
+    if (category === 'outdoor') return q.type === 'trash' || q.type === 'help';
+    if (category === 'home') return q.type === 'home';
+    return true;
+  });
   const level = getLevelName(xp, t);
   const nextXp = xp < 50 ? 50 : xp < 150 ? 150 : xp < 300 ? 300 : 500;
   const prevXp = xp < 50 ? 0 : xp < 150 ? 50 : xp < 300 ? 150 : 300;
@@ -233,7 +239,7 @@ export default function HomeScreen() {
             showsUserLocation={true}
             showsMyLocationButton={true}
           >
-            {activeQuests.map(q => (
+            {filteredQuests.map(q => (
               <Marker
                 key={q.id}
                 coordinate={{
@@ -246,11 +252,24 @@ export default function HomeScreen() {
               />
             ))}
           </MapView>
+          <View style={styles.catRow}>
+            {(['all', 'outdoor', 'home'] as const).map(cat => (
+              <TouchableOpacity
+                key={cat}
+                style={[styles.catBtn, category === cat && styles.catBtnActive]}
+                onPress={() => setCategory(cat)}
+              >
+                <Text style={[styles.catText, category === cat && styles.catTextActive]}>
+                  {cat === 'all' ? '🌍 Все' : cat === 'outdoor' ? '🗺️ Улица' : '🏠 Дома'}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
           <ScrollView style={styles.list}>
             <Text style={styles.sectionTitle}>
-              {activeQuests.length > 0 ? `${activeQuests.length} ${t.nearby}` : t.clean}
+              {filteredQuests.length > 0 ? `${filteredQuests.length} ${t.nearby}` : t.clean}
             </Text>
-            {activeQuests.map(q => (
+            {filteredQuests.map(q => (
               <TouchableOpacity key={q.id} style={styles.card} onPress={() => setSelected(q)}>
                 <Text style={styles.cardEmoji}>{q.emoji}</Text>
                 <View style={styles.cardBody}>
@@ -260,7 +279,7 @@ export default function HomeScreen() {
                 <Text style={styles.cardReward}>+{q.reward}🪙</Text>
               </TouchableOpacity>
             ))}
-            {activeQuests.length === 0 && (
+            {filteredQuests.length === 0 && (
               <View style={{ alignItems: 'center', marginTop: 40, gap: 16 }}>
                 <Text style={styles.empty}>{t.empty}</Text>
                 <TouchableOpacity
@@ -331,4 +350,9 @@ const styles = StyleSheet.create({
   xpBarBg: { height: 18, backgroundColor: '#0f1a0f', marginHorizontal: 12, borderRadius: 9, overflow: 'hidden', justifyContent: 'center' },
   xpBarFill: { position: 'absolute', left: 0, top: 0, bottom: 0, backgroundColor: '#3d8b52', borderRadius: 9 },
   xpLabel: { fontSize: 10, color: 'rgba(255,255,255,0.5)', textAlign: 'center', letterSpacing: 1 },
+  catRow: { flexDirection: 'row', gap: 8, paddingHorizontal: 12, paddingVertical: 8 },
+  catBtn: { flex: 1, paddingVertical: 8, borderRadius: 10, borderWidth: 1, borderColor: '#1e3020', alignItems: 'center' },
+  catBtnActive: { backgroundColor: '#1e3020', borderColor: '#3d8b52' },
+  catText: { fontSize: 12, color: 'rgba(255,255,255,0.4)' },
+  catTextActive: { color: '#5aad6a', fontWeight: '500' },
 });
