@@ -85,6 +85,8 @@ export default function HomeScreen() {
   const [mapMode, setMapMode] = useState<'standard' | 'satellite'>('standard');
   const [creatureCooldowns, setCreatureCooldowns] = useState<Record<string, number>>({});
   const [selectedCreature, setSelectedCreature] = useState<any>(null);
+  const [feedingProgress, setFeedingProgress] = useState(0);
+  const [isFeeding, setIsFeeding] = useState(false);
   const [completed, setCompleted] = useState<number[]>([]);
   const [selected, setSelected] = useState<any>(null);
   const [confirming, setConfirming] = useState(false);
@@ -255,20 +257,40 @@ export default function HomeScreen() {
           <Text style={styles.creatureEmoji}>{selectedCreature.emoji}</Text>
           <Text style={styles.creatureName}>{selectedCreature.label[lang]}</Text>
           <Text style={styles.creatureReward}>+{selectedCreature.reward} 🪙</Text>
+          {isFeeding && (
+            <View style={styles.feedingBarBg}>
+              <View style={[styles.feedingBarFill, { width: `${feedingProgress}%` }]} />
+            </View>
+          )}
           <TouchableOpacity
+          
             style={styles.creatureBtn}
-            onPress={() => {
-              const now = Date.now();
-              const lastTime = creatureCooldowns[selectedCreature.id] || 0;
-              if (now - lastTime > selectedCreature.cooldown) {
-                setDobri(prev => prev + selectedCreature.reward);
-                setXp(prev => prev + selectedCreature.reward);
-                setCreatureCooldowns(prev => ({ ...prev, [selectedCreature.id]: now }));
-                animateReward();
-                playRewardSound();
-              }
-              setSelectedCreature(null);
-            }}
+           onPress={() => {
+  const now = Date.now();
+  const lastTime = creatureCooldowns[selectedCreature.id] || 0;
+  if (now - lastTime > selectedCreature.cooldown && !isFeeding) {
+    setIsFeeding(true);
+    setFeedingProgress(0);
+    const interval = setInterval(() => {
+      setFeedingProgress(prev => {
+        if (prev >= 100) {
+          clearInterval(interval);
+          setIsFeeding(false);
+          setDobri(p => p + selectedCreature.reward);
+          setXp(p => p + selectedCreature.reward);
+          setCreatureCooldowns(p => ({ ...p, [selectedCreature.id]: Date.now() }));
+          animateReward();
+          playRewardSound();
+          setSelectedCreature(null);
+          return 0;
+        }
+        return prev + 5;
+      });
+    }, 100);
+  } else if (!isFeeding) {
+    setSelectedCreature(null);
+  }
+}}
           >
             <Text style={styles.creatureBtnText}>
               {creatureCooldowns[selectedCreature.id] && Date.now() - creatureCooldowns[selectedCreature.id] < selectedCreature.cooldown
@@ -491,4 +513,6 @@ const styles = StyleSheet.create({
   creatureReward: { fontSize: 14, color: '#e8c97a', marginBottom: 16 },
   creatureBtn: { backgroundColor: '#2d6a3f', borderRadius: 12, paddingVertical: 12, paddingHorizontal: 32, marginBottom: 8 },
   creatureBtnText: { color: 'white', fontSize: 15, fontWeight: '600' },
+  feedingBarBg: { width: '100%', height: 8, backgroundColor: '#1e3020', borderRadius: 4, overflow: 'hidden', marginBottom: 12 },
+  feedingBarFill: { height: '100%', backgroundColor: '#5aad6a', borderRadius: 4 },
 });
