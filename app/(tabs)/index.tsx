@@ -17,6 +17,7 @@ const LANGS: Record<string, any> = {
     confirm: 'Подтвердить?', yes: 'Да!', no: 'Отмена', how: 'Как выполнить',
     steps_trash: ['Подойди к месту', 'Убери мусор', 'Нажми Выполнено'],
     steps_help: ['Подойди к человеку', 'Предложи помощь', 'Нажми Выполнено'],
+    steps_home: ['Сделай дома', 'Будь осознанным', 'Нажми Выполнено'],
     empty: 'Вы убрали всё рядом. Отличная работа!',
   },
   de: {
@@ -26,6 +27,7 @@ const LANGS: Record<string, any> = {
     confirm: 'Bestätigen?', yes: 'Ja!', no: 'Abbrechen', how: 'So geht\'s',
     steps_trash: ['Geh zum Ort', 'Müll aufheben', 'Erledigt drücken'],
     steps_help: ['Geh zur Person', 'Hilfe anbieten', 'Erledigt drücken'],
+    steps_home: ['Zu Hause machen', 'Achtsam sein', 'Erledigt drücken'],
     empty: 'Alles aufgeräumt. Gut gemacht!',
   },
   uk: {
@@ -35,6 +37,7 @@ const LANGS: Record<string, any> = {
     confirm: 'Підтвердити?', yes: 'Так!', no: 'Скасувати', how: 'Як виконати',
     steps_trash: ['Підійди до місця', 'Забери сміття', 'Натисни Виконано'],
     steps_help: ['Підійди до людини', 'Запропонуй допомогу', 'Натисни Виконано'],
+    steps_home: ['Зроби вдома', 'Будь усвідомленим', 'Натисни Виконано'],
     empty: 'Ви прибрали все поруч. Чудова робота!',
   },
   ar: {
@@ -44,31 +47,42 @@ const LANGS: Record<string, any> = {
     confirm: 'تأكيد؟', yes: 'نعم!', no: 'إلغاء', how: 'كيف تنفذ',
     steps_trash: ['اذهب إلى المكان', 'التقط القمامة', 'اضغط تم'],
     steps_help: ['اذهب إلى الشخص', 'اعرض المساعدة', 'اضغط تم'],
+    steps_home: ['افعل ذلك في المنزل', 'كن واعياً', 'اضغط تم'],
     empty: 'لقد نظفت كل شيء. عمل رائع!',
+  },
+  en: {
+    level1: '🌱 Sprout', level2: '🌿 Eco', level3: '🌳 Guardian', level4: '⭐ Hero',
+    dobriki: 'dobriki', deeds: 'deeds', nearby: 'quests nearby', clean: '🌍 Area is clean!',
+    done: '✅  Done!', back: '← Back', reward: 'dobriki',
+    confirm: 'Confirm?', yes: 'Yes!', no: 'Cancel', how: 'How to complete',
+    steps_trash: ['Go to the location', 'Pick up the litter', 'Press Done'],
+    steps_help: ['Go to the person', 'Offer your help', 'Press Done'],
+    steps_home: ['Do it at home', 'Be mindful', 'Press Done'],
+    empty: 'You cleaned everything nearby. Great job!',
   },
 };
 
 const QUESTS = [
-  { id: 1, title: { ru: 'Стакан у скамейки', de: 'Becher bei der Bank', uk: 'Стакан біля лавки', ar: 'كوب عند المقعد' }, desc: { ru: 'Парк рядом', de: 'Park nebenan', uk: 'Парк поруч', ar: 'الحديقة' }, reward: 15, emoji: '🥤', type: 'trash' },
-  { id: 2, title: { ru: 'Пакет у урны', de: 'Tüte am Mülleimer', uk: 'Пакет біля урни', ar: 'كيس عند السلة' }, desc: { ru: 'Главная улица', de: 'Hauptstraße', uk: 'Головна вулиця', ar: 'الشارع الرئيسي' }, reward: 20, emoji: '🛍', type: 'trash' },
-  { id: 3, title: { ru: 'Помочь донести сумку', de: 'Tasche tragen helfen', uk: 'Допомогти нести сумку', ar: 'مساعدة في حمل الحقيبة' }, desc: { ru: 'Рядом с метро', de: 'U-Bahn-Nähe', uk: 'Біля метро', ar: 'بالقرب من المترو' }, reward: 40, emoji: '🤝', type: 'help' },
-  { id: 4, title: { ru: 'Бутылки у входа', de: 'Flaschen am Eingang', uk: 'Пляшки біля входу', ar: 'زجاجات عند المدخل' }, desc: { ru: 'Центральная площадь', de: 'Zentralplatz', uk: 'Центральна площа', ar: 'الساحة المركزية' }, reward: 25, emoji: '🍾', type: 'trash' },
-  { id: 5, title: { ru: 'Вынести мусор', de: 'Müll rausbringen', uk: 'Винести сміття', ar: 'إخراج القمامة' }, desc: { ru: 'Домашний квест', de: 'Heimquest', uk: 'Домашнє завдання', ar: 'مهمة منزلية' }, reward: 5, emoji: '🗑️', type: 'home' },
-  { id: 6, title: { ru: 'Полить цветы', de: 'Blumen gießen', uk: 'Полити квіти', ar: 'سقي الزهور' }, desc: { ru: 'Домашний квест', de: 'Heimquest', uk: 'Домашнє завдання', ar: 'مهمة منزلية' }, reward: 5, emoji: '🌸', type: 'home' },
-  { id: 7, title: { ru: 'Спортивные упражнения', de: 'Sport machen', uk: 'Спортивні вправи', ar: 'تمارين رياضية' }, desc: { ru: 'Домашний квест', de: 'Heimquest', uk: 'Домашнє завдання', ar: 'مهمة منزلية' }, reward: 8, emoji: '💪', type: 'home' },
-  { id: 8, title: { ru: 'Нарисовать что-нибудь', de: 'Etwas zeichnen', uk: 'Намалювати щось', ar: 'رسم شيء ما' }, desc: { ru: 'Для творцов', de: 'Für Kreative', uk: 'Для творців', ar: 'للمبدعين' }, reward: 10, emoji: '🎨', type: 'home' },
-  { id: 9, title: { ru: 'Не накричать на питомца', de: 'Nicht auf Haustier schreien', uk: 'Не накричати на улюбленця', ar: 'عدم الصراخ على الحيوان' }, desc: { ru: 'Ахимса дома', de: 'Ahimsa zuhause', uk: 'Ахімса вдома', ar: 'أهيمسا في المنزل' }, reward: 15, emoji: '🐾', type: 'home' },
-  { id: 10, title: { ru: 'Отсортировать мусор', de: 'Müll sortieren', uk: 'Відсортувати сміття', ar: 'فرز القمامة' }, desc: { ru: 'Домашний квест', de: 'Heimquest', uk: 'Домашнє завдання', ar: 'مهمة منزلية' }, reward: 8, emoji: '♻️', type: 'home' },
+  { id: 1, title: { ru: 'Стакан у скамейки', de: 'Becher bei der Bank', uk: 'Стакан біля лавки', ar: 'كوب عند المقعد', en: 'Cup by the bench' }, desc: { ru: 'Парк рядом', de: 'Park nebenan', uk: 'Парк поруч', ar: 'الحديقة', en: 'Nearby park' }, reward: 15, emoji: '🥤', type: 'trash' },
+  { id: 2, title: { ru: 'Пакет у урны', de: 'Tüte am Mülleimer', uk: 'Пакет біля урни', ar: 'كيس عند السلة', en: 'Bag by the bin' }, desc: { ru: 'Главная улица', de: 'Hauptstraße', uk: 'Головна вулиця', ar: 'الشارع الرئيسي', en: 'Main street' }, reward: 20, emoji: '🛍', type: 'trash' },
+  { id: 3, title: { ru: 'Помочь донести сумку', de: 'Tasche tragen helfen', uk: 'Допомогти нести сумку', ar: 'مساعدة في حمل الحقيبة', en: 'Help carry bags' }, desc: { ru: 'Рядом с метро', de: 'U-Bahn-Nähe', uk: 'Біля метро', ar: 'بالقرب من المترو', en: 'Near metro' }, reward: 40, emoji: '🤝', type: 'help' },
+  { id: 4, title: { ru: 'Бутылки у входа', de: 'Flaschen am Eingang', uk: 'Пляшки біля входу', ar: 'زجاجات عند المدخل', en: 'Bottles at entrance' }, desc: { ru: 'Центральная площадь', de: 'Zentralplatz', uk: 'Центральна площа', ar: 'الساحة المركزية', en: 'Central square' }, reward: 25, emoji: '🍾', type: 'trash' },
+  { id: 5, title: { ru: 'Вынести мусор', de: 'Müll rausbringen', uk: 'Винести сміття', ar: 'إخراج القمامة', en: 'Take out trash' }, desc: { ru: 'Домашний квест', de: 'Heimquest', uk: 'Домашнє завдання', ar: 'مهمة منزلية', en: 'Home quest' }, reward: 5, emoji: '🗑️', type: 'home' },
+  { id: 6, title: { ru: 'Полить цветы', de: 'Blumen gießen', uk: 'Полити квіти', ar: 'سقي الزهور', en: 'Water the plants' }, desc: { ru: 'Домашний квест', de: 'Heimquest', uk: 'Домашнє завдання', ar: 'مهمة منزلية', en: 'Home quest' }, reward: 5, emoji: '🌸', type: 'home' },
+  { id: 7, title: { ru: 'Спортивные упражнения', de: 'Sport machen', uk: 'Спортивні вправи', ar: 'تمارين رياضية', en: 'Exercise' }, desc: { ru: 'Домашний квест', de: 'Heimquest', uk: 'Домашнє завдання', ar: 'مهمة منزلية', en: 'Home quest' }, reward: 8, emoji: '💪', type: 'home' },
+  { id: 8, title: { ru: 'Нарисовать что-нибудь', de: 'Etwas zeichnen', uk: 'Намалювати щось', ar: 'رسم شيء ما', en: 'Draw something' }, desc: { ru: 'Для творцов', de: 'Für Kreative', uk: 'Для творців', ar: 'للمبدعين', en: 'For creators' }, reward: 10, emoji: '🎨', type: 'home' },
+  { id: 9, title: { ru: 'Не накричать на питомца', de: 'Nicht auf Haustier schreien', uk: 'Не накричати на улюбленця', ar: 'عدم الصراخ على الحيوان', en: 'Be kind to your pet' }, desc: { ru: 'Ахимса дома', de: 'Ahimsa zuhause', uk: 'Ахімса вдома', ar: 'أهيمسا في المنزل', en: 'Ahimsa at home' }, reward: 15, emoji: '🐾', type: 'home' },
+  { id: 10, title: { ru: 'Отсортировать мусор', de: 'Müll sortieren', uk: 'Відсортувати сміття', ar: 'فرز القمامة', en: 'Sort the recycling' }, desc: { ru: 'Домашний квест', de: 'Heimquest', uk: 'Домашнє завдання', ar: 'مهمة منزلية', en: 'Home quest' }, reward: 8, emoji: '♻️', type: 'home' },
 ];
 const CREATURES = [
-  { id: 'flower1', type: 'flower', emoji: '🌸', label: { ru: 'Цветок', de: 'Blume', uk: 'Квітка', ar: 'زهرة' }, reward: 8, cooldown: 3600000 },
-  { id: 'flower2', type: 'flower', emoji: '🌻', label: { ru: 'Подсолнух', de: 'Sonnenblume', uk: 'Соняшник', ar: 'عباد الشمس' }, reward: 8, cooldown: 3600000 },
-  { id: 'animal1', type: 'animal', emoji: '🦊', label: { ru: 'Лисёнок', de: 'Fuchs', uk: 'Лисеня', ar: 'ثعلب' }, reward: 15, cooldown: 7200000 },
-  { id: 'animal2', type: 'animal', emoji: '🐢', label: { ru: 'Черепашка', de: 'Schildkröte', uk: 'Черепашка', ar: 'سلحفاة' }, reward: 12, cooldown: 7200000 },
-  { id: 'animal3', type: 'animal', emoji: '🦋', label: { ru: 'Бабочка', de: 'Schmetterling', uk: 'Метелик', ar: 'فراشة' }, reward: 10, cooldown: 5400000 },
+  { id: 'flower1', type: 'flower', emoji: '🌸', label: { ru: 'Цветок', de: 'Blume', uk: 'Квітка', ar: 'زهرة', en: 'Flower' }, reward: 8, cooldown: 3600000 },
+  { id: 'flower2', type: 'flower', emoji: '🌻', label: { ru: 'Подсолнух', de: 'Sonnenblume', uk: 'Соняшник', ar: 'عباد الشمس', en: 'Sunflower' }, reward: 8, cooldown: 3600000 },
+  { id: 'animal1', type: 'animal', emoji: '🦊', label: { ru: 'Лисёнок', de: 'Fuchs', uk: 'Лисеня', ar: 'ثعلب', en: 'Fox' }, reward: 15, cooldown: 7200000 },
+  { id: 'animal2', type: 'animal', emoji: '🐢', label: { ru: 'Черепашка', de: 'Schildkröte', uk: 'Черепашка', ar: 'سلحفاة', en: 'Turtle' }, reward: 12, cooldown: 7200000 },
+  { id: 'animal3', type: 'animal', emoji: '🦋', label: { ru: 'Бабочка', de: 'Schmetterling', uk: 'Метелик', ar: 'فراشة', en: 'Butterfly' }, reward: 10, cooldown: 7200000 },
 ];
 
-const FLAG: Record<string, string> = { ru: '🇷🇺', de: '🇩🇪', uk: '🇺🇦', ar: '🇸🇦' };
+const FLAG: Record<string, string> = { ru: '🇷🇺', de: '🇩🇪', uk: '🇺🇦', ar: '🇸🇦', en: '🇬🇧' };
 
 const getLevelName = (xp: number, t: any) =>
   xp < 50 ? t.level1 : xp < 150 ? t.level2 : xp < 300 ? t.level3 : t.level4;
@@ -77,7 +91,7 @@ const getLevelKey = (xp: number) =>
   xp < 50 ? 'level1' : xp < 150 ? 'level2' : xp < 300 ? 'level3' : 'level4';
 
 export default function HomeScreen() {
-  const [lang, setLang] = useState<'ru' | 'de' | 'uk' | 'ar' | null>(null);
+  const [lang, setLang] = useState<'ru' | 'de' | 'uk' | 'ar' | 'en' | null>(null);
   const [dobri, setDobri] = useState(0);
   const [totalDobri, setTotalDobri] = useState(0);
   const [xp, setXp] = useState(0);
@@ -142,7 +156,7 @@ export default function HomeScreen() {
           if (save.xp) setXp(save.xp);
           if (save.deeds) setDeeds(save.deeds);
           if (save.completed) setCompleted(save.completed);
-          if (save.lang) setLang(save.lang as 'ru' | 'de' | 'uk' | 'ar');
+          if (save.lang) setLang(save.lang as 'ru' | 'de' | 'uk' | 'ar' | 'en');
           if (save.onboarded) setOnboarded(true);
           if (save.outdoorDeeds) setOutdoorDeeds(save.outdoorDeeds);
           if (save.homeDeeds) setHomeDeeds(save.homeDeeds);
@@ -195,7 +209,7 @@ export default function HomeScreen() {
           <Text style={styles.langTitle}>Earthity</Text>
           <Text style={styles.langSub}>Choose your language</Text>
           <View style={styles.langGrid}>
-            {(Object.keys(LANGS) as Array<'ru' | 'de' | 'uk' | 'ar'>).map(l => (
+            {(Object.keys(LANGS) as Array<'ru' | 'de' | 'uk' | 'ar' | 'en'>).map(l => (
               <TouchableOpacity key={l} style={styles.langBtn} onPress={() => setLang(l)}>
                 <Text style={styles.langFlag}>{FLAG[l]}</Text>
                 <Text style={styles.langName}>{l.toUpperCase()}</Text>
@@ -351,7 +365,7 @@ export default function HomeScreen() {
           <Text style={styles.detailReward}>🪙 +{selected.reward} {t.reward}</Text>
           <View style={styles.steps}>
             <Text style={styles.stepsLabel}>{t.how}</Text>
-            {(selected.type === 'trash' ? t.steps_trash : t.steps_help).map((step: string, i: number) => (
+            {(selected.type === 'trash' ? t.steps_trash : selected.type === 'home' ? t.steps_home : t.steps_help).map((step: string, i: number) => (
               <View key={i} style={styles.stepRow}>
                 <View style={styles.stepNum}><Text style={styles.stepNumText}>{i + 1}</Text></View>
                 <Text style={styles.stepText}>{step}</Text>
