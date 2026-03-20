@@ -149,9 +149,12 @@ export default function HomeScreen() {
     });
   }, []);
 
-  useEffect(() => {
-    AsyncStorage.setItem('earthity_save', JSON.stringify({ dobri, totalDobri, xp, deeds, completed, lang, onboarded, outdoorDeeds, homeDeeds, petDeeds }));
-  }, [dobri, totalDobri, xp, deeds, completed, lang, onboarded, outdoorDeeds, homeDeeds, petDeeds]);
+ useEffect(() => {
+    AsyncStorage.getItem('earthity_save').then(existing => {
+      const old = existing ? JSON.parse(existing) : {};
+      AsyncStorage.setItem('earthity_save', JSON.stringify({ ...old, dobri, xp, deeds, completed, lang, onboarded, outdoorDeeds, homeDeeds, petDeeds, totalDobri }));
+    });
+  }, [dobri, xp, deeds, completed, lang, onboarded, outdoorDeeds, homeDeeds, petDeeds, totalDobri]);
 
   useEffect(() => {
     const currentKey = getLevelKey(xp);
