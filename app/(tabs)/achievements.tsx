@@ -82,7 +82,7 @@ export default function AchievementsScreen() {
             {ACHIEVEMENTS.filter(a => a.category === cat).map(a => {
               const done = a.condition(stats);
               return (
-                <TouchableOpacity key={a.id} style={[styles.card, done && styles.cardDone, selectedTitle === a.id && styles.cardSelected]} onPress={() => done && selectTitle(a)} activeOpacity={done ? 0.7 : 1}>
+                <TouchableOpacity key={a.id} style={[styles.card, a.category === 'legend' && styles.cardLegend, done && styles.cardDone, done && a.category === 'legend' && styles.cardLegendDone, selectedTitle === a.id && styles.cardSelected]} onPress={() => done && selectTitle(a)} activeOpacity={done ? 0.7 : 1}>
                   <Text style={[styles.cardEmoji, !done && styles.locked]}>{done ? a.emoji : '🔒'}</Text>
                   <View style={styles.cardBody}>
                   <Text style={[styles.cardTitle, done && styles.cardTitleDone]}>{a.title[lang] || a.title.en}</Text>
@@ -120,6 +120,8 @@ const styles = StyleSheet.create({
   catTitle: { fontSize: 13, color: 'rgba(255,255,255,0.4)', letterSpacing: 1, marginBottom: 10, textTransform: 'uppercase' },
   card: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#0f1a0f', borderRadius: 12, padding: 14, marginBottom: 8, borderWidth: 1, borderColor: '#1e3020', opacity: 0.5 },
   cardDone: { opacity: 1, borderColor: '#2d6a3f' },
+  cardLegend: { backgroundColor: '#1a1205', borderColor: '#c9a84c', borderWidth: 1.5 },
+  cardLegendDone: { backgroundColor: '#1f1608', borderColor: '#e8c97a', borderWidth: 2 },
   cardEmoji: { fontSize: 28, marginRight: 14 },
   cardSelected: { borderColor: '#e8c97a', borderWidth: 2 },
   locked: { opacity: 0.4 },

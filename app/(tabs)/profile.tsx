@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
-import { StyleSheet, View, Text, TouchableOpacity, ScrollView, SafeAreaView } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useEffect, useState } from 'react';
+import { SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 const AVATARS = ['🌱', '🌿', '🌳', '🦊', '🐺', '🦅', '🐬', '🦋', '🐢', '🌍', '☯', '⭐'];
 
@@ -20,9 +20,10 @@ export default function ProfileScreen() {
   const [deeds, setDeeds] = useState(0);
   const [avatar, setAvatar] = useState('🌱');
   const [name, setName] = useState('Earthling');
-  const [title, setTitle] = useState('');
+  const [title, setTitle] = useState<any>('');
   const [titleEmoji, setTitleEmoji] = useState('');
   const [pickingAvatar, setPickingAvatar] = useState(false);
+  const [lang, setLang] = useState('ru');
 
   useEffect(() => {
     AsyncStorage.getItem('earthity_save').then(data => {
@@ -36,6 +37,7 @@ export default function ProfileScreen() {
           if (save.name) setName(save.name);
           if (save.selectedTitleName) setTitle(save.selectedTitleName);
           if (save.selectedTitleEmoji) setTitleEmoji(save.selectedTitleEmoji);
+          if (save.lang) setLang(save.lang);
         } catch (e) { }
       }
     });
@@ -83,7 +85,7 @@ export default function ProfileScreen() {
         <Text style={styles.name}>{name}</Text>
         <Text style={styles.levelName}>{levelName}</Text>
         {title ? (
-          <Text style={styles.titleBadge}>{titleEmoji} {title}</Text>
+          <Text style={styles.titleBadge}>{titleEmoji} {typeof title === 'object' ? title[lang] || title.en : title}</Text>
         ) : null}
 
         {/* XP bar */}
