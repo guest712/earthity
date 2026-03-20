@@ -92,6 +92,8 @@ export default function HomeScreen() {
   const [confirming, setConfirming] = useState(false);
   const [category, setCategory] = useState<'all' | 'outdoor' | 'home'>('all');
   const [onboarded, setOnboarded] = useState(false);
+  const [streak, setStreak] = useState(0);
+  const [lastOpenDate, setLastOpenDate] = useState('');
   const [location, setLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const playRewardSound = async () => {
     const { sound } = await Audio.Sound.createAsync(
@@ -146,6 +148,21 @@ export default function HomeScreen() {
           if (save.homeDeeds) setHomeDeeds(save.homeDeeds);
           if (save.petDeeds) setPetDeeds(save.petDeeds);
          setTotalDobri(save.totalDobri || save.dobri || 0);
+         const today = new Date().toDateString();
+          const last = save.lastOpenDate || '';
+          const yesterday = new Date(Date.now() - 86400000).toDateString();
+          
+          if (last === today) {
+            setStreak(save.streak || 0);
+          } else if (last === yesterday) {
+            const newStreak = (save.streak || 0) + 1;
+            setStreak(newStreak);
+          } else if (last !== '') {
+            setStreak(1);
+          } else {
+            setStreak(1);
+          }
+          setLastOpenDate(today);
         } catch (e) { }
       }
     });
@@ -154,9 +171,9 @@ export default function HomeScreen() {
  useEffect(() => {
     AsyncStorage.getItem('earthity_save').then(existing => {
       const old = existing ? JSON.parse(existing) : {};
-      AsyncStorage.setItem('earthity_save', JSON.stringify({ ...old, dobri, xp, deeds, completed, lang, onboarded, outdoorDeeds, homeDeeds, petDeeds, totalDobri }));
+      AsyncStorage.setItem('earthity_save', JSON.stringify({ ...old, dobri, xp, deeds, completed, lang, onboarded, outdoorDeeds, homeDeeds, petDeeds, totalDobri, streak, lastOpenDate }));
     });
-  }, [dobri, xp, deeds, completed, lang, onboarded, outdoorDeeds, homeDeeds, petDeeds, totalDobri]);
+  }, [dobri, xp, deeds, completed, lang, onboarded, outdoorDeeds, homeDeeds, petDeeds, totalDobri, streak, lastOpenDate]);
 
   useEffect(() => {
     const currentKey = getLevelKey(xp);
@@ -209,7 +226,8 @@ export default function HomeScreen() {
     setCompleted(prev => [...prev, id]);
     setDobri(prev => prev + selected.reward);
     setTotalDobri(prev => prev + selected.reward);
-    setXp(prev => prev + selected.reward);
+    const streakBonus = streak >= 20 ? 1.15 : streak >= 10 ? 1.10 : streak >= 5 ? 1.05 : 1;
+    setXp(prev => prev + Math.round(selected.reward * streakBonus));
     setDeeds(prev => prev + 1);
     if (type === 'trash' || type === 'help') {
       setOutdoorDeeds(prev => prev + 1);
@@ -230,6 +248,9 @@ export default function HomeScreen() {
           <View>
             <Text style={styles.brand}>Earth<Text style={styles.brandGreen}>ity</Text></Text>
             <Text style={styles.level}>{level}</Text>
+            {streak > 0 && (
+              <Text style={styles.streak}>🔥 {streak} дней</Text>
+            )}
           </View>
           <View style={styles.stats}>
             <View style={styles.stat}>
@@ -515,4 +536,5 @@ const styles = StyleSheet.create({
   creatureBtnText: { color: 'white', fontSize: 15, fontWeight: '600' },
   feedingBarBg: { width: '100%', height: 8, backgroundColor: '#1e3020', borderRadius: 4, overflow: 'hidden', marginBottom: 12 },
   feedingBarFill: { height: '100%', backgroundColor: '#5aad6a', borderRadius: 4 },
+  streak: { fontSize: 11, color: '#e8c97a', marginTop: 2, letterSpacing: 1 },
 });
