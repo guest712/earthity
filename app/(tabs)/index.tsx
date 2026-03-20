@@ -19,6 +19,7 @@ const LANGS: Record<string, any> = {
     steps_help: ['Подойди к человеку', 'Предложи помощь', 'Нажми Выполнено'],
     steps_home: ['Сделай дома', 'Будь осознанным', 'Нажми Выполнено'],
     empty: 'Вы убрали всё рядом. Отличная работа!',
+    catAll: 'Все', catOutdoor: 'Улица', catHome: 'Дома',
   },
   de: {
     level1: '🌱 Keimling', level2: '🌿 Öko', level3: '🌳 Hüter', level4: '⭐ Held',
@@ -29,6 +30,7 @@ const LANGS: Record<string, any> = {
     steps_help: ['Geh zur Person', 'Hilfe anbieten', 'Erledigt drücken'],
     steps_home: ['Zu Hause machen', 'Achtsam sein', 'Erledigt drücken'],
     empty: 'Alles aufgeräumt. Gut gemacht!',
+    catAll: 'Alle', catOutdoor: 'Draußen', catHome: 'Zuhause',
   },
   uk: {
     level1: '🌱 Паросток', level2: '🌿 Еко', level3: '🌳 Хранитель', level4: '⭐ Герой',
@@ -39,6 +41,7 @@ const LANGS: Record<string, any> = {
     steps_help: ['Підійди до людини', 'Запропонуй допомогу', 'Натисни Виконано'],
     steps_home: ['Зроби вдома', 'Будь усвідомленим', 'Натисни Виконано'],
     empty: 'Ви прибрали все поруч. Чудова робота!',
+    catAll: 'Всі', catOutdoor: 'Вулиця', catHome: 'Вдома',
   },
   ar: {
     level1: '🌱 بذرة', level2: '🌿 أخضر', level3: '🌳 حارس', level4: '⭐ بطل',
@@ -49,6 +52,7 @@ const LANGS: Record<string, any> = {
     steps_help: ['اذهب إلى الشخص', 'اعرض المساعدة', 'اضغط تم'],
     steps_home: ['افعل ذلك في المنزل', 'كن واعياً', 'اضغط تم'],
     empty: 'لقد نظفت كل شيء. عمل رائع!',
+    catAll: 'الكل', catOutdoor: 'خارج', catHome: 'منزل',
   },
   en: {
     level1: '🌱 Sprout', level2: '🌿 Eco', level3: '🌳 Guardian', level4: '⭐ Hero',
@@ -59,6 +63,7 @@ const LANGS: Record<string, any> = {
     steps_help: ['Go to the person', 'Offer your help', 'Press Done'],
     steps_home: ['Do it at home', 'Be mindful', 'Press Done'],
     empty: 'You cleaned everything nearby. Great job!',
+    catAll: 'All', catOutdoor: 'Outdoor', catHome: 'Home',
   },
 };
 
@@ -462,7 +467,7 @@ export default function HomeScreen() {
                 onPress={() => setCategory(cat)}
               >
                 <Text style={[styles.catText, category === cat && styles.catTextActive]}>
-                  {cat === 'all' ? '🌍 Все' : cat === 'outdoor' ? '🗺️ Улица' : '🏠 Дома'}
+                 {cat === 'all' ? `🌍 ${t.catAll}` : cat === 'outdoor' ? `🗺️ ${t.catOutdoor}` : `🏠 ${t.catHome}`}
                 </Text>
               </TouchableOpacity>
             ))}
