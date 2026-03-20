@@ -60,6 +60,13 @@ const QUESTS = [
   { id: 9, title: { ru: 'Не накричать на питомца', de: 'Nicht auf Haustier schreien', uk: 'Не накричати на улюбленця', ar: 'عدم الصراخ على الحيوان' }, desc: { ru: 'Ахимса дома', de: 'Ahimsa zuhause', uk: 'Ахімса вдома', ar: 'أهيمسا في المنزل' }, reward: 15, emoji: '🐾', type: 'home' },
   { id: 10, title: { ru: 'Отсортировать мусор', de: 'Müll sortieren', uk: 'Відсортувати сміття', ar: 'فرز القمامة' }, desc: { ru: 'Домашний квест', de: 'Heimquest', uk: 'Домашнє завдання', ar: 'مهمة منزلية' }, reward: 8, emoji: '♻️', type: 'home' },
 ];
+const CREATURES = [
+  { id: 'flower1', type: 'flower', emoji: '🌸', label: { ru: 'Цветок', de: 'Blume', uk: 'Квітка', ar: 'زهرة' }, reward: 8, cooldown: 3600000 },
+  { id: 'flower2', type: 'flower', emoji: '🌻', label: { ru: 'Подсолнух', de: 'Sonnenblume', uk: 'Соняшник', ar: 'عباد الشمس' }, reward: 8, cooldown: 3600000 },
+  { id: 'animal1', type: 'animal', emoji: '🦊', label: { ru: 'Лисёнок', de: 'Fuchs', uk: 'Лисеня', ar: 'ثعلب' }, reward: 15, cooldown: 7200000 },
+  { id: 'animal2', type: 'animal', emoji: '🐢', label: { ru: 'Черепашка', de: 'Schildkröte', uk: 'Черепашка', ar: 'سلحفاة' }, reward: 12, cooldown: 7200000 },
+  { id: 'animal3', type: 'animal', emoji: '🦋', label: { ru: 'Бабочка', de: 'Schmetterling', uk: 'Метелик', ar: 'فراشة' }, reward: 10, cooldown: 5400000 },
+];
 
 const FLAG: Record<string, string> = { ru: '🇷🇺', de: '🇩🇪', uk: '🇺🇦', ar: '🇸🇦' };
 
@@ -76,6 +83,8 @@ export default function HomeScreen() {
   const [xp, setXp] = useState(0);
   const [deeds, setDeeds] = useState(0);
   const [mapMode, setMapMode] = useState<'standard' | 'satellite'>('standard');
+  const [creatureCooldowns, setCreatureCooldowns] = useState<Record<string, number>>({});
+  const [selectedCreature, setSelectedCreature] = useState<any>(null);
   const [completed, setCompleted] = useState<number[]>([]);
   const [selected, setSelected] = useState<any>(null);
   const [confirming, setConfirming] = useState(false);
@@ -238,7 +247,37 @@ export default function HomeScreen() {
           <Text style={styles.xpLabel}>{xp} / {nextXp} XP</Text>
         </View>
       </View>
-
+      {selectedCreature && (
+        <View style={styles.creaturePopup}>
+          <Text style={styles.creatureEmoji}>{selectedCreature.emoji}</Text>
+          <Text style={styles.creatureName}>{selectedCreature.label[lang]}</Text>
+          <Text style={styles.creatureReward}>+{selectedCreature.reward} 🪙</Text>
+          <TouchableOpacity
+            style={styles.creatureBtn}
+            onPress={() => {
+              const now = Date.now();
+              const lastTime = creatureCooldowns[selectedCreature.id] || 0;
+              if (now - lastTime > selectedCreature.cooldown) {
+                setDobri(prev => prev + selectedCreature.reward);
+                setXp(prev => prev + selectedCreature.reward);
+                setCreatureCooldowns(prev => ({ ...prev, [selectedCreature.id]: now }));
+                animateReward();
+                playRewardSound();
+              }
+              setSelectedCreature(null);
+            }}
+          >
+            <Text style={styles.creatureBtnText}>
+              {creatureCooldowns[selectedCreature.id] && Date.now() - creatureCooldowns[selectedCreature.id] < selectedCreature.cooldown
+                ? '⏳ Подождите'
+                : selectedCreature.type === 'flower' ? '💧 Полить' : '🍃 Покормить'}
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => setSelectedCreature(null)} style={{ padding: 10 }}>
+            <Text style={{ color: 'rgba(255,255,255,0.3)', fontSize: 13 }}>✕ Закрыть</Text>
+          </TouchableOpacity>
+        </View>
+      )}
       {selected ? (
         <View style={styles.detail}>
           <Text style={styles.detailEmoji}>{selected.emoji}</Text>
@@ -320,6 +359,20 @@ export default function HomeScreen() {
                 description={`+${q.reward} ${t.reward}`}
                 onPress={() => setSelected(q)}
               />
+            ))}
+            {CREATURES.map((c, i) => (
+              <Marker
+                key={c.id}
+                coordinate={{
+                  latitude: (location?.latitude ?? 52.52) - (i * 0.002),
+                  longitude: (location?.longitude ?? 13.405) - (i * 0.003),
+                }}
+                onPress={() => setSelectedCreature(c)}
+              >
+                <View style={{ alignItems: 'center' }}>
+                  <Text style={{ fontSize: 28 }}>{c.emoji}</Text>
+                </View>
+              </Marker>
             ))}
           </MapView>
           <View style={styles.catRow}>
@@ -429,4 +482,10 @@ const styles = StyleSheet.create({
   mapBtn: { paddingVertical: 6, paddingHorizontal: 14, borderRadius: 10, borderWidth: 1, borderColor: '#1e3020', backgroundColor: '#0f1a0f' },
   mapBtnActive: { borderColor: '#3d8b52', backgroundColor: '#1e3020' },
   mapBtnText: { fontSize: 16 },
+  creaturePopup: { position: 'absolute', bottom: 100, left: 20, right: 20, backgroundColor: '#0f1a0f', borderRadius: 16, padding: 20, alignItems: 'center', borderWidth: 1, borderColor: '#2d6a3f', zIndex: 100 },
+  creatureEmoji: { fontSize: 52, marginBottom: 8 },
+  creatureName: { fontSize: 18, color: '#e8e4d8', fontWeight: '500', marginBottom: 4 },
+  creatureReward: { fontSize: 14, color: '#e8c97a', marginBottom: 16 },
+  creatureBtn: { backgroundColor: '#2d6a3f', borderRadius: 12, paddingVertical: 12, paddingHorizontal: 32, marginBottom: 8 },
+  creatureBtnText: { color: 'white', fontSize: 15, fontWeight: '600' },
 });
