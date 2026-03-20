@@ -323,7 +323,7 @@ export default function HomeScreen() {
   const creatureLon = (location?.longitude ?? 13.405) + (Math.cos(creatureIndex * 1.5) * 0.003);
   const dist = location ? getDistance(location.latitude, location.longitude, creatureLat, creatureLon) : 999;
   
-  if (dist > 100) {
+  if (dist > 300) {
     alert('Подойдите ближе! 📍');
     return;
   }
@@ -429,6 +429,7 @@ export default function HomeScreen() {
   }}
   showsUserLocation={true}
   showsMyLocationButton={true}
+  followsUserLocation={true}
   mapType={mapMode}
 >
           
