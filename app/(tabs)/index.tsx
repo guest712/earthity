@@ -219,6 +219,16 @@ export default function HomeScreen() {
   const prevXp = xp < 50 ? 0 : xp < 150 ? 50 : xp < 300 ? 150 : 300;
   const xpProgress = Math.min(100, ((xp - prevXp) / (nextXp - prevXp)) * 100);
 
+  function getDistance(lat1: number, lon1: number, lat2: number, lon2: number) {
+    const R = 6371000;
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+      Math.sin(dLon/2) * Math.sin(dLon/2);
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  }
+
  function complete() {
     if (!selected) return;
     const type = selected.type;
@@ -289,6 +299,15 @@ export default function HomeScreen() {
            onPress={() => {
   const now = Date.now();
   const lastTime = creatureCooldowns[selectedCreature.id] || 0;
+  const creatureIndex = CREATURES.findIndex(c => c.id === selectedCreature.id);
+  const creatureLat = (location?.latitude ?? 52.52) + (Math.sin(creatureIndex * 1.5) * 0.003);
+  const creatureLon = (location?.longitude ?? 13.405) + (Math.cos(creatureIndex * 1.5) * 0.003);
+  const dist = location ? getDistance(location.latitude, location.longitude, creatureLat, creatureLon) : 999;
+  
+  if (dist > 100) {
+    alert('Подойдите ближе! 📍');
+    return;
+  }
   if (now - lastTime > selectedCreature.cooldown && !isFeeding) {
     setIsFeeding(true);
     setFeedingProgress(0);
@@ -410,9 +429,9 @@ export default function HomeScreen() {
               <Marker
                 key={c.id}
                 coordinate={{
-                  latitude: (location?.latitude ?? 52.52) - (i * 0.002),
-                  longitude: (location?.longitude ?? 13.405) - (i * 0.003),
-                }}
+  latitude: (location?.latitude ?? 52.52) + (Math.sin(i * 1.5) * 0.003),
+  longitude: (location?.longitude ?? 13.405) + (Math.cos(i * 1.5) * 0.003),
+}}
                 onPress={() => setSelectedCreature(c)}
               >
                 <View style={{ alignItems: 'center' }}>
