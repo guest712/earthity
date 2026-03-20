@@ -75,6 +75,7 @@ export default function HomeScreen() {
   const [totalDobri, setTotalDobri] = useState(0);
   const [xp, setXp] = useState(0);
   const [deeds, setDeeds] = useState(0);
+  const [mapMode, setMapMode] = useState<'standard' | 'satellite'>('standard');
   const [completed, setCompleted] = useState<number[]>([]);
   const [selected, setSelected] = useState<any>(null);
   const [confirming, setConfirming] = useState(false);
@@ -276,17 +277,38 @@ export default function HomeScreen() {
         </View>
       ) : (
         <>
+           <View style={styles.mapControls}>
+            <TouchableOpacity
+              style={[styles.mapBtn, mapMode === 'standard' && styles.mapBtnActive]}
+              onPress={() => setMapMode('standard')}
+            >
+              <Text style={styles.mapBtnText}>🗺️</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.mapBtn, mapMode === 'satellite' && styles.mapBtnActive]}
+              onPress={() => setMapMode('satellite')}
+            >
+              <Text style={styles.mapBtnText}>🛰️</Text>
+            </TouchableOpacity>
+          </View>
           <MapView
-            style={{ height: 220, margin: 12, borderRadius: 16 }}
-            initialRegion={{
-              latitude: location?.latitude ?? 52.52,
-              longitude: location?.longitude ?? 13.405,
-              latitudeDelta: 0.02,
-              longitudeDelta: 0.02,
-            }}
-            showsUserLocation={true}
-            showsMyLocationButton={true}
-          >
+  style={{ height: 220, margin: 12, borderRadius: 16 }}
+  region={location ? {
+    latitude: location.latitude,
+    longitude: location.longitude,
+    latitudeDelta: 0.02,
+    longitudeDelta: 0.02,
+  } : {
+    latitude: 52.52,
+    longitude: 13.405,
+    latitudeDelta: 0.02,
+    longitudeDelta: 0.02,
+  }}
+  showsUserLocation={true}
+  showsMyLocationButton={true}
+  mapType={mapMode}
+>
+          
             {filteredQuests.map(q => (
               <Marker
                 key={q.id}
@@ -403,4 +425,8 @@ const styles = StyleSheet.create({
   catBtnActive: { backgroundColor: '#1e3020', borderColor: '#3d8b52' },
   catText: { fontSize: 12, color: 'rgba(255,255,255,0.4)' },
   catTextActive: { color: '#5aad6a', fontWeight: '500' },
+  mapControls: { flexDirection: 'row', gap: 8, paddingHorizontal: 12, paddingTop: 8 },
+  mapBtn: { paddingVertical: 6, paddingHorizontal: 14, borderRadius: 10, borderWidth: 1, borderColor: '#1e3020', backgroundColor: '#0f1a0f' },
+  mapBtnActive: { borderColor: '#3d8b52', backgroundColor: '#1e3020' },
+  mapBtnText: { fontSize: 16 },
 });
