@@ -88,6 +88,14 @@ const CREATURES = [
   { id: 'animal3', type: 'animal', emoji: '🦋', label: { ru: 'Бабочка', de: 'Schmetterling', uk: 'Метелик', ar: 'فراشة', en: 'Butterfly' }, reward: 10, cooldown: 7200000 },
 ];
 
+const MINDFUL_PHRASES = [
+  { ru: 'Этот мусор лежит здесь потому что кто-то решил что земля — его мусорное ведро. Ты думаешь иначе.', en: 'This litter is here because someone decided the earth is their bin. You think differently.', de: 'Dieser Müll liegt hier, weil jemand die Erde als seine Mülltonne betrachtet. Du denkst anders.', uk: 'Це сміття тут тому що хтось вирішив що земля — його смітник. Ти думаєш інакше.', ar: 'هذه القمامة هنا لأن شخصاً ما قرر أن الأرض سلة مهملاته. أنت تفكر بشكل مختلف.' },
+  { ru: 'Каждый убранный предмет — это существо которое не отравится. Спасибо тебе.', en: 'Every piece of litter removed is a creature that won\'t be poisoned. Thank you.', de: 'Jedes aufgehobene Stück ist ein Lebewesen das nicht vergiftet wird. Danke.', uk: 'Кожен прибраний предмет — це істота яка не отруїться. Дякую тобі.', ar: 'كل قطعة تُزال هي مخلوق لن يُسمَّم. شكراً لك.' },
+  { ru: 'Ты только что сделал мир чуть чище для кого-то кто ещё не родился.', en: 'You just made the world a little cleaner for someone not yet born.', de: 'Du hast die Welt gerade etwas sauberer gemacht für jemanden der noch nicht geboren ist.', uk: 'Ти щойно зробив світ трохи чистішим для когось хто ще не народився.', ar: 'لقد جعلت العالم أكثر نظافة قليلاً لشخص لم يولد بعد.' },
+  { ru: 'Небольшое действие. Большое значение. Ахимса в действии.', en: 'Small action. Big meaning. Ahimsa in action.', de: 'Kleine Handlung. Große Bedeutung. Ahimsa in Aktion.', uk: 'Маленька дія. Велике значення. Ахімса в дії.', ar: 'فعل صغير. معنى كبير. أهيمسا في العمل.' },
+  { ru: 'Природа не просит о помощи словами. Она просит действиями.', en: 'Nature doesn\'t ask for help with words. It asks through actions.', de: 'Die Natur bittet nicht mit Worten um Hilfe. Sie bittet durch Handlungen.', uk: 'Природа не просить допомоги словами. Вона просить діями.', ar: 'الطبيعة لا تطلب المساعدة بالكلمات. تطلبها من خلال الأفعال.' },
+];
+
 const FLAG: Record<string, string> = { ru: '🇷🇺', de: '🇩🇪', uk: '🇺🇦', ar: '🇸🇦', en: '🇬🇧' };
 
 const getLevelName = (xp: number, t: any) =>
@@ -376,6 +384,11 @@ export default function HomeScreen() {
           <Text style={styles.detailTitle}>{selected.title[lang]}</Text>
           <Text style={styles.detailDesc}>{selected.desc[lang]}</Text>
           <Text style={styles.detailReward}>🪙 +{selected.reward} {t.reward}</Text>
+          <View style={styles.mindfulBox}>
+            <Text style={styles.mindfulText}>
+              {MINDFUL_PHRASES[selected.id % MINDFUL_PHRASES.length][lang]}
+            </Text>
+          </View>
           <View style={styles.steps}>
             <Text style={styles.stepsLabel}>{t.how}</Text>
             {(selected.type === 'trash' ? t.steps_trash : selected.type === 'home' ? t.steps_home : t.steps_help).map((step: string, i: number) => (
@@ -584,4 +597,6 @@ const styles = StyleSheet.create({
   feedingBarBg: { width: '100%', height: 8, backgroundColor: '#1e3020', borderRadius: 4, overflow: 'hidden', marginBottom: 12 },
   feedingBarFill: { height: '100%', backgroundColor: '#5aad6a', borderRadius: 4 },
   streak: { fontSize: 11, color: '#e8c97a', marginTop: 2, letterSpacing: 1 },
+  mindfulBox: { backgroundColor: 'rgba(45,106,63,0.08)', borderLeftWidth: 2, borderLeftColor: '#3d8b52', borderRadius: 4, padding: 14, marginBottom: 20, width: '100%' },
+  mindfulText: { fontSize: 13, color: 'rgba(255,255,255,0.5)', lineHeight: 20, fontStyle: 'italic' },
 });
