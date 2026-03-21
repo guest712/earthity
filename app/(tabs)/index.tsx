@@ -78,6 +78,7 @@ const QUESTS = [
   { id: 8, title: { ru: 'Нарисовать что-нибудь', de: 'Etwas zeichnen', uk: 'Намалювати щось', ar: 'رسم شيء ما', en: 'Draw something' }, desc: { ru: 'Для творцов', de: 'Für Kreative', uk: 'Для творців', ar: 'للمبدعين', en: 'For creators' }, reward: 10, emoji: '🎨', type: 'home' },
   { id: 9, title: { ru: 'Не накричать на питомца', de: 'Nicht auf Haustier schreien', uk: 'Не накричати на улюбленця', ar: 'عدم الصراخ على الحيوان', en: 'Be kind to your pet' }, desc: { ru: 'Ахимса дома', de: 'Ahimsa zuhause', uk: 'Ахімса вдома', ar: 'أهيمسا في المنزل', en: 'Ahimsa at home' }, reward: 15, emoji: '🐾', type: 'home' },
   { id: 10, title: { ru: 'Отсортировать мусор', de: 'Müll sortieren', uk: 'Відсортувати сміття', ar: 'فرز القمامة', en: 'Sort the recycling' }, desc: { ru: 'Домашний квест', de: 'Heimquest', uk: 'Домашнє завдання', ar: 'مهمة منزلية', en: 'Home quest' }, reward: 8, emoji: '♻️', type: 'home' },
+  { id: 11, title: { ru: 'Тест', de: 'Test', uk: 'Тест', ar: 'اختبار', en: 'Test' }, desc: { ru: 'Тестовый квест', de: 'Testquest', uk: 'Тестовий квест', ar: 'مهمة اختبار', en: 'Test quest' }, reward: 1, emoji: '🧪', type: 'test' },
 ];
 const CREATURES = [
   { id: 'flower1', type: 'flower', emoji: '🌸', label: { ru: 'Цветок', de: 'Blume', uk: 'Квітка', ar: 'زهرة', en: 'Flower' }, reward: 8, cooldown: 3600000 },
@@ -114,6 +115,7 @@ export default function HomeScreen() {
   const [streak, setStreak] = useState(0);
   const [lastOpenDate, setLastOpenDate] = useState('');
   const [location, setLocation] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [testDeeds, setTestDeeds] = useState(0);
   const playRewardSound = async () => {
     const { sound } = await Audio.Sound.createAsync(
       require('../../assets/sounds/reward.mp3')
@@ -166,6 +168,7 @@ export default function HomeScreen() {
           if (save.outdoorDeeds) setOutdoorDeeds(save.outdoorDeeds);
           if (save.homeDeeds) setHomeDeeds(save.homeDeeds);
           if (save.petDeeds) setPetDeeds(save.petDeeds);
+          if (save.testDeeds) setTestDeeds(save.testDeeds)
          setTotalDobri(save.totalDobri || save.dobri || 0);
          const today = new Date().toDateString();
           const last = save.lastOpenDate || '';
@@ -190,9 +193,9 @@ export default function HomeScreen() {
  useEffect(() => {
     AsyncStorage.getItem('earthity_save').then(existing => {
       const old = existing ? JSON.parse(existing) : {};
-      AsyncStorage.setItem('earthity_save', JSON.stringify({ ...old, dobri, xp, deeds, completed, lang, onboarded, outdoorDeeds, homeDeeds, petDeeds, totalDobri, streak, lastOpenDate }));
+      AsyncStorage.setItem('earthity_save', JSON.stringify({ ...old, dobri, xp, deeds, completed, lang, onboarded, outdoorDeeds, homeDeeds, petDeeds, totalDobri, streak, lastOpenDate, testDeeds }));
     });
-  }, [dobri, xp, deeds, completed, lang, onboarded, outdoorDeeds, homeDeeds, petDeeds, totalDobri, streak, lastOpenDate]);
+  }, [dobri, xp, deeds, completed, lang, onboarded, outdoorDeeds, homeDeeds, petDeeds, totalDobri, streak, lastOpenDate, testDeeds]);
 
   useEffect(() => {
     const currentKey = getLevelKey(xp);
@@ -263,6 +266,9 @@ export default function HomeScreen() {
     } else if (type === 'home') {
       setHomeDeeds(prev => prev + 1);
       if (id === 9) setPetDeeds(prev => prev + 1);
+    }
+    if (selected.type === 'test') {
+      setTestDeeds(prev => prev + 1);
     }
     animateReward();
     playRewardSound();

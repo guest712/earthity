@@ -50,6 +50,10 @@ export default function ProfileScreen() {
     });
   }, []);
 
+  useEffect(() => {
+  AsyncStorage.removeItem('earthity_save');
+}, []);
+
   function saveAvatar(a: string) {
     setAvatar(a);
     setPickingAvatar(false);

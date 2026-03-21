@@ -13,9 +13,9 @@ const ACHIEVEMENTS: Record<string, any>[] = [
   { id: 'home_10', title: { ru: 'Мастер дома', de: 'Heimmeister', uk: 'Майстер дому', ar: 'سيد المنزل', en: 'Home Master' }, desc: { ru: '10 домашних квестов', de: '10 Heimquests', uk: '10 домашніх квестів', ar: '10 مهام منزلية', en: '10 home quests' }, emoji: '🔑', reward: 50, category: 'home', condition: (s: any) => s.homeDeeds >= 10 },
   { id: 'ahimsa_pet', title: { ru: 'Мир в доме', de: 'Frieden zuhause', uk: 'Мир у домі', ar: 'السلام في المنزل', en: 'Home Peace' }, desc: { ru: 'Не накричать на питомца 3 раза', de: '3x nicht auf Haustier schreien', uk: 'Не кричати на улюбленця 3 рази', ar: 'عدم الصراخ على الحيوان 3 مرات', en: 'Be kind to pet 3 times' }, emoji: '🐾', reward: 40, category: 'ahimsa', condition: (s: any) => s.petDeeds >= 3 },
   { id: 'ahimsa_level', title: { ru: 'Путь ахимсы', de: 'Pfad der Ahimsa', uk: 'Шлях ахімси', ar: 'طريق الأهيمسا', en: 'Path of Ahimsa' }, desc: { ru: 'Достичь уровня Хранитель', de: 'Hüter-Level erreichen', uk: 'Досягти рівня Хранитель', ar: 'الوصول لمستوى الحارس', en: 'Reach Guardian level' }, emoji: '☯', reward: 100, category: 'ahimsa', condition: (s: any) => s.xp >= 150 },
-  { id: 'legend', title: { ru: 'Легенда Earthity', de: 'Earthity-Legende', uk: 'Легенда Earthity', ar: 'أسطورة Earthity', en: 'Earthity Legend' }, desc: { ru: '100 добрых дел', de: '100 gute Taten', uk: '100 добрих справ', ar: '100 عمل جيد', en: '100 good deeds' }, emoji: '⭐', reward: 500, category: 'legend', condition: (s: any) => s.deeds >= 100 },
-  { id: 'universal', title: { ru: 'Универсал', de: 'Allrounder', uk: 'Універсал', ar: 'متعدد المهارات', en: 'All-Rounder' }, desc: { ru: 'Квесты всех категорий', de: 'Alle Quest-Kategorien', uk: 'Квести всіх категорій', ar: 'جميع فئات المهام', en: 'All quest categories' }, emoji: '🌍', reward: 300, category: 'legend', condition: (s: any) => s.outdoorDeeds >= 1 && s.homeDeeds >= 1 },
-  { id: 'dobri_2500', title: { ru: 'Добрый', de: 'Gütig', uk: 'Добрий', ar: 'طيب', en: 'Kind Soul' }, desc: { ru: 'Заработать 2500 добриков', de: '2500 Dobriki verdienen', uk: 'Заробити 2500 добриків', ar: 'كسب 2500 دوبريكي', en: 'Earn 2500 dobriki' }, emoji: '💛', reward: 100, category: 'legend', condition: (s: any) => s.totalDobri >= 2500 },
+  { id: 'legend', title: { ru: 'Легенда Earthity', de: 'Earthity-Legende', uk: 'Легенда Earthity', ar: 'أسطورة Earthity', en: 'Earthity Legend' }, desc: { ru: '100 добрых дел', de: '100 gute Taten', uk: '100 добрих справ', ar: '100 عمل جيد', en: '100 good deeds' }, emoji: '⭐', reward: 500, category: 'legend', givesTitle: true, condition: (s: any) => s.deeds >= 100 },
+  { id: 'universal', title: { ru: 'Универсал', de: 'Allrounder', uk: 'Універсал', ar: 'متعدد المهارات', en: 'All-Rounder' }, desc: { ru: 'Квесты всех категорий', de: 'Alle Quest-Kategorien', uk: 'Квести всіх категорій', ar: 'جميع فئات المهام', en: 'All quest categories' }, emoji: '🌍', reward: 300, category: 'legend', givesTitle: true, condition: (s: any) => s.outdoorDeeds >= 1 && s.homeDeeds >= 1 },
+  { id: 'dobri_2500', title: { ru: 'Добрый', de: 'Gütig', uk: 'Добрий', ar: 'طيب', en: 'Kind Soul' }, desc: { ru: 'Заработать 2500 добриков', de: '2500 Dobriki verdienen', uk: 'Заробити 2500 добриків', ar: 'كسب 2500 دوبريكي', en: 'Earn 2500 dobriki' }, emoji: '💛', reward: 100, category: 'legend', givesTitle: true, condition: (s: any) => s.totalDobri >= 2500 },
 ];
 
 export default function AchievementsScreen() {
@@ -25,6 +25,7 @@ export default function AchievementsScreen() {
   const [selectedTitle, setSelectedTitle] = useState('');
 
  function selectTitle(a: any) {
+  if (!a.givesTitle) return;
     setSelectedTitle(a.id);
     AsyncStorage.getItem('earthity_save').then(data => {
       const save = data ? JSON.parse(data) : {};
@@ -54,7 +55,29 @@ export default function AchievementsScreen() {
               homeDeeds: save.homeDeeds ?? 0,
               petDeeds: save.petDeeds ?? 0,
               totalDobri: save.totalDobri ?? 0,
+              testDeeds: save.testDeeds ?? 0,
           });
+          // Auto-unlock titles
+            const newTitles = ACHIEVEMENTS.filter(a => 
+              a.givesTitle && a.condition({
+                deeds: save.deeds ?? 0,
+                xp: save.xp ?? 0,
+                outdoorDeeds: save.outdoorDeeds ?? 0,
+                homeDeeds: save.homeDeeds ?? 0,
+                petDeeds: save.petDeeds ?? 0,
+                totalDobri: save.totalDobri ?? 0,
+                testDeeds: save.testDeeds ?? 0,
+              })
+            ).map(a => ({ id: a.id, title: a.title, emoji: a.emoji }));
+
+            const existing = save.unlockedTitles || [];
+            const merged = [...existing];
+            newTitles.forEach((t: any) => {
+              if (!merged.find((e: any) => e.id === t.id)) merged.push(t);
+            });
+            if (true) {
+              AsyncStorage.setItem('earthity_save', JSON.stringify({ ...save, unlockedTitles: merged }));
+            }
             if (save.lang) setLang(save.lang);
             setUnlocked(save.unlocked ?? []);
           } catch (e) { }
@@ -62,7 +85,7 @@ export default function AchievementsScreen() {
       });
     };
     load();
-    const interval = setInterval(load, 3000);
+    const interval = setInterval(load, 1000);
     return () => clearInterval(interval);
     
   }, []);
@@ -100,6 +123,9 @@ export default function AchievementsScreen() {
                   <View style={styles.cardReward}>
                     <Text style={styles.rewardNum}>+{a.reward}</Text>
                     <Text style={styles.rewardLabel}>🪙</Text>
+                    {a.givesTitle && (
+                      <Text style={styles.titleTag}>👑 Звание</Text>
+                    )}
                   </View>
                   {done && selectedTitle === a.id && (
   <Text style={{ fontSize: 11, color: '#e8c97a', marginLeft: 8 }}>✓</Text>
@@ -142,5 +168,6 @@ const styles = StyleSheet.create({
   rewardNum: { fontSize: 16, fontWeight: '600', color: '#e8c97a' },
   rewardLabel: { fontSize: 12 },
   motto: { marginTop: 16, padding: 16, borderRadius: 12, backgroundColor: '#0f1a0f', borderWidth: 1, borderColor: '#1e3020', alignItems: 'center' },
+  titleTag: { fontSize: 10, color: '#e8c97a', letterSpacing: 0.5, marginTop: 4, textAlign: 'center' },
   mottoText: { fontSize: 13, color: 'rgba(255,255,255,0.3)', letterSpacing: 0.5 },
 });
