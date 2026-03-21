@@ -1,11 +1,22 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Audio } from 'expo-av';
 import * as Location from 'expo-location';
+import * as Notifications from 'expo-notifications';
 import { useEffect, useRef, useState } from 'react';
 import { SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
 import Animated, { useAnimatedStyle, useSharedValue, withSequence, withSpring, withTiming } from 'react-native-reanimated';
 import Onboarding from './onboarding';
+
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+    shouldShowBanner: true,
+    shouldShowList: true,
+  }),
+});
 
 
 
@@ -152,6 +163,26 @@ export default function HomeScreen() {
   const [outdoorDeeds, setOutdoorDeeds] = useState(0);
   const [homeDeeds, setHomeDeeds] = useState(0);
   const [petDeeds, setPetDeeds] = useState(0);
+
+  useEffect(() => {
+    Notifications.requestPermissionsAsync();
+  }, []);
+
+  async function scheduleCreatureNotification(creature: any) {
+    await Notifications.scheduleNotificationAsync({
+      content: {
+        title: '🌍 Earthity',
+        body: creature.type === 'flower' 
+          ? `${creature.emoji} Цветок хочет пить! Полей его.`
+          : `${creature.emoji} ${creature.label['ru']} голоден! Покорми его.`,
+        sound: true,
+      },
+      trigger: {
+        type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
+        seconds: creature.cooldown / 1000,
+      },
+    });
+  }
 
   useEffect(() => {
     Location.requestForegroundPermissionsAsync().then(({ status }) => {
@@ -358,6 +389,7 @@ export default function HomeScreen() {
           setCreatureCooldowns(p => ({ ...p, [selectedCreature.id]: Date.now() }));
           animateReward();
           playRewardSound();
+          scheduleCreatureNotification(selectedCreature);
           setSelectedCreature(null);
           return 0;
         }
