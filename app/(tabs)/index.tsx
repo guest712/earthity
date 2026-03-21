@@ -205,9 +205,7 @@ export default function HomeScreen() {
     prevLevelKey.current = currentKey;
   }, [xp]);
 
-  if (!onboarded) {
-    return <Onboarding onDone={() => setOnboarded(true)} />;
-  }
+
 
   if (!lang) {
     return (
@@ -227,6 +225,10 @@ export default function HomeScreen() {
         </View>
       </SafeAreaView>
     );
+  }
+  
+  if (!onboarded) {
+    return <Onboarding onDone={() => setOnboarded(true)} lang={lang} />;
   }
 
   const t = LANGS[lang];

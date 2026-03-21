@@ -50,9 +50,6 @@ export default function ProfileScreen() {
     });
   }, []);
 
-  useEffect(() => {
-  AsyncStorage.removeItem('earthity_save');
-}, []);
 
   function saveAvatar(a: string) {
     setAvatar(a);
@@ -128,6 +125,10 @@ export default function ProfileScreen() {
           </Text>
           <Text style={styles.titleSelectorArrow}>{pickingTitle ? '▲' : '▼'}</Text>
         </TouchableOpacity>
+        
+      <TouchableOpacity onPress={() => AsyncStorage.setItem('earthity_save', JSON.stringify({ onboarded: false }))}>
+  <Text style={{ color: 'red', fontSize: 12 }}>Reset onboarding</Text>
+</TouchableOpacity>
 
         {/* Name */}
         <Text style={styles.name}>{name}</Text>
