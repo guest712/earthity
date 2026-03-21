@@ -24,6 +24,8 @@ export default function ProfileScreen() {
   const [titleEmoji, setTitleEmoji] = useState('');
   const [pickingAvatar, setPickingAvatar] = useState(false);
   const [lang, setLang] = useState('ru');
+  const [pickingTitle, setPickingTitle] = useState(false);
+  const [availableTitles, setAvailableTitles] = useState<any[]>([]);
 
   useEffect(() => {
     AsyncStorage.getItem('earthity_save').then(data => {
@@ -38,6 +40,11 @@ export default function ProfileScreen() {
           if (save.selectedTitleName) setTitle(save.selectedTitleName);
           if (save.selectedTitleEmoji) setTitleEmoji(save.selectedTitleEmoji);
           if (save.lang) setLang(save.lang);
+          if (save.unlockedTitles) {
+  setAvailableTitles(save.unlockedTitles);
+} else if (save.selectedTitleName && save.selectedTitleEmoji) {
+  setAvailableTitles([{ id: 'existing', title: save.selectedTitleName, emoji: save.selectedTitleEmoji }]);
+}
         } catch (e) { }
       }
     });
@@ -80,6 +87,43 @@ export default function ProfileScreen() {
             ))}
           </View>
         )}
+
+        {/* Title selector */}
+        {pickingTitle && (
+          <View style={styles.titleGrid}>
+            {availableTitles.length === 0 ? (
+              <Text style={styles.noTitles}>Выполняйте достижения чтобы открыть звания</Text>
+            ) : (
+              availableTitles.map((t: any, i: number) => (
+                <TouchableOpacity
+                  key={i}
+                  style={[styles.titleOption, titleEmoji === t.emoji && styles.titleOptionActive]}
+                  onPress={() => {
+                    setTitle(t.title);
+                    setTitleEmoji(t.emoji);
+                    setPickingTitle(false);
+                    AsyncStorage.getItem('earthity_save').then(data => {
+                      const save = data ? JSON.parse(data) : {};
+                      AsyncStorage.setItem('earthity_save', JSON.stringify({ ...save, selectedTitleName: t.title, selectedTitleEmoji: t.emoji }));
+                    });
+                  }}
+                >
+                  <Text style={styles.titleOptionEmoji}>{t.emoji}</Text>
+                  <Text style={styles.titleOptionName}>{typeof t.title === 'object' ? t.title[lang] || t.title.en : t.title}</Text>
+                </TouchableOpacity>
+              ))
+            )}
+          </View>
+        )}
+        <TouchableOpacity 
+          style={styles.titleSelector}
+          onPress={() => setPickingTitle(!pickingTitle)}
+        >
+          <Text style={styles.titleSelectorText}>
+            {titleEmoji ? `${titleEmoji} ${typeof title === 'object' ? title[lang] || title.en : title}` : '+ Выбрать звание'}
+          </Text>
+          <Text style={styles.titleSelectorArrow}>{pickingTitle ? '▲' : '▼'}</Text>
+        </TouchableOpacity>
 
         {/* Name */}
         <Text style={styles.name}>{name}</Text>
@@ -172,4 +216,13 @@ const styles = StyleSheet.create({
   mottoSymbol: { fontSize: 28, marginBottom: 10 },
   mottoText: { fontSize: 13, color: 'rgba(255,255,255,0.4)', textAlign: 'center', lineHeight: 20, letterSpacing: 0.5 },
   titleBadge: { fontSize: 13, color: '#e8c97a', marginTop: 4, letterSpacing: 0.5 },
+  titleSelector: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%', padding: 14, borderRadius: 12, borderWidth: 1, borderColor: '#1e3020', backgroundColor: '#0f1a0f', marginTop: 8 },
+  titleSelectorText: { fontSize: 14, color: '#e8c97a' },
+  titleSelectorArrow: { fontSize: 12, color: 'rgba(255,255,255,0.3)' },
+  titleGrid: { width: '100%', backgroundColor: '#0f1a0f', borderRadius: 12, padding: 12, borderWidth: 1, borderColor: '#1e3020', marginTop: 4, gap: 6 },
+  titleOption: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 10, borderRadius: 8, borderWidth: 1, borderColor: '#1e3020' },
+  titleOptionActive: { borderColor: '#e8c97a', backgroundColor: '#1a1205' },
+  titleOptionEmoji: { fontSize: 22 },
+  titleOptionName: { fontSize: 14, color: '#e8e4d8' },
+  noTitles: { fontSize: 13, color: 'rgba(255,255,255,0.3)', textAlign: 'center', padding: 10 },
 });

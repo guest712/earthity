@@ -24,11 +24,20 @@ export default function AchievementsScreen() {
   const [lang, setLang] = useState('ru');
   const [selectedTitle, setSelectedTitle] = useState('');
 
-  function selectTitle(a: any) {
+ function selectTitle(a: any) {
     setSelectedTitle(a.id);
     AsyncStorage.getItem('earthity_save').then(data => {
       const save = data ? JSON.parse(data) : {};
-      AsyncStorage.setItem('earthity_save', JSON.stringify({ ...save, selectedTitle: a.id, selectedTitleEmoji: a.emoji, selectedTitleName: a.title }));
+      const existing = save.unlockedTitles || [];
+      const alreadyExists = existing.find((t: any) => t.id === a.id);
+      const updated = alreadyExists ? existing : [...existing, { id: a.id, title: a.title, emoji: a.emoji }];
+      AsyncStorage.setItem('earthity_save', JSON.stringify({ 
+        ...save, 
+        selectedTitle: a.id, 
+        selectedTitleEmoji: a.emoji, 
+        selectedTitleName: a.title,
+        unlockedTitles: updated,
+      }));
     });
   }
 
