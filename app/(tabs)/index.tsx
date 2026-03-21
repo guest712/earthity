@@ -124,6 +124,7 @@ export default function HomeScreen() {
   const [lastOpenDate, setLastOpenDate] = useState('');
   const [location, setLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const [testDeeds, setTestDeeds] = useState(0);
+  const [showConfirmBtn, setShowConfirmBtn] = useState(false);
   const playRewardSound = async () => {
     const { sound } = await Audio.Sound.createAsync(
       require('../../assets/sounds/reward.mp3')
@@ -284,6 +285,7 @@ export default function HomeScreen() {
     playRewardSound();
     setSelected(null);
     setConfirming(false);
+    setShowConfirmBtn(false);
   }
 
   return (
@@ -399,7 +401,10 @@ export default function HomeScreen() {
             ))}
           </View>
           {!confirming ? (
-            <TouchableOpacity style={styles.btnComplete} onPress={() => setConfirming(true)}>
+            <TouchableOpacity 
+              style={[styles.btnComplete, !showConfirmBtn && { opacity: 0.3 }]} 
+              onPress={() => showConfirmBtn && setConfirming(true)}
+            >
               <Text style={styles.btnCompleteText}>{t.done}</Text>
             </TouchableOpacity>
           ) : (
@@ -463,7 +468,7 @@ export default function HomeScreen() {
                 }}
                 title={q.title[lang]}
                 description={`+${q.reward} ${t.reward}`}
-                onPress={() => setSelected(q)}
+                onPress={() => { setSelected(q); setShowConfirmBtn(false); setTimeout(() => setShowConfirmBtn(true), 1500); }}
               />
             ))}
             {CREATURES.map((c, i) => (
@@ -499,7 +504,7 @@ export default function HomeScreen() {
               {filteredQuests.length > 0 ? `${filteredQuests.length} ${t.nearby}` : t.clean}
             </Text>
             {filteredQuests.map(q => (
-              <TouchableOpacity key={q.id} style={styles.card} onPress={() => setSelected(q)}>
+              <TouchableOpacity key={q.id} style={styles.card} onPress={() => { setSelected(q); setShowConfirmBtn(false); setTimeout(() => setShowConfirmBtn(true), 1500); }}>
                 <Text style={styles.cardEmoji}>{q.emoji}</Text>
                 <View style={styles.cardBody}>
                   <Text style={styles.cardTitle}>{q.title[lang]}</Text>
