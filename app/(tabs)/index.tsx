@@ -5,7 +5,7 @@ import * as Notifications from 'expo-notifications';
 import { useEffect, useRef, useState } from 'react';
 import { Image, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
-import Animated, { useAnimatedStyle, useSharedValue, withSequence, withSpring, withTiming } from 'react-native-reanimated';
+import Animated, { Easing, useAnimatedStyle, useSharedValue, withRepeat, withSequence, withSpring, withTiming } from 'react-native-reanimated';
 import Onboarding from './onboarding';
 
 Notifications.setNotificationHandler({
@@ -151,6 +151,7 @@ export default function HomeScreen() {
     opacity: rewardOpacity.value,
   }));
 
+
   function animateReward() {
     rewardOpacity.value = withTiming(1, { duration: 100 });
     rewardScale.value = withSequence(
@@ -164,6 +165,20 @@ export default function HomeScreen() {
   const [outdoorDeeds, setOutdoorDeeds] = useState(0);
   const [homeDeeds, setHomeDeeds] = useState(0);
   const [petDeeds, setPetDeeds] = useState(0);
+const breathScale = useSharedValue(1);
+
+useEffect(() => {
+  breathScale.value = withRepeat(
+    withTiming(1.08, { duration: 1500, easing: Easing.inOut(Easing.ease) }),
+    -1,
+    true
+  );
+}, []);
+
+const breathStyle = useAnimatedStyle(() => ({
+  transform: [{ scale: breathScale.value }],
+}));
+
 
   useEffect(() => {
     Notifications.requestPermissionsAsync();
@@ -353,19 +368,18 @@ export default function HomeScreen() {
         </View>
       </View>
       {selectedCreature && (
-        <View style={styles.creaturePopup}>
-          {selectedCreature.id === 'animal1' ? (
-  <Image
-    source={require('../../assets/images/creatures/fox.png')}
-    style={{ width: 100, height: 100 }}
-    resizeMode="contain"
-  />
-) : (
-  <Image 
-  source={selectedCreature.image} 
-  style={{ width: 80, height: 80, marginBottom: 8 }} 
-/>
-)}
+  <View style={styles.creaturePopup}>
+    {selectedCreature.id === 'animal1' ? (
+      <Animated.Image
+        source={selectedCreature.image}
+        style={[{ width: 80, height: 80, marginBottom: 8 }, breathStyle]}
+      />
+    ) : (
+      <Image
+        source={selectedCreature.image}
+        style={{ width: 80, height: 80, marginBottom: 8 }}
+      />
+    )}
           <Text style={styles.creatureName}>{selectedCreature.label[lang]}</Text>
           <Text style={styles.creatureReward}>+{selectedCreature.reward} 🪙</Text>
           {isFeeding && (
