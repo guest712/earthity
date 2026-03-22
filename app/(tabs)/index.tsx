@@ -3,7 +3,7 @@ import { Audio } from 'expo-av';
 import * as Location from 'expo-location';
 import * as Notifications from 'expo-notifications';
 import { useEffect, useRef, useState } from 'react';
-import { SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
 import Animated, { useAnimatedStyle, useSharedValue, withSequence, withSpring, withTiming } from 'react-native-reanimated';
 import Onboarding from './onboarding';
@@ -92,11 +92,12 @@ const QUESTS = [
   { id: 11, title: { ru: 'Тест', de: 'Test', uk: 'Тест', ar: 'اختبار', en: 'Test' }, desc: { ru: 'Тестовый квест', de: 'Testquest', uk: 'Тестовий квест', ar: 'مهمة اختبار', en: 'Test quest' }, reward: 1, emoji: '🧪', type: 'test' },
 ];
 const CREATURES = [
-  { id: 'flower1', type: 'flower', emoji: '🌸', label: { ru: 'Цветок', de: 'Blume', uk: 'Квітка', ar: 'زهرة', en: 'Flower' }, reward: 8, cooldown: 3600000 },
-  { id: 'flower2', type: 'flower', emoji: '🌻', label: { ru: 'Подсолнух', de: 'Sonnenblume', uk: 'Соняшник', ar: 'عباد الشمس', en: 'Sunflower' }, reward: 8, cooldown: 3600000 },
-  { id: 'animal1', type: 'animal', emoji: '🦊', label: { ru: 'Лисёнок', de: 'Fuchs', uk: 'Лисеня', ar: 'ثعلب', en: 'Fox' }, reward: 15, cooldown: 7200000 },
-  { id: 'animal2', type: 'animal', emoji: '🐢', label: { ru: 'Черепашка', de: 'Schildkröte', uk: 'Черепашка', ar: 'سلحفاة', en: 'Turtle' }, reward: 12, cooldown: 7200000 },
-  { id: 'animal3', type: 'animal', emoji: '🦋', label: { ru: 'Бабочка', de: 'Schmetterling', uk: 'Метелик', ar: 'فراشة', en: 'Butterfly' }, reward: 10, cooldown: 7200000 },
+  { id: 'flower1', type: 'flower', image: require('../../assets/images/creatures/flower_1.png'), label: { ru: 'Цветок', de: 'Blume', uk: 'Квітка', ar: 'زهرة', en: 'Flower' }, reward: 8, cooldown: 3600000 },
+  { id: 'flower2', type: 'flower', image: require('../../assets/images/creatures/sunflower.png'), label: { ru: 'Подсолнух', de: 'Sonnenblume', uk: 'Соняшник', ar: 'عباد الشمس', en: 'Sunflower' }, reward: 8, cooldown: 3600000 },
+  { id: 'animal1', type: 'animal', image: require('../../assets/images/creatures/fox.png'), label: { ru: 'Лисёнок', de: 'Fuchs', uk: 'Лисеня', ar: 'ثعلب', en: 'Fox' }, reward: 15, cooldown: 7200000 },
+  { id: 'animal2', type: 'animal', image: require('../../assets/images/creatures/turtoise.png'), label: { ru: 'Черепашка', de: 'Schildkröte', uk: 'Черепашка', ar: 'سلحفاة', en: 'Turtle' }, reward: 12, cooldown: 7200000 },
+  { id: 'animal3', type: 'animal', image: require('../../assets/images/creatures/butterfly.png'), label: { ru: 'Бабочка', de: 'Schmetterling', uk: 'Метелик', ar: 'فراشة', en: 'Butterfly' }, reward: 10, cooldown: 7200000 },
+  { id: 'codariocalyx', type: 'flower', image: require('../../assets/images/creatures/desmodium.png'), label: { ru: 'Кодариокаликс', de: 'Codariocalyx', uk: 'Кодаріокалікс', ar: 'كوداريوكاليكس', en: 'Codariocalyx' }, reward: 12, cooldown: 5400000 },
 ];
 
 const MINDFUL_PHRASES = [
@@ -353,7 +354,18 @@ export default function HomeScreen() {
       </View>
       {selectedCreature && (
         <View style={styles.creaturePopup}>
-          <Text style={styles.creatureEmoji}>{selectedCreature.emoji}</Text>
+          {selectedCreature.id === 'animal1' ? (
+  <Image
+    source={require('../../assets/images/creatures/fox.png')}
+    style={{ width: 100, height: 100 }}
+    resizeMode="contain"
+  />
+) : (
+  <Image 
+  source={selectedCreature.image} 
+  style={{ width: 80, height: 80, marginBottom: 8 }} 
+/>
+)}
           <Text style={styles.creatureName}>{selectedCreature.label[lang]}</Text>
           <Text style={styles.creatureReward}>+{selectedCreature.reward} 🪙</Text>
           {isFeeding && (
@@ -504,19 +516,31 @@ export default function HomeScreen() {
               />
             ))}
             {CREATURES.map((c, i) => (
-              <Marker
-                key={c.id}
-                coordinate={{
-  latitude: (location?.latitude ?? 52.52) + (Math.sin(i * 1.5) * 0.003),
-  longitude: (location?.longitude ?? 13.405) + (Math.cos(i * 1.5) * 0.003),
-}}
-                onPress={() => setSelectedCreature(c)}
-              >
-                <View style={{ alignItems: 'center' }}>
-                  <Text style={{ fontSize: 28 }}>{c.emoji}</Text>
-                </View>
-              </Marker>
-            ))}
+  <Marker
+    key={c.id}
+    coordinate={{
+      latitude: (location?.latitude ?? 52.52) + (Math.sin(i * 1.5) * 0.003),
+      longitude: (location?.longitude ?? 13.405) + (Math.cos(i * 1.5) * 0.003),
+    }}
+    onPress={() => setSelectedCreature(c)}
+  >
+    <View style={{ alignItems: 'center' }}>
+      {c.id === 'animal1' ? (
+        <Image
+          source={require('../../assets/images/creatures/fox.png')}
+          style={{ width: 40, height: 40 }}
+          resizeMode="contain"
+        />
+      ) : (
+        <Image 
+  source={c.image} 
+  style={{ width: 40, height: 40 }} 
+/>
+      )}
+    </View>
+  </Marker>
+))}
+            ))
           </MapView>
           <View style={styles.catRow}>
             {(['all', 'outdoor', 'home'] as const).map(cat => (
