@@ -1,3 +1,5 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useEffect, useState } from 'react';
 import { FlatList, SafeAreaView, StyleSheet, Text, View } from 'react-native';
 
 const ITEMS = [
@@ -7,6 +9,21 @@ const ITEMS = [
 const TOTAL_SLOTS = 12;
 
 export default function InventoryScreen() {
+    const [waterLevel, setWaterLevel] = useState(10);
+
+useEffect(() => {
+  const load = () => {
+    AsyncStorage.getItem('earthity_save').then(data => {
+      if (data) {
+        const save = JSON.parse(data);
+        if (save.waterLevel !== undefined) setWaterLevel(save.waterLevel);
+      }
+    });
+  };
+  load();
+  const interval = setInterval(load, 2000);
+  return () => clearInterval(interval);
+}, []);
   const slots = Array.from({ length: TOTAL_SLOTS }, (_, i) => {
     return ITEMS[i] || null;
   });
@@ -22,16 +39,22 @@ export default function InventoryScreen() {
         keyExtractor={(_, index) => index.toString()}
         contentContainerStyle={styles.grid}
         renderItem={({ item }) => (
-          <View style={[styles.slot, item && styles.slotFilled]}>
-            {item ? (
-              <>
-                <Text style={styles.itemEmoji}>{item.emoji}</Text>
-                <Text style={styles.itemName}>{item.name.ru}</Text>
-                <Text style={styles.itemQty}>x{item.quantity}</Text>
-              </>
-            ) : null}
-          </View>
+  <View style={[styles.slot, item && styles.slotFilled]}>
+    {item ? (
+      <>
+        <Text style={styles.itemEmoji}>{item.emoji}</Text>
+        <Text style={styles.itemName}>{item.name.ru}</Text>
+        {item.id === 'watering_can' ? (
+          <Text style={{ fontSize: 11, color: '#7ab8f5' }}>
+            💧 {waterLevel} / 10
+          </Text>
+        ) : (
+          <Text style={styles.itemQty}>x{item.quantity}</Text>
         )}
+      </>
+    ) : null}
+  </View>
+)}
       />
     </SafeAreaView>
   );
