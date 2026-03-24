@@ -43,7 +43,14 @@ export default function TabLayout() {
           title: 'Awards',
           tabBarIcon: ({ color }) => <Text style={{ fontSize: 22 }}>🏆</Text>,
         }}
-      />
+        />
+        <Tabs.Screen
+  name="inventory"
+  options={{
+    title: 'Inventory',
+    tabBarIcon: ({ color }) => <Text style={{ fontSize: 22 }}>🎒</Text>,
+  }}
+/>
       <Tabs.Screen
         name="stats"
         options={{
