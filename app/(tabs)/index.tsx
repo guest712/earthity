@@ -136,6 +136,7 @@ export default function HomeScreen() {
   const [lastOpenDate, setLastOpenDate] = useState('');
   const [location, setLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const [testDeeds, setTestDeeds] = useState(0);
+  const [waterLevel, setWaterLevel] = useState(10);
   const [showConfirmBtn, setShowConfirmBtn] = useState(false);
   const playRewardSound = async () => {
     const { sound } = await Audio.Sound.createAsync(
@@ -225,6 +226,7 @@ const breathStyle = useAnimatedStyle(() => ({
           if (save.homeDeeds) setHomeDeeds(save.homeDeeds);
           if (save.petDeeds) setPetDeeds(save.petDeeds);
           if (save.testDeeds) setTestDeeds(save.testDeeds)
+          if (save.waterLevel !== undefined) setWaterLevel(save.waterLevel);
          setTotalDobri(save.totalDobri || save.dobri || 0);
          const today = new Date().toDateString();
           const last = save.lastOpenDate || '';
@@ -249,9 +251,9 @@ const breathStyle = useAnimatedStyle(() => ({
  useEffect(() => {
     AsyncStorage.getItem('earthity_save').then(existing => {
       const old = existing ? JSON.parse(existing) : {};
-      AsyncStorage.setItem('earthity_save', JSON.stringify({ ...old, dobri, xp, deeds, completed, lang, onboarded, outdoorDeeds, homeDeeds, petDeeds, totalDobri, streak, lastOpenDate, testDeeds }));
+      AsyncStorage.setItem('earthity_save', JSON.stringify({ ...old, dobri, xp, deeds, completed, lang, onboarded, outdoorDeeds, homeDeeds, petDeeds, totalDobri, streak, lastOpenDate, testDeeds, waterLevel }));
     });
-  }, [dobri, xp, deeds, completed, lang, onboarded, outdoorDeeds, homeDeeds, petDeeds, totalDobri, streak, lastOpenDate, testDeeds]);
+  }, [dobri, xp, deeds, completed, lang, onboarded, outdoorDeeds, homeDeeds, petDeeds, totalDobri, streak, lastOpenDate, testDeeds, waterLevel]);
 
   useEffect(() => {
     const currentKey = getLevelKey(xp);
@@ -382,6 +384,11 @@ const breathStyle = useAnimatedStyle(() => ({
     )}
           <Text style={styles.creatureName}>{selectedCreature.label[lang]}</Text>
           <Text style={styles.creatureReward}>+{selectedCreature.reward} 🪙</Text>
+          {selectedCreature.type === 'flower' && (
+  <Text style={{ fontSize: 13, color: '#7ab8f5', marginBottom: 8 }}>
+    💧 Вода: {waterLevel} / 10
+  </Text>
+)}
           {isFeeding && (
             <View style={styles.feedingBarBg}>
               <View style={[styles.feedingBarFill, { width: `${feedingProgress}%` }]} />
@@ -402,6 +409,12 @@ const breathStyle = useAnimatedStyle(() => ({
     alert('Подойдите ближе! 📍');
     return;
   }
+
+  if (selectedCreature.type === 'flower' && waterLevel <= 0) {
+    alert('Лейка пуста! Найдите родник 💧');
+    return;
+  }
+
   if (now - lastTime > selectedCreature.cooldown && !isFeeding) {
     setIsFeeding(true);
     setFeedingProgress(0);
@@ -413,6 +426,9 @@ const breathStyle = useAnimatedStyle(() => ({
           setDobri(p => p + selectedCreature.reward);
           setXp(p => p + selectedCreature.reward);
           setCreatureCooldowns(p => ({ ...p, [selectedCreature.id]: Date.now() }));
+          if (selectedCreature.type === 'flower') {
+            setWaterLevel(p => Math.max(0, p - 1));
+          }
           animateReward();
           playRewardSound();
           scheduleCreatureNotification(selectedCreature);
