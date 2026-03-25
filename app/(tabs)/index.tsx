@@ -100,6 +100,12 @@ const CREATURES = [
   { id: 'codariocalyx', type: 'flower', image: require('../../assets/images/creatures/desmodium.png'), label: { ru: 'Кодариокаликс', de: 'Codariocalyx', uk: 'Кодаріокалікс', ar: 'كوداريوكاليكس', en: 'Codariocalyx' }, reward: 12, cooldown: 5400000 },
 ];
 
+const WATER_SPOTS = [
+  { id: 'water1' },
+  { id: 'water2' },
+  { id: 'water3' },
+];
+
 const MINDFUL_PHRASES = [
   { ru: 'Этот мусор лежит здесь потому что кто-то решил что земля — его мусорное ведро. Ты думаешь иначе.', en: 'This litter is here because someone decided the earth is their bin. You think differently.', de: 'Dieser Müll liegt hier, weil jemand die Erde als seine Mülltonne betrachtet. Du denkst anders.', uk: 'Це сміття тут тому що хтось вирішив що земля — його смітник. Ти думаєш інакше.', ar: 'هذه القمامة هنا لأن شخصاً ما قرر أن الأرض سلة مهملاته. أنت تفكر بشكل مختلف.' },
   { ru: 'Каждый убранный предмет — это существо которое не отравится. Спасибо тебе.', en: 'Every piece of litter removed is a creature that won\'t be poisoned. Thank you.', de: 'Jedes aufgehobene Stück ist ein Lebewesen das nicht vergiftet wird. Danke.', uk: 'Кожен прибраний предмет — це істота яка не отруїться. Дякую тобі.', ar: 'كل قطعة تُزال هي مخلوق لن يُسمَّم. شكراً لك.' },
@@ -567,6 +573,27 @@ const breathStyle = useAnimatedStyle(() => ({
   style={{ width: 40, height: 40 }} 
 />
       )}
+    </View>
+  </Marker>
+))}
+{WATER_SPOTS.map((spot, i) => (
+  <Marker
+    key={spot.id}
+    coordinate={{
+      latitude: (location?.latitude ?? 52.52) + (Math.cos(i * 2.1) * 0.005),
+      longitude: (location?.longitude ?? 13.405) + (Math.sin(i * 2.1) * 0.005),
+    }}
+    onPress={() => {
+      if (waterLevel >= 10) {
+        alert('Лейка уже полна! 💧');
+        return;
+      }
+      setWaterLevel(10);
+      alert('Лейка пополнена! 💧');
+    }}
+  >
+    <View style={{ alignItems: 'center' }}>
+      <Text style={{ fontSize: 28 }}>💧</Text>
     </View>
   </Marker>
 ))}
