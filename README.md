@@ -2,6 +2,8 @@
 
 Earthity is a mobile application that connects digital actions with real-world impact.
 
+The goal of the project is to encourage users to care about the environment by combining in-app interactions with real-life actions. Non-violence system.
+
 ## Features
 
 - Map-based interaction
@@ -28,10 +30,14 @@ In development
 
 This project is being developed as a learning and experimental product focused on real interaction systems and user engagement.
 
-## GitHub
+## Author
 
-Code available here:
-https://github.com/guest712/earthity
+Developed independently as a personal project focused on practical learning and system design.
+
+## Screenshots
+
+(soon)
+
 
 ## Run locally
 
