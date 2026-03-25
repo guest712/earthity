@@ -1,8 +1,11 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect, useState } from 'react';
-import { SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
-const AVATARS = ['🌱', '🌿', '🌳', '🦊', '🐺', '🦅', '🐬', '🦋', '🐢', '🌍', '☯', '⭐'];
+const AVATARS = [
+  { id: 'lumi', image: require('../../assets/images/avatars/lumi.png') },
+  { id: 'earthity', image: require('../../assets/images/avatars/earthity.png') },
+];
 
 const LEVEL_NAMES: Record<string, string> = {
   level1: '🌱 Росток',
@@ -18,7 +21,8 @@ export default function ProfileScreen() {
   const [dobri, setDobri] = useState(0);
   const [xp, setXp] = useState(0);
   const [deeds, setDeeds] = useState(0);
-  const [avatar, setAvatar] = useState('🌱');
+  const [avatar, setAvatar] = useState('lumi');
+  const currentAvatar = AVATARS.find(a => a.id === avatar) ?? AVATARS[0];
   const [name, setName] = useState('Earthling');
   const [title, setTitle] = useState<any>('');
   const [titleEmoji, setTitleEmoji] = useState('');
@@ -51,14 +55,14 @@ export default function ProfileScreen() {
   }, []);
 
 
-  function saveAvatar(a: string) {
-    setAvatar(a);
-    setPickingAvatar(false);
-    AsyncStorage.getItem('earthity_save').then(data => {
-      const save = data ? JSON.parse(data) : {};
-      AsyncStorage.setItem('earthity_save', JSON.stringify({ ...save, avatar: a }));
-    });
-  }
+  function saveAvatar(id: string) {
+  setAvatar(id);
+  setPickingAvatar(false);
+  AsyncStorage.getItem('earthity_save').then(data => {
+    const save = data ? JSON.parse(data) : {};
+    AsyncStorage.setItem('earthity_save', JSON.stringify({ ...save, avatar: id }));
+  });
+}
 
   const levelKey = getLevelKey(xp);
   const levelName = LEVEL_NAMES[levelKey];
@@ -71,23 +75,30 @@ export default function ProfileScreen() {
       <ScrollView contentContainerStyle={styles.scroll}>
 
         {/* Avatar */}
-        <View style={styles.avatarSection}>
-          <TouchableOpacity style={styles.avatarCircle} onPress={() => setPickingAvatar(!pickingAvatar)}>
-            <Text style={styles.avatarEmoji}>{avatar}</Text>
-          </TouchableOpacity>
-          <Text style={styles.avatarHint}>Нажмите чтобы сменить</Text>
-        </View>
+       <View style={styles.avatarSection}>
+  <TouchableOpacity
+    style={styles.avatarCircle}
+    onPress={() => setPickingAvatar(!pickingAvatar)}
+  >
+    <Image source={currentAvatar.image} style={styles.avatarImage} />
+  </TouchableOpacity>
+  <Text style={styles.avatarHint}>Нажмите чтобы сменить</Text>
+</View>
 
         {/* Avatar picker */}
         {pickingAvatar && (
-          <View style={styles.avatarGrid}>
-            {AVATARS.map(a => (
-              <TouchableOpacity key={a} style={[styles.avatarOption, avatar === a && styles.avatarOptionActive]} onPress={() => saveAvatar(a)}>
-                <Text style={styles.avatarOptionEmoji}>{a}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        )}
+  <View style={styles.avatarGrid}>
+    {AVATARS.map(a => (
+      <TouchableOpacity
+        key={a.id}
+        style={[styles.avatarOption, avatar === a.id && styles.avatarOptionActive]}
+        onPress={() => saveAvatar(a.id)}
+      >
+        <Image source={a.image} style={styles.avatarOptionImage} />
+      </TouchableOpacity>
+    ))}
+  </View>
+)}
 
         {/* Title selector */}
         {pickingTitle && (
@@ -230,4 +241,17 @@ const styles = StyleSheet.create({
   titleOptionEmoji: { fontSize: 22 },
   titleOptionName: { fontSize: 14, color: '#e8e4d8' },
   noTitles: { fontSize: 13, color: 'rgba(255,255,255,0.3)', textAlign: 'center', padding: 10 },
+  avatarImage: {
+  width: 84,
+  height: 84,
+  borderRadius: 42,
+  resizeMode: 'cover',
+},
+
+avatarOptionImage: {
+  width: 40,
+  height: 40,
+  borderRadius: 10,
+  resizeMode: 'cover',
+},
 });
