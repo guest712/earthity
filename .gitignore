@@ -3,10 +3,14 @@
 # dependencies
 node_modules/
 
+# VS_Code
+.vscode/
+
 # Expo
 .expo/
 dist/
 web-build/
+/build
 expo-env.d.ts
 
 # Native
