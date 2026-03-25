@@ -1,9 +1,9 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect, useState } from 'react';
-import { FlatList, SafeAreaView, StyleSheet, Text, View } from 'react-native';
+import { FlatList, Image, SafeAreaView, StyleSheet, Text, View } from 'react-native';
 
 const ITEMS = [
-  { id: 'watering_can', name: { ru: 'Лейка', en: 'Watering Can' }, emoji: '🪣', quantity: 1 },
+  { id: 'watering_can', name: { ru: 'Лейка', en: 'Watering Can' }, image: require('../../assets/images/items/watercan.png'), quantity: 1 },
 ];
 
 const TOTAL_SLOTS = 12;
@@ -42,7 +42,7 @@ useEffect(() => {
   <View style={[styles.slot, item && styles.slotFilled]}>
     {item ? (
       <>
-        <Text style={styles.itemEmoji}>{item.emoji}</Text>
+        <Image source={item.image} style={{ width: 70, height: 70 }} resizeMode="contain" />
         <Text style={styles.itemName}>{item.name.ru}</Text>
         {item.id === 'watering_can' ? (
           <Text style={{ fontSize: 11, color: '#7ab8f5' }}>
