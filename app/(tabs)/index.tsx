@@ -597,7 +597,7 @@ const breathStyle = useAnimatedStyle(() => ({
     </View>
   </Marker>
 ))}
-            ))
+            
           </MapView>
           <View style={styles.catRow}>
             {(['all', 'outdoor', 'home'] as const).map(cat => (

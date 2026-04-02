@@ -5,6 +5,7 @@ import { Image, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, Vi
 const AVATARS = [
   { id: 'lumi', image: require('../../assets/images/avatars/lumi.png') },
   { id: 'earthity', image: require('../../assets/images/avatars/earthity.png') },
+  { id: 'loone', image: require('../../assets/images/avatars/loone.png')}
 ];
 
 const LEVEL_NAMES: Record<string, string> = {
@@ -30,6 +31,7 @@ export default function ProfileScreen() {
   const [lang, setLang] = useState('ru');
   const [pickingTitle, setPickingTitle] = useState(false);
   const [availableTitles, setAvailableTitles] = useState<any[]>([]);
+  const [activeTab, setActiveTab] = useState<'profile' | 'stats' | 'settings'>('profile');
 
   useEffect(() => {
     AsyncStorage.getItem('earthity_save').then(data => {
@@ -72,8 +74,32 @@ export default function ProfileScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scroll}>
-
+      
+        <View style={styles.tabRow}>
+  <TouchableOpacity
+    style={[styles.tabBtn, activeTab === 'profile' && styles.tabBtnActive]}
+    onPress={() => setActiveTab('profile')}
+  >
+    <Text style={[styles.tabText, activeTab === 'profile' && styles.tabTextActive]}>👤 Профиль</Text>
+  </TouchableOpacity>
+  <TouchableOpacity
+    style={[styles.tabBtn, activeTab === 'stats' && styles.tabBtnActive]}
+    onPress={() => setActiveTab('stats')}
+  >
+    <Text style={[styles.tabText, activeTab === 'stats' && styles.tabTextActive]}>📊 Статистика</Text>
+  </TouchableOpacity>
+  <TouchableOpacity
+    style={[styles.tabBtn, activeTab === 'settings' && styles.tabBtnActive]}
+    onPress={() => setActiveTab('settings')}
+  >
+    <Text style={[styles.tabText, activeTab === 'settings' && styles.tabTextActive]}>⚙️ Настройки</Text>
+  </TouchableOpacity>
+</View>
+<ScrollView contentContainerStyle={styles.scroll}>
+    {activeTab === 'profile' && (
+  <>
+    {/* весь текущий контент профиля */}
+  
         {/* Avatar */}
        <View style={styles.avatarSection}>
   <TouchableOpacity
@@ -177,13 +203,34 @@ export default function ProfileScreen() {
           <Text style={styles.mottoSymbol}>☯</Text>
           <Text style={styles.mottoText}>Ахимса — ненасилие{'\n'}по отношению ко всему живому</Text>
         </View>
+        {activeTab === 'stats' && (
+  <View style={{ alignItems: 'center', marginTop: 40 }}>
+    <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 14 }}>📊 Статистика</Text>
+  </View>
+  
+)}
 
+{activeTab === 'settings' && (
+  <View style={{ alignItems: 'center', marginTop: 40 }}>
+    <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 14 }}>⚙️ Настройки</Text>
+  </View>
+)}
+</>
+)}
       </ScrollView>
+      
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  tabRow: { flexDirection: 'row', gap: 8, paddingHorizontal: 16,
+  paddingTop: 12,
+  paddingBottom: 8, marginBottom: 20, width: '100%' },
+tabBtn: { flex: 1, paddingVertical: 8, borderRadius: 10, borderWidth: 1, borderColor: '#1e3020', alignItems: 'center' },
+tabBtnActive: { backgroundColor: '#1e3020', borderColor: '#3d8b52' },
+tabText: { fontSize: 12, color: 'rgba(255,255,255,0.4)' },
+tabTextActive: { color: '#5aad6a', fontWeight: '500' },
   container: { flex: 1, backgroundColor: '#0c120c' },
   scroll: { padding: 24, alignItems: 'center' },
   avatarSection: { alignItems: 'center', marginTop: 20, marginBottom: 8 },
