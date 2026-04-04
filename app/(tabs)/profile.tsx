@@ -224,9 +224,14 @@ export default function ProfileScreen() {
 }
 
 const styles = StyleSheet.create({
-  tabRow: { flexDirection: 'row', gap: 8, paddingHorizontal: 16,
-  paddingTop: 12,
-  paddingBottom: 8, marginBottom: 20, width: '100%' },
+  tabRow: { 
+  flexDirection: 'row', 
+  gap: 8, 
+  paddingHorizontal: 16,
+  paddingTop: 48,
+  paddingBottom: 8,
+  width: '100%' 
+},
 tabBtn: { flex: 1, paddingVertical: 8, borderRadius: 10, borderWidth: 1, borderColor: '#1e3020', alignItems: 'center' },
 tabBtnActive: { backgroundColor: '#1e3020', borderColor: '#3d8b52' },
 tabText: { fontSize: 12, color: 'rgba(255,255,255,0.4)' },
