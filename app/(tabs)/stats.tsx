@@ -1,4 +1,4 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { loadSave } from '../../lib/storage';
 import { useEffect, useState } from 'react';
 import { SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
 
@@ -10,26 +10,25 @@ export default function StatsScreen() {
   });
 
   useEffect(() => {
-    const load = () => {
-      AsyncStorage.getItem('earthity_save').then(data => {
-        if (data) {
-          try {
-            const save = JSON.parse(data);
-            setStats({
-              deeds: save.deeds ?? 0,
-              xp: save.xp ?? 0,
-              dobri: save.dobri ?? 0,
-              totalDobri: save.totalDobri ?? 0,
-              outdoorDeeds: save.outdoorDeeds ?? 0,
-              homeDeeds: save.homeDeeds ?? 0,
-              petDeeds: save.petDeeds ?? 0,
-              streak: save.streak ?? 0,
-              lang: save.lang ?? 'en',
-            });
-          } catch (e) {}
-        }
-      });
-    };
+    const load = async () => {
+  try {
+    const save = await loadSave();
+
+    setStats({
+      deeds: save.deeds,
+      xp: save.xp,
+      dobri: save.dobri,
+      totalDobri: save.totalDobri,
+      outdoorDeeds: save.outdoorDeeds,
+      homeDeeds: save.homeDeeds,
+      petDeeds: save.petDeeds,
+      streak: save.streak,
+      lang: save.lang,
+    });
+  } catch (e) {
+    console.warn('Stats load error', e);
+  }
+};
     load();
     const interval = setInterval(load, 2000);
     return () => clearInterval(interval);

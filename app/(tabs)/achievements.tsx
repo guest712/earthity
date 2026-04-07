@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { loadSave } from '../../lib/storage';
 import { useEffect, useState } from 'react';
 import { SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
@@ -20,7 +21,6 @@ const ACHIEVEMENTS: Record<string, any>[] = [
 
 export default function AchievementsScreen() {
   const [stats, setStats] = useState<any>({ deeds: 0, xp: 0, outdoorDeeds: 0, homeDeeds: 0, petDeeds: 0, totalDobri: 0 });
-  const [unlocked, setUnlocked] = useState<string[]>([]);
   const [lang, setLang] = useState('ru');
   const [selectedTitle, setSelectedTitle] = useState('');
 
@@ -43,47 +43,51 @@ export default function AchievementsScreen() {
   }
 
   useEffect(() => {
-    const load = () => {
-      AsyncStorage.getItem('earthity_save').then(data => {
-        if (data) {
-          try {
-            const save = JSON.parse(data);
-            setStats({
-              deeds: save.deeds ?? 0,
-              xp: save.xp ?? 0,
-              outdoorDeeds: save.outdoorDeeds ?? 0,
-              homeDeeds: save.homeDeeds ?? 0,
-              petDeeds: save.petDeeds ?? 0,
-              totalDobri: save.totalDobri ?? 0,
-              testDeeds: save.testDeeds ?? 0,
-          });
-          // Auto-unlock titles
-            const newTitles = ACHIEVEMENTS.filter(a => 
-              a.givesTitle && a.condition({
-                deeds: save.deeds ?? 0,
-                xp: save.xp ?? 0,
-                outdoorDeeds: save.outdoorDeeds ?? 0,
-                homeDeeds: save.homeDeeds ?? 0,
-                petDeeds: save.petDeeds ?? 0,
-                totalDobri: save.totalDobri ?? 0,
-                testDeeds: save.testDeeds ?? 0,
-              })
-            ).map(a => ({ id: a.id, title: a.title, emoji: a.emoji }));
+   const load = async () => {
+  try {
+    const save = await loadSave();
 
-            const existing = save.unlockedTitles || [];
-            const merged = [...existing];
-            newTitles.forEach((t: any) => {
-              if (!merged.find((e: any) => e.id === t.id)) merged.push(t);
-            });
-            if (true) {
-              AsyncStorage.setItem('earthity_save', JSON.stringify({ ...save, unlockedTitles: merged }));
-            }
-            if (save.lang) setLang(save.lang);
-            setUnlocked(save.unlocked ?? []);
-          } catch (e) { }
-        }
-      });
-    };
+    setStats({
+      deeds: save.deeds,
+      xp: save.xp,
+      outdoorDeeds: save.outdoorDeeds,
+      homeDeeds: save.homeDeeds,
+      petDeeds: save.petDeeds,
+      totalDobri: save.totalDobri,
+      testDeeds: save.testDeeds,
+    });
+
+    const newTitles = ACHIEVEMENTS.filter(a =>
+      a.givesTitle &&
+      a.condition({
+        deeds: save.deeds,
+        xp: save.xp,
+        outdoorDeeds: save.outdoorDeeds,
+        homeDeeds: save.homeDeeds,
+        petDeeds: save.petDeeds,
+        totalDobri: save.totalDobri,
+        testDeeds: save.testDeeds,
+      })
+    ).map(a => ({ id: a.id, title: a.title, emoji: a.emoji }));
+
+    const existing = save.unlockedTitles || [];
+    const merged = [...existing];
+
+    newTitles.forEach((t: any) => {
+      if (!merged.find((e: any) => e.id === t.id)) merged.push(t);
+    });
+
+    await AsyncStorage.setItem(
+      'earthity_save',
+      JSON.stringify({ ...save, unlockedTitles: merged })
+    );
+
+    setLang(save.lang);
+    
+  } catch (e) {
+    console.warn('Achievements load error', e);
+  }
+};
     load();
     const interval = setInterval(load, 1000);
     return () => clearInterval(interval);

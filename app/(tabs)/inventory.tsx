@@ -1,4 +1,4 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { loadSave } from '../../lib/storage';
 import { useEffect, useState } from 'react';
 import { FlatList, Image, SafeAreaView, StyleSheet, Text, View } from 'react-native';
 
@@ -12,14 +12,14 @@ export default function InventoryScreen() {
     const [waterLevel, setWaterLevel] = useState(10);
 
 useEffect(() => {
-  const load = () => {
-    AsyncStorage.getItem('earthity_save').then(data => {
-      if (data) {
-        const save = JSON.parse(data);
-        if (save.waterLevel !== undefined) setWaterLevel(save.waterLevel);
-      }
-    });
-  };
+  const load = async () => {
+  try {
+    const save = await loadSave();
+    setWaterLevel(save.waterLevel);
+  } catch (e) {
+    console.warn('Inventory load error', e);
+  }
+};
   load();
   const interval = setInterval(load, 2000);
   return () => clearInterval(interval);
