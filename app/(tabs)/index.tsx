@@ -1,4 +1,4 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { loadSave, updateSave } from '../../lib/storage';
 import { Audio } from 'expo-av';
 import * as Location from 'expo-location';
 import * as Notifications from 'expo-notifications';
@@ -7,6 +7,10 @@ import { Image, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, Vi
 import MapView, { Marker } from 'react-native-maps';
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withRepeat, withSequence, withSpring, withTiming } from 'react-native-reanimated';
 import Onboarding from './onboarding';
+import HomeHeader from '../../components/HomeHeader';
+import CategoryTabs from '../../components/CategoryTabs';
+import QuestDetailCard from '../../components/QuestDetailCard';
+import CreaturePopup from '../../components/CreaturePopup';
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -205,7 +209,7 @@ const breathStyle = useAnimatedStyle(() => ({
         title: '🌍 Earthity',
         body: creature.type === 'flower' 
           ? `🌸 ${creature.label['ru']} хочет пить! Полей его.`
-    : `🐾 ${creature.label['ru']} голоден! Покорми его.`,
+          : `🐾 ${creature.label['ru']} голоден! Покорми его.`,
         sound: true,
       },
       trigger: {
@@ -225,49 +229,81 @@ const breathStyle = useAnimatedStyle(() => ({
     });
   }, []);
 
-  useEffect(() => {
-    AsyncStorage.getItem('earthity_save').then(data => {
-      if (data) {
-        try {
-          const save = JSON.parse(data);
-          if (save.dobri) setDobri(save.dobri);
-          if (save.xp) setXp(save.xp);
-          if (save.deeds) setDeeds(save.deeds);
-          if (save.completed) setCompleted(save.completed);
-          if (save.lang) setLang(save.lang as 'ru' | 'de' | 'uk' | 'ar' | 'en');
-          if (save.onboarded) setOnboarded(true);
-          if (save.outdoorDeeds) setOutdoorDeeds(save.outdoorDeeds);
-          if (save.homeDeeds) setHomeDeeds(save.homeDeeds);
-          if (save.petDeeds) setPetDeeds(save.petDeeds);
-          if (save.testDeeds) setTestDeeds(save.testDeeds)
-          if (save.waterLevel !== undefined) setWaterLevel(save.waterLevel);
-         setTotalDobri(save.totalDobri || save.dobri || 0);
-         const today = new Date().toDateString();
-          const last = save.lastOpenDate || '';
-          const yesterday = new Date(Date.now() - 86400000).toDateString();
-          
-          if (last === today) {
-            setStreak(save.streak || 0);
-          } else if (last === yesterday) {
-            const newStreak = (save.streak || 0) + 1;
-            setStreak(newStreak);
-          } else if (last !== '') {
-            setStreak(1);
-          } else {
-            setStreak(1);
-          }
-          setLastOpenDate(today);
-        } catch (e) { }
-      }
-    });
-  }, []);
-
  useEffect(() => {
-    AsyncStorage.getItem('earthity_save').then(existing => {
-      const old = existing ? JSON.parse(existing) : {};
-      AsyncStorage.setItem('earthity_save', JSON.stringify({ ...old, dobri, xp, deeds, completed, lang, onboarded, outdoorDeeds, homeDeeds, petDeeds, totalDobri, streak, lastOpenDate, testDeeds, waterLevel }));
-    });
-  }, [dobri, xp, deeds, completed, lang, onboarded, outdoorDeeds, homeDeeds, petDeeds, totalDobri, streak, lastOpenDate, testDeeds, waterLevel]);
+  const loadHome = async () => {
+    try {
+      const save = await loadSave();
+
+      setDobri(save.dobri);
+      setXp(save.xp);
+      setDeeds(save.deeds);
+      setCompleted(save.completed);
+      setLang(save.lang);
+      setOnboarded(save.onboarded);
+      setOutdoorDeeds(save.outdoorDeeds);
+      setHomeDeeds(save.homeDeeds);
+      setPetDeeds(save.petDeeds);
+      setTestDeeds(save.testDeeds);
+      setWaterLevel(save.waterLevel);
+      setTotalDobri(save.totalDobri || save.dobri || 0);
+
+      const today = new Date().toDateString();
+      const last = save.lastOpenDate || '';
+      const yesterday = new Date(Date.now() - 86400000).toDateString();
+
+      if (last === today) {
+        setStreak(save.streak || 0);
+      } else if (last === yesterday) {
+        setStreak((save.streak || 0) + 1);
+      } else {
+        setStreak(1);
+      }
+
+      setLastOpenDate(today);
+    } catch (e) {
+      console.warn('Home load error', e);
+    }
+  };
+
+  loadHome();
+}, []);
+ useEffect(() => {
+  if (!lang) return;
+
+  updateSave({
+    dobri,
+    xp,
+    deeds,
+    completed,
+    lang,
+    onboarded,
+    outdoorDeeds,
+    homeDeeds,
+    petDeeds,
+    totalDobri,
+    streak,
+    lastOpenDate,
+    testDeeds,
+    waterLevel,
+  }).catch((e) => {
+    console.warn('Home save error', e);
+  });
+}, [
+  dobri,
+  xp,
+  deeds,
+  completed,
+  lang,
+  onboarded,
+  outdoorDeeds,
+  homeDeeds,
+  petDeeds,
+  totalDobri,
+  streak,
+  lastOpenDate,
+  testDeeds,
+  waterLevel,
+]);
 
   useEffect(() => {
     const currentKey = getLevelKey(xp);
@@ -314,6 +350,16 @@ const breathStyle = useAnimatedStyle(() => ({
   const nextXp = xp < 50 ? 50 : xp < 150 ? 150 : xp < 300 ? 300 : 500;
   const prevXp = xp < 50 ? 0 : xp < 150 ? 50 : xp < 300 ? 150 : 300;
   const xpProgress = Math.min(100, ((xp - prevXp) / (nextXp - prevXp)) * 100);
+  const selectedSteps =
+  selected?.type === 'trash'
+    ? t.steps_trash
+    : selected?.type === 'home'
+    ? t.steps_home
+    : t.steps_help;
+
+const mindfulPhrase = selected
+  ? MINDFUL_PHRASES[selected.id % MINDFUL_PHRASES.length][lang]
+  : '';
 
   function getDistance(lat1: number, lon1: number, lat2: number, lon2: number) {
     const R = 6371000;
@@ -353,167 +399,103 @@ const breathStyle = useAnimatedStyle(() => ({
 
   return (
     <SafeAreaView style={styles.container}>
-      <View>
-        <View style={styles.header}>
-          <View>
-            <Text style={styles.brand}>Earth<Text style={styles.brandGreen}>ity</Text></Text>
-            <Text style={styles.level}>{level}</Text>
-            {streak > 0 && (
-              <Text style={styles.streak}>🔥 {streak} дней</Text>
-            )}
-          </View>
-          <View style={styles.stats}>
-            <View style={styles.stat}>
-             <Animated.View style={rewardAnimStyle}>
-                <Text style={styles.statNum}>{dobri}</Text>
-                <Text style={styles.statLabel}>{t.dobriki}</Text>
-              </Animated.View>
-            </View>
-            <View style={styles.stat}>
-              <Text style={styles.statNumGreen}>{deeds}</Text>
-              <Text style={styles.statLabel}>{t.deeds}</Text>
-            </View>
-            <TouchableOpacity onPress={() => setLang(null)} style={{ padding: 10 }}>
-              <Text style={{ fontSize: 22 }}>{FLAG[lang]}</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-        <View style={styles.xpBarBg}>
-          <View style={[styles.xpBarFill, { width: `${xpProgress}%` }]} />
-          <Text style={styles.xpLabel}>{xp} / {nextXp} XP</Text>
-        </View>
-      </View>
+        <HomeHeader
+  level={level}
+  streak={streak}
+  dobri={dobri}
+  deeds={deeds}
+  xp={xp}
+  nextXp={nextXp}
+  xpProgress={xpProgress}
+  dobrikiLabel={t.dobriki}
+  deedsLabel={t.deeds}
+  flag={FLAG[lang]}
+  onPressLanguage={() => setLang(null)}
+  rewardAnimStyle={rewardAnimStyle}
+/>
       {selectedCreature && (
-  <View style={styles.creaturePopup}>
-    {selectedCreature.id === 'animal1' ? (
-      <Animated.Image
-        source={selectedCreature.image}
-        style={[{ width: 80, height: 80, marginBottom: 8 }, breathStyle]}
-      />
-    ) : (
-      <Image
-        source={selectedCreature.image}
-        style={{ width: 80, height: 80, marginBottom: 8 }}
-      />
-    )}
-          <Text style={styles.creatureName}>{selectedCreature.label[lang]}</Text>
-          <Text style={styles.creatureReward}>+{selectedCreature.reward} 🪙</Text>
-          {selectedCreature.type === 'flower' && (
-  <Text style={{ fontSize: 13, color: '#7ab8f5', marginBottom: 8 }}>
-    💧 Вода: {waterLevel} / 10
-  </Text>
+  <CreaturePopup
+    selectedCreature={selectedCreature}
+    lang={lang}
+    waterLevel={waterLevel}
+    isFeeding={isFeeding}
+    feedingProgress={feedingProgress}
+    breathStyle={breathStyle}
+    creatureCooldowns={creatureCooldowns}
+    onPressAction={() => {
+      const now = Date.now();
+      const lastTime = creatureCooldowns[selectedCreature.id] || 0;
+      const creatureIndex = CREATURES.findIndex(c => c.id === selectedCreature.id);
+      const creatureLat = (location?.latitude ?? 52.52) + (Math.sin(creatureIndex * 1.5) * 0.003);
+      const creatureLon = (location?.longitude ?? 13.405) + (Math.cos(creatureIndex * 1.5) * 0.003);
+      const dist = location ? getDistance(location.latitude, location.longitude, creatureLat, creatureLon) : 999;
+
+      if (dist > 300) {
+        alert('Подойдите ближе! 📍');
+        return;
+      }
+
+      if (selectedCreature.type === 'flower' && waterLevel <= 0) {
+        alert('Лейка пуста! Найдите родник 💧');
+        return;
+      }
+
+      if (now - lastTime > selectedCreature.cooldown && !isFeeding) {
+        setIsFeeding(true);
+        setFeedingProgress(0);
+        const interval = setInterval(() => {
+          setFeedingProgress(prev => {
+            if (prev >= 100) {
+              clearInterval(interval);
+              setIsFeeding(false);
+              setDobri(p => p + selectedCreature.reward);
+              setXp(p => p + selectedCreature.reward);
+              setCreatureCooldowns(p => ({ ...p, [selectedCreature.id]: Date.now() }));
+              if (selectedCreature.type === 'flower') {
+                setWaterLevel(p => Math.max(0, p - 1));
+              }
+              animateReward();
+              playRewardSound();
+              scheduleCreatureNotification(selectedCreature);
+              setSelectedCreature(null);
+              return 0;
+            }
+            return prev + 5;
+          });
+        }, 100);
+      } else if (!isFeeding) {
+        setSelectedCreature(null);
+      }
+    }}
+    onClose={() => setSelectedCreature(null)}
+  />
 )}
-          {isFeeding && (
-            <View style={styles.feedingBarBg}>
-              <View style={[styles.feedingBarFill, { width: `${feedingProgress}%` }]} />
-            </View>
-          )}
-          <TouchableOpacity
-          
-            style={styles.creatureBtn}
-           onPress={() => {
-  const now = Date.now();
-  const lastTime = creatureCooldowns[selectedCreature.id] || 0;
-  const creatureIndex = CREATURES.findIndex(c => c.id === selectedCreature.id);
-  const creatureLat = (location?.latitude ?? 52.52) + (Math.sin(creatureIndex * 1.5) * 0.003);
-  const creatureLon = (location?.longitude ?? 13.405) + (Math.cos(creatureIndex * 1.5) * 0.003);
-  const dist = location ? getDistance(location.latitude, location.longitude, creatureLat, creatureLon) : 999;
-  
-  if (dist > 300) {
-    alert('Подойдите ближе! 📍');
-    return;
-  }
-
-  if (selectedCreature.type === 'flower' && waterLevel <= 0) {
-    alert('Лейка пуста! Найдите родник 💧');
-    return;
-  }
-
-  if (now - lastTime > selectedCreature.cooldown && !isFeeding) {
-    setIsFeeding(true);
-    setFeedingProgress(0);
-    const interval = setInterval(() => {
-      setFeedingProgress(prev => {
-        if (prev >= 100) {
-          clearInterval(interval);
-          setIsFeeding(false);
-          setDobri(p => p + selectedCreature.reward);
-          setXp(p => p + selectedCreature.reward);
-          setCreatureCooldowns(p => ({ ...p, [selectedCreature.id]: Date.now() }));
-          if (selectedCreature.type === 'flower') {
-            setWaterLevel(p => Math.max(0, p - 1));
-          }
-          animateReward();
-          playRewardSound();
-          scheduleCreatureNotification(selectedCreature);
-          setSelectedCreature(null);
-          return 0;
-        }
-        return prev + 5;
-      });
-    }, 100);
-  } else if (!isFeeding) {
-    setSelectedCreature(null);
-  }
-}}
-          >
-            <Text style={styles.creatureBtnText}>
-              {creatureCooldowns[selectedCreature.id] && Date.now() - creatureCooldowns[selectedCreature.id] < selectedCreature.cooldown
-                ? '⏳ Подождите'
-                : selectedCreature.type === 'flower' ? '💧 Полить' : '🍃 Покормить'}
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => setSelectedCreature(null)} style={{ padding: 10 }}>
-            <Text style={{ color: 'rgba(255,255,255,0.3)', fontSize: 13 }}>✕ Закрыть</Text>
-          </TouchableOpacity>
-        </View>
-      )}
+      
       {selected ? (
-        <View style={styles.detail}>
-          <Text style={styles.detailEmoji}>{selected.emoji}</Text>
-          <Text style={styles.detailTitle}>{selected.title[lang]}</Text>
-          <Text style={styles.detailDesc}>{selected.desc[lang]}</Text>
-          <Text style={styles.detailReward}>🪙 +{selected.reward} {t.reward}</Text>
-          <View style={styles.mindfulBox}>
-            <Text style={styles.mindfulText}>
-              {MINDFUL_PHRASES[selected.id % MINDFUL_PHRASES.length][lang]}
-            </Text>
-          </View>
-          <View style={styles.steps}>
-            <Text style={styles.stepsLabel}>{t.how}</Text>
-            {(selected.type === 'trash' ? t.steps_trash : selected.type === 'home' ? t.steps_home : t.steps_help).map((step: string, i: number) => (
-              <View key={i} style={styles.stepRow}>
-                <View style={styles.stepNum}><Text style={styles.stepNumText}>{i + 1}</Text></View>
-                <Text style={styles.stepText}>{step}</Text>
-              </View>
-            ))}
-          </View>
-          {!confirming ? (
-            <TouchableOpacity 
-              style={[styles.btnComplete, !showConfirmBtn && { opacity: 0.3 }]} 
-              onPress={() => showConfirmBtn && setConfirming(true)}
-            >
-              <Text style={styles.btnCompleteText}>{t.done}</Text>
-            </TouchableOpacity>
-          ) : (
-            <View style={styles.confirmRow}>
-              <Text style={styles.confirmText}>{t.confirm}</Text>
-              <View style={styles.confirmBtns}>
-                <TouchableOpacity style={styles.btnNo} onPress={() => setConfirming(false)}>
-                  <Text style={styles.btnNoText}>{t.no}</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.btnYes} onPress={complete}>
-                  <Text style={styles.btnYesText}>{t.yes}</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          )}
-          <TouchableOpacity style={styles.btnBack} onPress={() => { setSelected(null); setConfirming(false); }}>
-            <Text style={styles.btnBackText}>{t.back}</Text>
-          </TouchableOpacity>
-        </View>
-      ) : (
-        <>
+  <QuestDetailCard
+    selected={selected}
+    lang={lang}
+    rewardLabel={t.reward}
+    howLabel={t.how}
+    doneLabel={t.done}
+    backLabel={t.back}
+    confirmLabel={t.confirm}
+    yesLabel={t.yes}
+    noLabel={t.no}
+    mindfulPhrase={mindfulPhrase}
+    steps={selectedSteps}
+    confirming={confirming}
+    showConfirmBtn={showConfirmBtn}
+    onPressComplete={() => showConfirmBtn && setConfirming(true)}
+    onPressConfirmYes={complete}
+    onPressConfirmNo={() => setConfirming(false)}
+    onPressBack={() => {
+      setSelected(null);
+      setConfirming(false);
+    }}
+  />
+) : (
+  <>
            <View style={styles.mapControls}>
             <TouchableOpacity
               style={[styles.mapBtn, mapMode === 'standard' && styles.mapBtnActive]}
@@ -607,19 +589,15 @@ const breathStyle = useAnimatedStyle(() => ({
 ))}
             
           </MapView>
-          <View style={styles.catRow}>
-            {(['all', 'outdoor', 'home'] as const).map(cat => (
-              <TouchableOpacity
-                key={cat}
-                style={[styles.catBtn, category === cat && styles.catBtnActive]}
-                onPress={() => setCategory(cat)}
-              >
-                <Text style={[styles.catText, category === cat && styles.catTextActive]}>
-                 {cat === 'all' ? `🌍 ${t.catAll}` : cat === 'outdoor' ? `🗺️ ${t.catOutdoor}` : `🏠 ${t.catHome}`}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+          <CategoryTabs
+  category={category}
+  onChange={setCategory}
+  labels={{
+    all: t.catAll,
+    outdoor: t.catOutdoor,
+    home: t.catHome,
+  }}
+/>
           <ScrollView style={styles.list}>
             <Text style={styles.sectionTitle}>
               {filteredQuests.length > 0 ? `${filteredQuests.length} ${t.nearby}` : t.clean}
