@@ -87,8 +87,6 @@ if (hasChanges) {
   await updateSave({ unlockedTitles: merged });
 }
 
-      await updateSave({ unlockedTitles: merged });
-
       setLang(save.lang);
       setSelectedTitle(save.selectedTitle || '');
     } catch (e) {

@@ -3,6 +3,7 @@ import { Audio } from 'expo-av';
 import { QUESTS, CREATURES, WATER_SPOTS, MINDFUL_PHRASES } from  '../../lib/game-data';
 import { LANGS, FLAG } from '../../lib/i18n';
 import { getDistance, getLevelKey, getLevelName } from '../../lib/game-utils';
+import { applyQuestCompletion, getCreaturePosition, isWithinInteractionDistance, } from '../../lib/game-engine';
 import * as Location from 'expo-location';
 import * as Notifications from 'expo-notifications';
 import { useEffect, useRef, useState } from 'react';
@@ -24,8 +25,6 @@ Notifications.setNotificationHandler({
     shouldShowList: true,
   }),
 });
-
-
 
 
 
@@ -269,30 +268,38 @@ const mindfulPhrase = selected
 
 
  function complete() {
-    if (!selected) return;
-    const type = selected.type;
-    const id = selected.id;
-    setCompleted(prev => [...prev, id]);
-    setDobri(prev => prev + selected.reward);
-    setTotalDobri(prev => prev + selected.reward);
-    const streakBonus = streak >= 20 ? 1.15 : streak >= 10 ? 1.10 : streak >= 5 ? 1.05 : 1;
-    setXp(prev => prev + Math.round(selected.reward * streakBonus));
-    setDeeds(prev => prev + 1);
-    if (type === 'trash' || type === 'help') {
-      setOutdoorDeeds(prev => prev + 1);
-    } else if (type === 'home') {
-      setHomeDeeds(prev => prev + 1);
-      if (id === 9) setPetDeeds(prev => prev + 1);
-    }
-    if (selected.type === 'test') {
-      setTestDeeds(prev => prev + 1);
-    }
-    animateReward();
-    playRewardSound();
-    setSelected(null);
-    setConfirming(false);
-    setShowConfirmBtn(false);
-  }
+  if (!selected) return;
+
+  const result = applyQuestCompletion({
+    selected,
+    completed,
+    dobri,
+    totalDobri,
+    xp,
+    deeds,
+    outdoorDeeds,
+    homeDeeds,
+    petDeeds,
+    testDeeds,
+    streak,
+  });
+
+  setCompleted(result.completed);
+  setDobri(result.dobri);
+  setTotalDobri(result.totalDobri);
+  setXp(result.xp);
+  setDeeds(result.deeds);
+  setOutdoorDeeds(result.outdoorDeeds);
+  setHomeDeeds(result.homeDeeds);
+  setPetDeeds(result.petDeeds);
+  setTestDeeds(result.testDeeds);
+
+  animateReward();
+  playRewardSound();
+  setSelected(null);
+  setConfirming(false);
+  setShowConfirmBtn(false);
+}
 
   return (
     <SafeAreaView style={styles.container}>
@@ -323,14 +330,24 @@ const mindfulPhrase = selected
       const now = Date.now();
       const lastTime = creatureCooldowns[selectedCreature.id] || 0;
       const creatureIndex = CREATURES.findIndex(c => c.id === selectedCreature.id);
-      const creatureLat = (location?.latitude ?? 52.52) + (Math.sin(creatureIndex * 1.5) * 0.003);
-      const creatureLon = (location?.longitude ?? 13.405) + (Math.cos(creatureIndex * 1.5) * 0.003);
-      const dist = location ? getDistance(location.latitude, location.longitude, creatureLat, creatureLon) : 999;
+const creaturePos = getCreaturePosition(
+  location?.latitude ?? 52.52,
+  location?.longitude ?? 13.405,
+  creatureIndex
+);
 
-      if (dist > 300) {
-        alert('Подойдите ближе! 📍');
-        return;
-      }
+const dist = location
+  ? getDistance(
+      location.latitude,
+      location.longitude,
+      creaturePos.latitude,
+      creaturePos.longitude
+    )
+  : 999;
+      if (!isWithinInteractionDistance(dist)) {
+  alert('Подойдите ближе! 📍');
+  return;
+}
 
       if (selectedCreature.type === 'flower' && waterLevel <= 0) {
         alert('Лейка пуста! Найдите родник 💧');
@@ -438,31 +455,37 @@ const mindfulPhrase = selected
                 onPress={() => { setSelected(q); setShowConfirmBtn(false); setTimeout(() => setShowConfirmBtn(true), 1500); }}
               />
             ))}
-            {CREATURES.map((c, i) => (
-  <Marker
-    key={c.id}
-    coordinate={{
-      latitude: (location?.latitude ?? 52.52) + (Math.sin(i * 1.5) * 0.003),
-      longitude: (location?.longitude ?? 13.405) + (Math.cos(i * 1.5) * 0.003),
-    }}
-    onPress={() => setSelectedCreature(c)}
-  >
-    <View style={{ alignItems: 'center' }}>
-      {c.id === 'animal1' ? (
-        <Image
-          source={require('../../assets/images/creatures/fox.png')}
-          style={{ width: 40, height: 40 }}
-          resizeMode="contain"
-        />
-      ) : (
-        <Image 
-  source={c.image} 
-  style={{ width: 40, height: 40 }} 
-/>
-      )}
-    </View>
-  </Marker>
-))}
+            
+ {CREATURES.map((c, i) => {
+  const pos = getCreaturePosition(
+    location?.latitude ?? 52.52,
+    location?.longitude ?? 13.405,
+    i
+  );
+
+  return (
+    <Marker
+      key={c.id}
+      coordinate={pos}
+      onPress={() => setSelectedCreature(c)}
+    >
+      <View style={{ alignItems: 'center' }}>
+        {c.id === 'animal1' ? (
+          <Image
+            source={require('../../assets/images/creatures/fox.png')}
+            style={{ width: 40, height: 40 }}
+            resizeMode="contain"
+          />
+        ) : (
+          <Image
+            source={c.image}
+            style={{ width: 40, height: 40 }}
+          />
+        )}
+      </View>
+    </Marker>
+  );
+})}
 {WATER_SPOTS.map((spot, i) => (
   <Marker
     key={spot.id}
