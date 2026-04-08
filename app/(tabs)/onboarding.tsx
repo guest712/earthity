@@ -39,7 +39,6 @@ export default function Onboarding({ onDone, lang: initialLang }: Props) {
  const [lang, setLang] = useState<'ru' | 'de' | 'uk' | 'ar' | 'en'>(
     (['ru','de','uk','ar','en'].includes(initialLang || '') ? initialLang : 'en') as any
   );
-console.log('initialLang:', initialLang, 'lang:', lang);
   useEffect(() => {
   if (initialLang) setLang(initialLang as any);
 }, [initialLang]);

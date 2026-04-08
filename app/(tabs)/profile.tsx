@@ -1,4 +1,3 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect, useState } from 'react';
 import { Image, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { loadSave, updateSave } from '../../lib/storage';
@@ -70,6 +69,7 @@ export default function ProfileScreen() {
       setName(save.name);
       setTitle(save.selectedTitleName || '');
       setTitleEmoji(save.selectedTitleEmoji || '');
+      setSelectedTitleId(save.selectedTitle || '');
       setLang(save.lang);
 
       if (save.unlockedTitles?.length) {
@@ -97,24 +97,18 @@ export default function ProfileScreen() {
   await updateSave({ avatar: id });
 }
 
-  const selectTitle = (t: any) => {
+  async function selectTitle(t: any) {
   setTitle(t.title);
+  setSelectedTitleId(t.id);
   setTitleEmoji(t.emoji);
   setPickingTitle(false);
 
-  AsyncStorage.getItem('earthity_save').then(data => {
-    const save = data ? JSON.parse(data) : {};
-    AsyncStorage.setItem(
-      'earthity_save',
-      JSON.stringify({
-        ...save,
-        selectedTitle: t.id,
-        selectedTitleName: t.title,
-        selectedTitleEmoji: t.emoji,
-      })
-    );
+  await updateSave({
+    selectedTitle: t.id,
+    selectedTitleName: t.title,
+    selectedTitleEmoji: t.emoji,
   });
-};
+}
 
   return (
     <SafeAreaView style={styles.container}>
@@ -178,7 +172,7 @@ export default function ProfileScreen() {
                   availableTitles.map((t: any, i: number) => (
                     <TouchableOpacity
                       key={i}
-                      style={[styles.titleOption, titleEmoji === selectedTitleId === t.id && styles.titleOptionActive]}
+                      style={[styles.titleOption, selectedTitleId === t.id && styles.titleOptionActive]}
                       onPress={() => selectTitle(t)}
                     >
                       <Text style={styles.titleOptionEmoji}>{t.emoji}</Text>

@@ -145,11 +145,19 @@ export default function HomeScreen() {
   const [waterLevel, setWaterLevel] = useState(10);
   const [showConfirmBtn, setShowConfirmBtn] = useState(false);
   const playRewardSound = async () => {
-    const { sound } = await Audio.Sound.createAsync(
-      require('../../assets/sounds/reward.mp3')
-    );
+  const { sound } = await Audio.Sound.createAsync(
+    require('../../assets/sounds/reward.mp3')
+  );
+  try {
     await sound.playAsync();
-  };
+  } finally {
+    sound.setOnPlaybackStatusUpdate((status) => {
+      if ('didJustFinish' in status && status.didJustFinish) {
+        sound.unloadAsync();
+      }
+    });
+  }
+};
   const prevLevelKey = useRef('');const rewardScale = useSharedValue(1);
   const rewardOpacity = useSharedValue(1);
 
@@ -196,8 +204,8 @@ const breathStyle = useAnimatedStyle(() => ({
       content: {
         title: '🌍 Earthity',
         body: creature.type === 'flower' 
-          ? `${creature.emoji} Цветок хочет пить! Полей его.`
-          : `${creature.emoji} ${creature.label['ru']} голоден! Покорми его.`,
+          ? `🌸 ${creature.label['ru']} хочет пить! Полей его.`
+    : `🐾 ${creature.label['ru']} голоден! Покорми его.`,
         sound: true,
       },
       trigger: {
