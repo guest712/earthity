@@ -97,8 +97,7 @@ if (hasChanges) {
   };
 
   load();
-  const interval = setInterval(load, 1000);
-  return () => clearInterval(interval);
+  
 }, []);
 
   const categories = [...new Set(ACHIEVEMENTS.map(a => a.category))];

@@ -21,8 +21,7 @@ useEffect(() => {
   }
 };
   load();
-  const interval = setInterval(load, 2000);
-  return () => clearInterval(interval);
+  
 }, []);
   const slots = Array.from({ length: TOTAL_SLOTS }, (_, i) => {
     return ITEMS[i] || null;

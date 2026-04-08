@@ -30,8 +30,7 @@ export default function StatsScreen() {
   }
 };
     load();
-    const interval = setInterval(load, 2000);
-    return () => clearInterval(interval);
+    
   }, []);
 
   const LABELS: Record<string, Record<string, string>> = {
