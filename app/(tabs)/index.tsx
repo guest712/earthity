@@ -1,5 +1,8 @@
 import { loadSave, updateSave } from '../../lib/storage';
 import { Audio } from 'expo-av';
+import { QUESTS, CREATURES, WATER_SPOTS, MINDFUL_PHRASES } from  '../../lib/game-data';
+import { LANGS, FLAG } from '../../lib/i18n';
+import { getDistance, getLevelKey, getLevelName } from '../../lib/game-utils';
 import * as Location from 'expo-location';
 import * as Notifications from 'expo-notifications';
 import { useEffect, useRef, useState } from 'react';
@@ -24,107 +27,9 @@ Notifications.setNotificationHandler({
 
 
 
-const LANGS: Record<string, any> = {
-  ru: {
-    level1: '🌱 Росток', level2: '🌿 Эко', level3: '🌳 Хранитель', level4: '⭐ Герой',
-    dobriki: 'добриков', deeds: 'дел', nearby: 'задачи рядом', clean: '🌍 Район чист!',
-    done: '✅  Выполнено!', back: '← Назад', reward: 'добриков',
-    confirm: 'Подтвердить?', yes: 'Да!', no: 'Отмена', how: 'Как выполнить',
-    steps_trash: ['Подойди к месту', 'Убери мусор', 'Нажми Выполнено'],
-    steps_help: ['Подойди к человеку', 'Предложи помощь', 'Нажми Выполнено'],
-    steps_home: ['Сделай дома', 'Будь осознанным', 'Нажми Выполнено'],
-    empty: 'Вы убрали всё рядом. Отличная работа!',
-    catAll: 'Все', catOutdoor: 'Улица', catHome: 'Дома',
-  },
-  de: {
-    level1: '🌱 Keimling', level2: '🌿 Öko', level3: '🌳 Hüter', level4: '⭐ Held',
-    dobriki: 'Dobriki', deeds: 'Taten', nearby: 'Aufgaben in der Nähe', clean: '🌍 Sauber!',
-    done: '✅  Erledigt!', back: '← Zurück', reward: 'Dobriki',
-    confirm: 'Bestätigen?', yes: 'Ja!', no: 'Abbrechen', how: 'So geht\'s',
-    steps_trash: ['Geh zum Ort', 'Müll aufheben', 'Erledigt drücken'],
-    steps_help: ['Geh zur Person', 'Hilfe anbieten', 'Erledigt drücken'],
-    steps_home: ['Zu Hause machen', 'Achtsam sein', 'Erledigt drücken'],
-    empty: 'Alles aufgeräumt. Gut gemacht!',
-    catAll: 'Alle', catOutdoor: 'Draußen', catHome: 'Zuhause',
-  },
-  uk: {
-    level1: '🌱 Паросток', level2: '🌿 Еко', level3: '🌳 Хранитель', level4: '⭐ Герой',
-    dobriki: 'добриків', deeds: 'справ', nearby: 'завдання поруч', clean: '🌍 Район чистий!',
-    done: '✅  Виконано!', back: '← Назад', reward: 'добриків',
-    confirm: 'Підтвердити?', yes: 'Так!', no: 'Скасувати', how: 'Як виконати',
-    steps_trash: ['Підійди до місця', 'Забери сміття', 'Натисни Виконано'],
-    steps_help: ['Підійди до людини', 'Запропонуй допомогу', 'Натисни Виконано'],
-    steps_home: ['Зроби вдома', 'Будь усвідомленим', 'Натисни Виконано'],
-    empty: 'Ви прибрали все поруч. Чудова робота!',
-    catAll: 'Всі', catOutdoor: 'Вулиця', catHome: 'Вдома',
-  },
-  ar: {
-    level1: '🌱 بذرة', level2: '🌿 أخضر', level3: '🌳 حارس', level4: '⭐ بطل',
-    dobriki: 'دوبريكي', deeds: 'أعمال', nearby: 'مهام قريبة', clean: '🌍 الحي نظيف!',
-    done: '✅  تم!', back: 'رجوع →', reward: 'دوبريكي',
-    confirm: 'تأكيد؟', yes: 'نعم!', no: 'إلغاء', how: 'كيف تنفذ',
-    steps_trash: ['اذهب إلى المكان', 'التقط القمامة', 'اضغط تم'],
-    steps_help: ['اذهب إلى الشخص', 'اعرض المساعدة', 'اضغط تم'],
-    steps_home: ['افعل ذلك في المنزل', 'كن واعياً', 'اضغط تم'],
-    empty: 'لقد نظفت كل شيء. عمل رائع!',
-    catAll: 'الكل', catOutdoor: 'خارج', catHome: 'منزل',
-  },
-  en: {
-    level1: '🌱 Sprout', level2: '🌿 Eco', level3: '🌳 Guardian', level4: '⭐ Hero',
-    dobriki: 'dobriki', deeds: 'deeds', nearby: 'quests nearby', clean: '🌍 Area is clean!',
-    done: '✅  Done!', back: '← Back', reward: 'dobriki',
-    confirm: 'Confirm?', yes: 'Yes!', no: 'Cancel', how: 'How to complete',
-    steps_trash: ['Go to the location', 'Pick up the litter', 'Press Done'],
-    steps_help: ['Go to the person', 'Offer your help', 'Press Done'],
-    steps_home: ['Do it at home', 'Be mindful', 'Press Done'],
-    empty: 'You cleaned everything nearby. Great job!',
-    catAll: 'All', catOutdoor: 'Outdoor', catHome: 'Home',
-  },
-};
 
-const QUESTS = [
-  { id: 1, title: { ru: 'Стакан у скамейки', de: 'Becher bei der Bank', uk: 'Стакан біля лавки', ar: 'كوب عند المقعد', en: 'Cup by the bench' }, desc: { ru: 'Парк рядом', de: 'Park nebenan', uk: 'Парк поруч', ar: 'الحديقة', en: 'Nearby park' }, reward: 15, emoji: '🥤', type: 'trash' },
-  { id: 2, title: { ru: 'Пакет у урны', de: 'Tüte am Mülleimer', uk: 'Пакет біля урни', ar: 'كيس عند السلة', en: 'Bag by the bin' }, desc: { ru: 'Главная улица', de: 'Hauptstraße', uk: 'Головна вулиця', ar: 'الشارع الرئيسي', en: 'Main street' }, reward: 20, emoji: '🛍', type: 'trash' },
-  { id: 3, title: { ru: 'Помочь донести сумку', de: 'Tasche tragen helfen', uk: 'Допомогти нести сумку', ar: 'مساعدة في حمل الحقيبة', en: 'Help carry bags' }, desc: { ru: 'Рядом с метро', de: 'U-Bahn-Nähe', uk: 'Біля метро', ar: 'بالقرب من المترو', en: 'Near metro' }, reward: 40, emoji: '🤝', type: 'help' },
-  { id: 4, title: { ru: 'Бутылки у входа', de: 'Flaschen am Eingang', uk: 'Пляшки біля входу', ar: 'زجاجات عند المدخل', en: 'Bottles at entrance' }, desc: { ru: 'Центральная площадь', de: 'Zentralplatz', uk: 'Центральна площа', ar: 'الساحة المركزية', en: 'Central square' }, reward: 25, emoji: '🍾', type: 'trash' },
-  { id: 5, title: { ru: 'Вынести мусор', de: 'Müll rausbringen', uk: 'Винести сміття', ar: 'إخراج القمامة', en: 'Take out trash' }, desc: { ru: 'Домашний квест', de: 'Heimquest', uk: 'Домашнє завдання', ar: 'مهمة منزلية', en: 'Home quest' }, reward: 5, emoji: '🗑️', type: 'home' },
-  { id: 6, title: { ru: 'Полить цветы', de: 'Blumen gießen', uk: 'Полити квіти', ar: 'سقي الزهور', en: 'Water the plants' }, desc: { ru: 'Домашний квест', de: 'Heimquest', uk: 'Домашнє завдання', ar: 'مهمة منزلية', en: 'Home quest' }, reward: 5, emoji: '🌸', type: 'home' },
-  { id: 7, title: { ru: 'Спортивные упражнения', de: 'Sport machen', uk: 'Спортивні вправи', ar: 'تمارين رياضية', en: 'Exercise' }, desc: { ru: 'Домашний квест', de: 'Heimquest', uk: 'Домашнє завдання', ar: 'مهمة منزلية', en: 'Home quest' }, reward: 8, emoji: '💪', type: 'home' },
-  { id: 8, title: { ru: 'Нарисовать что-нибудь', de: 'Etwas zeichnen', uk: 'Намалювати щось', ar: 'رسم شيء ما', en: 'Draw something' }, desc: { ru: 'Для творцов', de: 'Für Kreative', uk: 'Для творців', ar: 'للمبدعين', en: 'For creators' }, reward: 10, emoji: '🎨', type: 'home' },
-  { id: 9, title: { ru: 'Не накричать на питомца', de: 'Nicht auf Haustier schreien', uk: 'Не накричати на улюбленця', ar: 'عدم الصراخ على الحيوان', en: 'Be kind to your pet' }, desc: { ru: 'Ахимса дома', de: 'Ahimsa zuhause', uk: 'Ахімса вдома', ar: 'أهيمسا في المنزل', en: 'Ahimsa at home' }, reward: 15, emoji: '🐾', type: 'home' },
-  { id: 10, title: { ru: 'Отсортировать мусор', de: 'Müll sortieren', uk: 'Відсортувати сміття', ar: 'فرز القمامة', en: 'Sort the recycling' }, desc: { ru: 'Домашний квест', de: 'Heimquest', uk: 'Домашнє завдання', ar: 'مهمة منزلية', en: 'Home quest' }, reward: 8, emoji: '♻️', type: 'home' },
-  { id: 11, title: { ru: 'Тест', de: 'Test', uk: 'Тест', ar: 'اختبار', en: 'Test' }, desc: { ru: 'Тестовый квест', de: 'Testquest', uk: 'Тестовий квест', ar: 'مهمة اختبار', en: 'Test quest' }, reward: 1, emoji: '🧪', type: 'test' },
-];
-const CREATURES = [
-  { id: 'flower1', type: 'flower', image: require('../../assets/images/creatures/flower_1.png'), label: { ru: 'Цветок', de: 'Blume', uk: 'Квітка', ar: 'زهرة', en: 'Flower' }, reward: 8, cooldown: 3600000 },
-  { id: 'flower2', type: 'flower', image: require('../../assets/images/creatures/sunflower.png'), label: { ru: 'Подсолнух', de: 'Sonnenblume', uk: 'Соняшник', ar: 'عباد الشمس', en: 'Sunflower' }, reward: 8, cooldown: 3600000 },
-  { id: 'animal1', type: 'animal', image: require('../../assets/images/creatures/fox.png'), label: { ru: 'Лисёнок', de: 'Fuchs', uk: 'Лисеня', ar: 'ثعلب', en: 'Fox' }, reward: 15, cooldown: 7200000 },
-  { id: 'animal2', type: 'animal', image: require('../../assets/images/creatures/turtoise.png'), label: { ru: 'Черепашка', de: 'Schildkröte', uk: 'Черепашка', ar: 'سلحفاة', en: 'Turtle' }, reward: 12, cooldown: 7200000 },
-  { id: 'animal3', type: 'animal', image: require('../../assets/images/creatures/butterfly.png'), label: { ru: 'Бабочка', de: 'Schmetterling', uk: 'Метелик', ar: 'فراشة', en: 'Butterfly' }, reward: 10, cooldown: 7200000 },
-  { id: 'codariocalyx', type: 'flower', image: require('../../assets/images/creatures/desmodium.png'), label: { ru: 'Кодариокаликс', de: 'Codariocalyx', uk: 'Кодаріокалікс', ar: 'كوداريوكاليكس', en: 'Codariocalyx' }, reward: 12, cooldown: 5400000 },
-];
 
-const WATER_SPOTS = [
-  { id: 'water1' },
-  { id: 'water2' },
-  { id: 'water3' },
-];
 
-const MINDFUL_PHRASES = [
-  { ru: 'Этот мусор лежит здесь потому что кто-то решил что земля — его мусорное ведро. Ты думаешь иначе.', en: 'This litter is here because someone decided the earth is their bin. You think differently.', de: 'Dieser Müll liegt hier, weil jemand die Erde als seine Mülltonne betrachtet. Du denkst anders.', uk: 'Це сміття тут тому що хтось вирішив що земля — його смітник. Ти думаєш інакше.', ar: 'هذه القمامة هنا لأن شخصاً ما قرر أن الأرض سلة مهملاته. أنت تفكر بشكل مختلف.' },
-  { ru: 'Каждый убранный предмет — это существо которое не отравится. Спасибо тебе.', en: 'Every piece of litter removed is a creature that won\'t be poisoned. Thank you.', de: 'Jedes aufgehobene Stück ist ein Lebewesen das nicht vergiftet wird. Danke.', uk: 'Кожен прибраний предмет — це істота яка не отруїться. Дякую тобі.', ar: 'كل قطعة تُزال هي مخلوق لن يُسمَّم. شكراً لك.' },
-  { ru: 'Ты только что сделал мир чуть чище для кого-то кто ещё не родился.', en: 'You just made the world a little cleaner for someone not yet born.', de: 'Du hast die Welt gerade etwas sauberer gemacht für jemanden der noch nicht geboren ist.', uk: 'Ти щойно зробив світ трохи чистішим для когось хто ще не народився.', ar: 'لقد جعلت العالم أكثر نظافة قليلاً لشخص لم يولد بعد.' },
-  { ru: 'Небольшое действие. Большое значение. Ахимса в действии.', en: 'Small action. Big meaning. Ahimsa in action.', de: 'Kleine Handlung. Große Bedeutung. Ahimsa in Aktion.', uk: 'Маленька дія. Велике значення. Ахімса в дії.', ar: 'فعل صغير. معنى كبير. أهيمسا في العمل.' },
-  { ru: 'Природа не просит о помощи словами. Она просит действиями.', en: 'Nature doesn\'t ask for help with words. It asks through actions.', de: 'Die Natur bittet nicht mit Worten um Hilfe. Sie bittet durch Handlungen.', uk: 'Природа не просить допомоги словами. Вона просить діями.', ar: 'الطبيعة لا تطلب المساعدة بالكلمات. تطلبها من خلال الأفعال.' },
-];
-
-const FLAG: Record<string, string> = { ru: '🇷🇺', de: '🇩🇪', uk: '🇺🇦', ar: '🇸🇦', en: '🇬🇧' };
-
-const getLevelName = (xp: number, t: any) =>
-  xp < 50 ? t.level1 : xp < 150 ? t.level2 : xp < 300 ? t.level3 : t.level4;
-
-const getLevelKey = (xp: number) =>
-  xp < 50 ? 'level1' : xp < 150 ? 'level2' : xp < 300 ? 'level3' : 'level4';
 
 export default function HomeScreen() {
   const [lang, setLang] = useState<'ru' | 'de' | 'uk' | 'ar' | 'en' | null>(null);
@@ -361,15 +266,7 @@ const mindfulPhrase = selected
   ? MINDFUL_PHRASES[selected.id % MINDFUL_PHRASES.length][lang]
   : '';
 
-  function getDistance(lat1: number, lon1: number, lat2: number, lon2: number) {
-    const R = 6371000;
-    const dLat = (lat2 - lat1) * Math.PI / 180;
-    const dLon = (lon2 - lon1) * Math.PI / 180;
-    const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-      Math.sin(dLon/2) * Math.sin(dLon/2);
-    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-  }
+
 
  function complete() {
     if (!selected) return;

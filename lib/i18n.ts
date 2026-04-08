@@ -1,0 +1,61 @@
+export const LANGS: Record<string, any> = {
+  ru: {
+    level1: '🌱 Росток', level2: '🌿 Эко', level3: '🌳 Хранитель', level4: '⭐ Герой',
+    dobriki: 'добриков', deeds: 'дел', nearby: 'задачи рядом', clean: '🌍 Район чист!',
+    done: '✅  Выполнено!', back: '← Назад', reward: 'добриков',
+    confirm: 'Подтвердить?', yes: 'Да!', no: 'Отмена', how: 'Как выполнить',
+    steps_trash: ['Подойди к месту', 'Убери мусор', 'Нажми Выполнено'],
+    steps_help: ['Подойди к человеку', 'Предложи помощь', 'Нажми Выполнено'],
+    steps_home: ['Сделай дома', 'Будь осознанным', 'Нажми Выполнено'],
+    empty: 'Вы убрали всё рядом. Отличная работа!',
+    catAll: 'Все', catOutdoor: 'Улица', catHome: 'Дома',
+  },
+  de: {
+    level1: '🌱 Keimling', level2: '🌿 Öko', level3: '🌳 Hüter', level4: '⭐ Held',
+    dobriki: 'Dobriki', deeds: 'Taten', nearby: 'Aufgaben in der Nähe', clean: '🌍 Sauber!',
+    done: '✅  Erledigt!', back: '← Zurück', reward: 'Dobriki',
+    confirm: 'Bestätigen?', yes: 'Ja!', no: 'Abbrechen', how: 'So geht\'s',
+    steps_trash: ['Geh zum Ort', 'Müll aufheben', 'Erledigt drücken'],
+    steps_help: ['Geh zur Person', 'Hilfe anbieten', 'Erledigt drücken'],
+    steps_home: ['Zu Hause machen', 'Achtsam sein', 'Erledigt drücken'],
+    empty: 'Alles aufgeräumt. Gut gemacht!',
+    catAll: 'Alle', catOutdoor: 'Draußen', catHome: 'Zuhause',
+  },
+  uk: {
+    level1: '🌱 Паросток', level2: '🌿 Еко', level3: '🌳 Хранитель', level4: '⭐ Герой',
+    dobriki: 'добриків', deeds: 'справ', nearby: 'завдання поруч', clean: '🌍 Район чистий!',
+    done: '✅  Виконано!', back: '← Назад', reward: 'добриків',
+    confirm: 'Підтвердити?', yes: 'Так!', no: 'Скасувати', how: 'Як виконати',
+    steps_trash: ['Підійди до місця', 'Забери сміття', 'Натисни Виконано'],
+    steps_help: ['Підійди до людини', 'Запропонуй допомогу', 'Натисни Виконано'],
+    steps_home: ['Зроби вдома', 'Будь усвідомленим', 'Натисни Виконано'],
+    empty: 'Ви прибрали все поруч. Чудова робота!',
+    catAll: 'Всі', catOutdoor: 'Вулиця', catHome: 'Вдома',
+  },
+  ar: {
+    level1: '🌱 بذرة', level2: '🌿 أخضر', level3: '🌳 حارس', level4: '⭐ بطل',
+    dobriki: 'دوبريكي', deeds: 'أعمال', nearby: 'مهام قريبة', clean: '🌍 الحي نظيف!',
+    done: '✅  تم!', back: 'رجوع →', reward: 'دوبريكي',
+    confirm: 'تأكيد؟', yes: 'نعم!', no: 'إلغاء', how: 'كيف تنفذ',
+    steps_trash: ['اذهب إلى المكان', 'التقط القمامة', 'اضغط تم'],
+    steps_help: ['اذهب إلى الشخص', 'اعرض المساعدة', 'اضغط تم'],
+    steps_home: ['افعل ذلك في المنزل', 'كن واعياً', 'اضغط تم'],
+    empty: 'لقد نظفت كل شيء. عمل رائع!',
+    catAll: 'الكل', catOutdoor: 'خارج', catHome: 'منزل',
+  },
+  en: {
+    level1: '🌱 Sprout', level2: '🌿 Eco', level3: '🌳 Guardian', level4: '⭐ Hero',
+    dobriki: 'dobriki', deeds: 'deeds', nearby: 'quests nearby', clean: '🌍 Area is clean!',
+    done: '✅  Done!', back: '← Back', reward: 'dobriki',
+    confirm: 'Confirm?', yes: 'Yes!', no: 'Cancel', how: 'How to complete',
+    steps_trash: ['Go to the location', 'Pick up the litter', 'Press Done'],
+    steps_help: ['Go to the person', 'Offer your help', 'Press Done'],
+    steps_home: ['Do it at home', 'Be mindful', 'Press Done'],
+    empty: 'You cleaned everything nearby. Great job!',
+    catAll: 'All', catOutdoor: 'Outdoor', catHome: 'Home',
+  },
+};
+
+
+
+export const FLAG: Record<string, string> = { ru: '🇷🇺', de: '🇩🇪', uk: '🇺🇦', ar: '🇸🇦', en: '🇬🇧' };
