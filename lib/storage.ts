@@ -32,10 +32,8 @@ export const defaultSave: EarthitySave = {
 export async function loadSave(): Promise<EarthitySave> {
   try {
     const raw = await AsyncStorage.getItem(STORAGE_KEY);
-
-    if (!raw) {
-      return defaultSave;
-    }
+    if (!raw) return defaultSave;
+    
 
     const parsed = JSON.parse(raw);
 
@@ -59,11 +57,7 @@ export async function saveSave(save: EarthitySave): Promise<void> {
 
 export async function updateSave(patch: Partial<EarthitySave>): Promise<EarthitySave> {
   const current = await loadSave();
-  const next = {
-    ...current,
-    ...patch,
-  };
-
+  const next = { ...current, ...patch };
   await saveSave(next);
   return next;
 }

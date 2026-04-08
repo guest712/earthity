@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect, useState } from 'react';
 import { Image, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { updateSave } from '../../lib/storage';
+import { loadSave, updateSave } from '../../lib/storage';
 
 const AVATARS = [
   { id: 'lumi', image: require('../../assets/images/avatars/lumi.png') },
@@ -21,6 +21,12 @@ const getLevelKey = (xp: number) =>
 
 type TitleType = string | { [key: string]: string };
 
+type AvailableTitle = {
+  id: string;
+  title: TitleType;
+  emoji: string;
+};
+
 export default function ProfileScreen() {
   const [activeTab, setActiveTab] = useState<'profile' | 'stats' | 'settings'>('profile');
 
@@ -33,8 +39,9 @@ export default function ProfileScreen() {
   const [titleEmoji, setTitleEmoji] = useState('');
   const [pickingAvatar, setPickingAvatar] = useState(false);
   const [pickingTitle, setPickingTitle] = useState(false);
-  const [availableTitles, setAvailableTitles] = useState<any[]>([]);
+  const [availableTitles, setAvailableTitles] = useState<AvailableTitle[]>([]);
   const [lang, setLang] = useState<'ru' | 'de' | 'uk' | 'ar' | 'en'>('ru');
+  const [selectedTitleId, setSelectedTitleId] = useState('');
 
   const currentAvatar = AVATARS.find(a => a.id === avatar) ?? AVATARS[0];
   const levelKey = getLevelKey(xp);
@@ -51,35 +58,44 @@ export default function ProfileScreen() {
     return '';
   };
 
-  useEffect(() => {
-    AsyncStorage.getItem('earthity_save').then(data => {
-      if (data) {
-        try {
-          const save = JSON.parse(data);
-          setDobri(save.dobri ?? 0);
-          setXp(save.xp ?? 0);
-          setDeeds(save.deeds ?? 0);
-          setAvatar(save.avatar ?? 'lumi');
-          setName(save.name ?? 'Earthling');
-          setTitle(save.selectedTitleName ?? '');
-          setTitleEmoji(save.selectedTitleEmoji ?? '');
-          setLang(save.lang ?? 'ru');
-          setAvailableTitles(save.unlockedTitles ?? []);
-        } catch (e) {
-          console.log('Profile load error', e);
-        }
-      }
-    });
-  }, []);
+ useEffect(() => {
+  const loadProfile = async () => {
+    try {
+      const save = await loadSave();
 
-  const saveAvatar = (id: string) => {
-    setAvatar(id);
-    setPickingAvatar(false);
-    AsyncStorage.getItem('earthity_save').then(data => {
-      const save = data ? JSON.parse(data) : {};
-      AsyncStorage.setItem('earthity_save', JSON.stringify({ ...save, avatar: id }));
-    });
+      setDobri(save.dobri);
+      setXp(save.xp);
+      setDeeds(save.deeds);
+      setAvatar(save.avatar);
+      setName(save.name);
+      setTitle(save.selectedTitleName || '');
+      setTitleEmoji(save.selectedTitleEmoji || '');
+      setLang(save.lang);
+
+      if (save.unlockedTitles?.length) {
+        setAvailableTitles(save.unlockedTitles);
+      } else if (save.selectedTitleName && save.selectedTitleEmoji) {
+        setAvailableTitles([
+          {
+            id: save.selectedTitle || 'existing',
+            title: save.selectedTitleName,
+            emoji: save.selectedTitleEmoji,
+          },
+        ]);
+      }
+    } catch (e) {
+      console.warn('Profile load error', e);
+    }
   };
+
+  loadProfile();
+}, []);
+
+  async function saveAvatar(id: string) {
+  setAvatar(id);
+  setPickingAvatar(false);
+  await updateSave({ avatar: id });
+}
 
   const selectTitle = (t: any) => {
   setTitle(t.title);
@@ -162,7 +178,7 @@ export default function ProfileScreen() {
                   availableTitles.map((t: any, i: number) => (
                     <TouchableOpacity
                       key={i}
-                      style={[styles.titleOption, titleEmoji === t.emoji && styles.titleOptionActive]}
+                      style={[styles.titleOption, titleEmoji === selectedTitleId === t.id && styles.titleOptionActive]}
                       onPress={() => selectTitle(t)}
                     >
                       <Text style={styles.titleOptionEmoji}>{t.emoji}</Text>
