@@ -1,10 +1,10 @@
 import { loadSave, updateSave } from '../../lib/storage';
+import { requestNotificationPermissions, scheduleCreatureNotification } from '../../lib/notifications';
 import { Audio } from 'expo-av';
 import { QUESTS, CREATURES, WATER_SPOTS, MINDFUL_PHRASES } from  '../../lib/game-data';
 import { LANGS, FLAG } from '../../lib/i18n';
 import { getDistance, getLevelKey, getLevelName } from '../../lib/game-utils';
 import { applyQuestCompletion, getCreaturePosition, isWithinInteractionDistance, } from '../../lib/game-engine';
-import * as Notifications from 'expo-notifications';
 import { useEffect, useRef, useState } from 'react';
 import { Image, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
@@ -17,19 +17,6 @@ import CreaturePopup from '../../components/CreaturePopup';
 import { Creature } from '../../lib/types';
 import { Quest } from '../../lib/types';
 import { useLocationState } from '../../lib/useLocationState';
-
-
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: false,
-    shouldShowBanner: true,
-    shouldShowList: true,
-  }),
-});
-
-
 
 
 
@@ -107,24 +94,8 @@ const breathStyle = useAnimatedStyle(() => ({
 
 
   useEffect(() => {
-    Notifications.requestPermissionsAsync();
+    requestNotificationPermissions();
   }, []);
-
-  async function scheduleCreatureNotification(creature: Creature) {
-    await Notifications.scheduleNotificationAsync({
-      content: {
-        title: '🌍 Earthity',
-        body: creature.type === 'flower' 
-          ? `🌸 ${creature.label['ru']} хочет пить! Полей его.`
-          : `🐾 ${creature.label['ru']} голоден! Покорми его.`,
-        sound: true,
-      },
-      trigger: {
-        type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
-        seconds: creature.cooldown / 1000,
-      },
-    });
-  }
 
 
 
