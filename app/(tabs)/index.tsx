@@ -17,6 +17,8 @@ import CreaturePopup from '../../components/CreaturePopup';
 import { Creature } from '../../lib/types';
 import { Quest } from '../../lib/types';
 import { useLocationState } from '../../lib/useLocationState';
+import { useCreatureSystem } from '../../lib/useCreatureSystem';
+
 
 
 
@@ -27,10 +29,17 @@ export default function HomeScreen() {
   const [xp, setXp] = useState(0);
   const [deeds, setDeeds] = useState(0);
   const [mapMode, setMapMode] = useState<'standard' | 'satellite'>('standard');
-  const [creatureCooldowns, setCreatureCooldowns] = useState<Record<string, number>>({});
+
+  const {
+  creatureCooldowns,
+  setCreatureCooldowns,
+  feedingProgress,
+  setFeedingProgress,
+  isFeeding,
+  setIsFeeding,
+} = useCreatureSystem();
+
   const [selectedCreature, setSelectedCreature] = useState<Creature | null>(null);
-  const [feedingProgress, setFeedingProgress] = useState(0);
-  const [isFeeding, setIsFeeding] = useState(false);
   const [completed, setCompleted] = useState<number[]>([]);
   const [selected, setSelected] = useState<Quest | null>(null);
   const [confirming, setConfirming] = useState(false);
