@@ -4,7 +4,7 @@ import { Audio } from 'expo-av';
 import { QUESTS, CREATURES, WATER_SPOTS, MINDFUL_PHRASES } from  '../../lib/game-data';
 import { LANGS, FLAG } from '../../lib/i18n';
 import { getDistance, getLevelKey, getLevelName } from '../../lib/game-utils';
-import { applyQuestCompletion, getCreaturePosition, isWithinInteractionDistance, } from '../../lib/game-engine';
+import { applyQuestCompletion, getCreaturePosition, canInteractWithCreature, getCreatureRewardResult, } from '../../lib/game-engine';
 import { useEffect, useRef, useState } from 'react';
 import { Image, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
@@ -34,9 +34,9 @@ export default function HomeScreen() {
   creatureCooldowns,
   setCreatureCooldowns,
   feedingProgress,
-  setFeedingProgress,
   isFeeding,
-  setIsFeeding,
+  startFeeding,
+  stopFeeding,
 } = useCreatureSystem();
 
   const [selectedCreature, setSelectedCreature] = useState<Creature | null>(null);
@@ -302,63 +302,72 @@ const mindfulPhrase = selected
     breathStyle={breathStyle}
     creatureCooldowns={creatureCooldowns}
     onPressAction={() => {
-      const now = Date.now();
-      const lastTime = creatureCooldowns[selectedCreature.id] || 0;
-      const creatureIndex = CREATURES.findIndex(c => c.id === selectedCreature.id);
-const creaturePos = getCreaturePosition(
-  location?.latitude ?? 52.52,
-  location?.longitude ?? 13.405,
-  creatureIndex
-);
+  const now = Date.now();
+  const lastTime = creatureCooldowns[selectedCreature.id] || 0;
+  const creatureIndex = CREATURES.findIndex(c => c.id === selectedCreature.id);
 
-const dist = location
-  ? getDistance(
-      location.latitude,
-      location.longitude,
-      creaturePos.latitude,
-      creaturePos.longitude
-    )
-  : 999;
-      if (!isWithinInteractionDistance(dist)) {
-  alert('Подойдите ближе! 📍');
-  return;
-}
+  const creaturePos = getCreaturePosition(
+    location?.latitude ?? 52.52,
+    location?.longitude ?? 13.405,
+    creatureIndex
+  );
 
-      if (selectedCreature.type === 'flower' && waterLevel <= 0) {
-        alert('Лейка пуста! Найдите родник 💧');
-        return;
-      }
+  const dist = location
+    ? getDistance(
+        location.latitude,
+        location.longitude,
+        creaturePos.latitude,
+        creaturePos.longitude
+      )
+    : 999;
 
-      if (now - lastTime > selectedCreature.cooldown && !isFeeding) {
-        setIsFeeding(true);
-        setFeedingProgress(0);
-        const interval = setInterval(() => {
-          setFeedingProgress(prev => {
-            if (prev >= 100) {
-              clearInterval(interval);
-              setIsFeeding(false);
-              setDobri(p => p + selectedCreature.reward);
-              setXp(p => p + selectedCreature.reward);
-              setCreatureCooldowns(p => ({ ...p, [selectedCreature.id]: Date.now() }));
-              if (selectedCreature.type === 'flower') {
-                setWaterLevel(p => Math.max(0, p - 1));
-              }
-              animateReward();
-              playRewardSound();
-              scheduleCreatureNotification(selectedCreature);
-              setSelectedCreature(null);
-              return 0;
-            }
-            return prev + 5;
-          });
-        }, 100);
-      } else if (!isFeeding) {
-        setSelectedCreature(null);
-      }
-    }}
+  const interaction = canInteractWithCreature({
+    creature: selectedCreature,
+    distance: dist,
+    waterLevel,
+    lastInteractionTime: lastTime,
+    now,
+  });
+
+  if (!interaction.ok) {
+    if (interaction.reason === 'too_far') {
+      alert('Подойдите ближе! 📍');
+    } else if (interaction.reason === 'no_water') {
+      alert('Лейка пуста! Найдите родник 💧');
+    } else if (interaction.reason === 'cooldown' && !isFeeding) {
+      setSelectedCreature(null);
+    }
+    return;
+  }
+
+  if (isFeeding) return;
+
+startFeeding(() => {
+  const rewardResult = getCreatureRewardResult({
+    creature: selectedCreature,
+    dobri,
+    xp,
+    waterLevel,
+  });
+
+  setDobri(rewardResult.dobri);
+  setXp(rewardResult.xp);
+  setWaterLevel(rewardResult.waterLevel);
+  setCreatureCooldowns((p) => ({
+    ...p,
+    [selectedCreature.id]: Date.now(),
+  }));
+
+  animateReward();
+  playRewardSound();
+  scheduleCreatureNotification(selectedCreature);
+  setSelectedCreature(null);
+});
+}}
     onClose={() => setSelectedCreature(null)}
   />
 )}
+
       
       {selected ? (
   <QuestDetailCard

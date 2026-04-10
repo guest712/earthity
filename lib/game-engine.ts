@@ -1,10 +1,5 @@
-type QuestType = 'trash' | 'help' | 'home' | 'test';
-
-type Quest = {
-  id: number;
-  reward: number;
-  type: QuestType;
-};
+import { Quest } from './types';
+import type { Creature } from './types';
 
 type CompleteQuestResult = {
   completed: number[];
@@ -82,9 +77,66 @@ export function getCreaturePosition(
   };
 }
 
+
 export function isWithinInteractionDistance(
   distance: number,
   maxDistance = 300
 ): boolean {
   return distance <= maxDistance;
 }
+
+export type CreatureInteractionCheckResult =
+  | { ok: true }
+  | { ok: false; reason: 'too_far' | 'no_water' | 'cooldown' };
+
+export const canInteractWithCreature = (params: {
+  creature: Creature;
+  distance: number;
+  waterLevel: number;
+  lastInteractionTime: number;
+  now: number;
+  maxDistance?: number;
+}): CreatureInteractionCheckResult => {
+  const {
+    creature,
+    distance,
+    waterLevel,
+    lastInteractionTime,
+    now,
+    maxDistance = 300,
+  } = params;
+
+  if (distance > maxDistance) {
+    return { ok: false, reason: 'too_far' };
+  }
+
+  if (creature.type === 'flower' && waterLevel <= 0) {
+    return { ok: false, reason: 'no_water' };
+  }
+
+  if (now - lastInteractionTime <= creature.cooldown) {
+    return { ok: false, reason: 'cooldown' };
+  }
+
+  return { ok: true };
+};
+
+export const getCreatureRewardResult = (params: {
+  creature: Creature;
+  dobri: number;
+  xp: number;
+  waterLevel: number;
+}) => {
+  const { creature, dobri, xp, waterLevel } = params;
+
+  return {
+    dobri: dobri + creature.reward,
+    xp: xp + creature.reward,
+    waterLevel:
+      creature.type === 'flower'
+        ? Math.max(0, waterLevel - 1)
+        : waterLevel,
+  };
+};
+
+console.log('game-engine loaded', { canInteractWithCreature, getCreatureRewardResult });
