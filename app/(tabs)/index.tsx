@@ -4,7 +4,6 @@ import { QUESTS, CREATURES, WATER_SPOTS, MINDFUL_PHRASES } from  '../../lib/game
 import { LANGS, FLAG } from '../../lib/i18n';
 import { getDistance, getLevelKey, getLevelName } from '../../lib/game-utils';
 import { applyQuestCompletion, getCreaturePosition, isWithinInteractionDistance, } from '../../lib/game-engine';
-import * as Location from 'expo-location';
 import * as Notifications from 'expo-notifications';
 import { useEffect, useRef, useState } from 'react';
 import { Image, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -15,6 +14,10 @@ import HomeHeader from '../../components/HomeHeader';
 import CategoryTabs from '../../components/CategoryTabs';
 import QuestDetailCard from '../../components/QuestDetailCard';
 import CreaturePopup from '../../components/CreaturePopup';
+import { Creature } from '../../lib/types';
+import { Quest } from '../../lib/types';
+import { useLocationState } from '../../lib/useLocationState';
+
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -38,17 +41,17 @@ export default function HomeScreen() {
   const [deeds, setDeeds] = useState(0);
   const [mapMode, setMapMode] = useState<'standard' | 'satellite'>('standard');
   const [creatureCooldowns, setCreatureCooldowns] = useState<Record<string, number>>({});
-  const [selectedCreature, setSelectedCreature] = useState<any>(null);
+  const [selectedCreature, setSelectedCreature] = useState<Creature | null>(null);
   const [feedingProgress, setFeedingProgress] = useState(0);
   const [isFeeding, setIsFeeding] = useState(false);
   const [completed, setCompleted] = useState<number[]>([]);
-  const [selected, setSelected] = useState<any>(null);
+  const [selected, setSelected] = useState<Quest | null>(null);
   const [confirming, setConfirming] = useState(false);
   const [category, setCategory] = useState<'all' | 'outdoor' | 'home'>('all');
   const [onboarded, setOnboarded] = useState(false);
   const [streak, setStreak] = useState(0);
+  const { location } = useLocationState();
   const [lastOpenDate, setLastOpenDate] = useState('');
-  const [location, setLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const [testDeeds, setTestDeeds] = useState(0);
   const [waterLevel, setWaterLevel] = useState(10);
   const [showConfirmBtn, setShowConfirmBtn] = useState(false);
@@ -107,7 +110,7 @@ const breathStyle = useAnimatedStyle(() => ({
     Notifications.requestPermissionsAsync();
   }, []);
 
-  async function scheduleCreatureNotification(creature: any) {
+  async function scheduleCreatureNotification(creature: Creature) {
     await Notifications.scheduleNotificationAsync({
       content: {
         title: '🌍 Earthity',
@@ -123,15 +126,7 @@ const breathStyle = useAnimatedStyle(() => ({
     });
   }
 
-  useEffect(() => {
-    Location.requestForegroundPermissionsAsync().then(({ status }) => {
-      if (status === 'granted') {
-        Location.getCurrentPositionAsync({}).then(loc => {
-          setLocation({ latitude: loc.coords.latitude, longitude: loc.coords.longitude });
-        });
-      }
-    });
-  }, []);
+
 
  useEffect(() => {
   const loadHome = async () => {
