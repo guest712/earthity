@@ -18,12 +18,13 @@ import { Creature } from '../../lib/types';
 import { Quest } from '../../lib/types';
 import { useLocationState } from '../../lib/useLocationState';
 import { useCreatureSystem } from '../../lib/useCreatureSystem';
+import { useAppLanguage } from '../../lib/LanguageContext';
 
 
 
 
 export default function HomeScreen() {
-  const [lang, setLang] = useState<'ru' | 'de' | 'uk' | 'ar' | 'en' | null>(null);
+  const { lang, setAppLanguage, openLanguagePicker } = useAppLanguage();
   const [dobri, setDobri] = useState(0);
   const [totalDobri, setTotalDobri] = useState(0);
   const [xp, setXp] = useState(0);
@@ -117,7 +118,6 @@ const breathStyle = useAnimatedStyle(() => ({
       setXp(save.xp);
       setDeeds(save.deeds);
       setCompleted(save.completed);
-      setLang(save.lang);
       setOnboarded(save.onboarded);
       setOutdoorDeeds(save.outdoorDeeds);
       setHomeDeeds(save.homeDeeds);
@@ -203,7 +203,7 @@ const breathStyle = useAnimatedStyle(() => ({
           <Text style={styles.langSub}>Choose your language</Text>
           <View style={styles.langGrid}>
             {(Object.keys(LANGS) as Array<'ru' | 'de' | 'uk' | 'ar' | 'en'>).map(l => (
-              <TouchableOpacity key={l} style={styles.langBtn} onPress={() => setLang(l)}>
+              <TouchableOpacity key={l} style={styles.langBtn} onPress={() => setAppLanguage(l)}>
                 <Text style={styles.langFlag}>{FLAG[l]}</Text>
                 <Text style={styles.langName}>{l.toUpperCase()}</Text>
               </TouchableOpacity>
@@ -289,7 +289,7 @@ const mindfulPhrase = selected
   dobrikiLabel={t.dobriki}
   deedsLabel={t.deeds}
   flag={FLAG[lang]}
-  onPressLanguage={() => setLang(null)}
+  onPressLanguage={openLanguagePicker}
   rewardAnimStyle={rewardAnimStyle}
 />
       {selectedCreature && (
@@ -342,9 +342,12 @@ const mindfulPhrase = selected
 
   if (isFeeding) return;
 
+const creature = selectedCreature;
+if (!creature) return;
+
 startFeeding(() => {
   const rewardResult = getCreatureRewardResult({
-    creature: selectedCreature,
+    creature,
     dobri,
     xp,
     waterLevel,
@@ -353,14 +356,15 @@ startFeeding(() => {
   setDobri(rewardResult.dobri);
   setXp(rewardResult.xp);
   setWaterLevel(rewardResult.waterLevel);
+
   setCreatureCooldowns((p) => ({
     ...p,
-    [selectedCreature.id]: Date.now(),
+    [creature.id]: Date.now(),
   }));
 
   animateReward();
   playRewardSound();
-  scheduleCreatureNotification(selectedCreature);
+  scheduleCreatureNotification(creature);
   setSelectedCreature(null);
 });
 }}

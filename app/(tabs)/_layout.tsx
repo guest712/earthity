@@ -2,30 +2,18 @@ import { HapticTab } from '@/components/haptic-tab';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { loadSave } from '../../lib/storage';
 import { LANGS } from '../../lib/i18n';
+import { LanguageProvider, useAppLanguage } from '../../lib/LanguageContext';
 import { Tabs } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { Text } from 'react-native';
 
-export default function TabLayout() {
+function TabsContent() {
   const colorScheme = useColorScheme();
-  const [lang, setLang] = useState<'ru' | 'de' | 'uk' | 'ar' | 'en'>('en');
+  const { lang } = useAppLanguage();
 
-  useEffect(() => {
-    const loadLang = async () => {
-      try {
-        const save = await loadSave();
-        setLang(save.lang || 'en');
-      } catch (e) {
-        console.warn('Tab layout load error', e);
-      }
-    };
-
-    loadLang();
-  }, []);
-
-  const t = LANGS[lang];
+  const safeLang = lang ?? 'en';
+  const t = LANGS[safeLang];
 
   return (
     <Tabs
@@ -65,16 +53,20 @@ export default function TabLayout() {
       />
       <Tabs.Screen
         name="stats"
-        options={{
-          href: null,
-        }}
+        options={{ href: null }}
       />
       <Tabs.Screen
         name="onboarding"
-        options={{
-          href: null,
-        }}
+        options={{ href: null }}
       />
     </Tabs>
+  );
+}
+
+export default function TabLayout() {
+  return (
+    <LanguageProvider>
+      <TabsContent />
+    </LanguageProvider>
   );
 }

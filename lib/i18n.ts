@@ -17,6 +17,33 @@ export const LANGS: Record<string, any> = {
 
     inventoryTitle: 'Инвентарь',
     itemWateringCan: 'Лейка',
+
+    profileTabProfile: 'Профиль',
+profileTabStats: 'Статистика',
+profileTabSettings: 'Настройки',
+profileChangeAvatar: 'Нажмите чтобы сменить аватар',
+profileChooseTitle: '+ Выбрать звание',
+profileNoTitles: 'Выполняйте достижения, чтобы открыть звания',
+profileStatDobriki: 'добриков',
+profileStatDeeds: 'добрых дел',
+profileStatXp: 'опыта',
+profileFullStats: 'Полная статистика',
+profileStatsSoon: 'Полная статистика скоро будет здесь ✨',
+profileSettingsTitle: 'Настройки',
+profileSettingsSoon: 'Раздел настроек в разработке',
+profileMotto: 'Ахимса — ненасилие\nпо отношению ко всему живому',
+
+achievementsTitle: 'Достижения',
+achievementsOpened: 'открыто',
+
+achievementsCatFirst: '🌱 Первые шаги',
+achievementsCatEco: '🌍 Эко-воин',
+achievementsCatHome: '🏠 Домашний герой',
+achievementsCatAhimsa: '☯ Ахимса',
+achievementsCatLegend: '⭐ Легендарные',
+
+achievementRank: '👑 Звание',
+achievementsMotto: '☯  Каждое доброе дело оставляет след',
   },
 
   de: {
@@ -37,6 +64,33 @@ export const LANGS: Record<string, any> = {
 
     inventoryTitle: 'Inventar',
     itemWateringCan: 'Gießkanne',
+
+    profileTabProfile: 'Profil',
+profileTabStats: 'Statistik',
+profileTabSettings: 'Einstellungen',
+profileChangeAvatar: 'Tippe, um den Avatar zu ändern',
+profileChooseTitle: '+ Titel wählen',
+profileNoTitles: 'Schließe Erfolge ab, um Titel freizuschalten',
+profileStatDobriki: 'Dobriki',
+profileStatDeeds: 'gute Taten',
+profileStatXp: 'Erfahrung',
+profileFullStats: 'Vollständige Statistik',
+profileStatsSoon: 'Die vollständige Statistik erscheint bald ✨',
+profileSettingsTitle: 'Einstellungen',
+profileSettingsSoon: 'Der Einstellungsbereich ist in Entwicklung',
+profileMotto: 'Ahimsa — Gewaltlosigkeit\ngegenüber allem Lebendigen',
+
+achievementsTitle: 'Erfolge',
+achievementsOpened: 'freigeschaltet',
+
+achievementsCatFirst: '🌱 Erste Schritte',
+achievementsCatEco: '🌍 Öko-Krieger',
+achievementsCatHome: '🏠 Held des Hauses',
+achievementsCatAhimsa: '☯ Ahimsa',
+achievementsCatLegend: '⭐ Legendär',
+
+achievementRank: '👑 Titel',
+achievementsMotto: '☯  Jede gute Tat hinterlässt eine Spur',
   },
 
   uk: {
@@ -57,6 +111,33 @@ export const LANGS: Record<string, any> = {
 
     inventoryTitle: 'Інвентар',
     itemWateringCan: 'Лійка',
+
+    profileTabProfile: 'Профіль',
+profileTabStats: 'Статистика',
+profileTabSettings: 'Налаштування',
+profileChangeAvatar: 'Натисніть, щоб змінити аватар',
+profileChooseTitle: '+ Обрати звання',
+profileNoTitles: 'Виконуйте досягнення, щоб відкрити звання',
+profileStatDobriki: 'добриків',
+profileStatDeeds: 'добрих справ',
+profileStatXp: 'досвіду',
+profileFullStats: 'Повна статистика',
+profileStatsSoon: 'Повна статистика скоро буде тут ✨',
+profileSettingsTitle: 'Налаштування',
+profileSettingsSoon: 'Розділ налаштувань у розробці',
+profileMotto: 'Ахімса — ненасильство\nпо відношенню до всього живого',
+
+achievementsTitle: 'Досягнення',
+achievementsOpened: 'відкрито',
+
+achievementsCatFirst: '🌱 Перші кроки',
+achievementsCatEco: '🌍 Еко-воїн',
+achievementsCatHome: '🏠 Домашній герой',
+achievementsCatAhimsa: '☯ Ахімса',
+achievementsCatLegend: '⭐ Легендарні',
+
+achievementRank: '👑 Звання',
+achievementsMotto: '☯  Кожна добра справа залишає слід',
   },
 
   ar: {
@@ -77,6 +158,34 @@ export const LANGS: Record<string, any> = {
 
     inventoryTitle: 'المخزون',
     itemWateringCan: 'إبريق السقي',
+
+    profileTabProfile: 'الملف',
+profileTabStats: 'الإحصاءات',
+profileTabSettings: 'الإعدادات',
+profileChangeAvatar: 'اضغط لتغيير الصورة الرمزية',
+profileChooseTitle: '+ اختر لقباً',
+profileNoTitles: 'أكمل الإنجازات لفتح الألقاب',
+profileStatDobriki: 'دوبريكي',
+profileStatDeeds: 'أعمال طيبة',
+profileStatXp: 'خبرة',
+profileFullStats: 'الإحصاءات الكاملة',
+profileStatsSoon: 'ستظهر الإحصاءات الكاملة هنا قريباً ✨',
+profileSettingsTitle: 'الإعدادات',
+profileSettingsSoon: 'قسم الإعدادات قيد التطوير',
+profileMotto: 'أهيمسا — اللاعنف\nتجاه كل ما هو حي',
+achievementsTitle: 'الإنجازات',
+achievementsOpened: 'مفتوح',
+
+achievementsCatFirst: '🌱 الخطوات الأولى',
+achievementsCatEco: '🌍 محارب البيئة',
+achievementsCatHome: '🏠 بطل المنزل',
+achievementsCatAhimsa: '☯ أهيمسا',
+achievementsCatLegend: '⭐ أسطوري',
+
+achievementRank: '👑 لقب',
+achievementsMotto: '☯  كل عمل طيب يترك أثراً',
+
+
   },
 
   en: {
@@ -97,6 +206,33 @@ export const LANGS: Record<string, any> = {
 
     inventoryTitle: 'Inventory',
     itemWateringCan: 'Watering Can',
+
+profileTabProfile: 'Profile',
+profileTabStats: 'Statistics',
+profileTabSettings: 'Settings',
+profileChangeAvatar: 'Tap to change avatar',
+profileChooseTitle: '+ Choose title',
+profileNoTitles: 'Complete achievements to unlock titles',
+profileStatDobriki: 'dobriki',
+profileStatDeeds: 'good deeds',
+profileStatXp: 'experience',
+profileFullStats: 'Full Statistics',
+profileStatsSoon: 'Full statistics will appear here soon ✨',
+profileSettingsTitle: 'Settings',
+profileSettingsSoon: 'Settings section is in development',
+profileMotto: 'Ahimsa — non-violence\ntowards all living beings',
+
+achievementsTitle: 'Achievements',
+achievementsOpened: 'unlocked',
+
+achievementsCatFirst: '🌱 First Steps',
+achievementsCatEco: '🌍 Eco Warrior',
+achievementsCatHome: '🏠 Home Hero',
+achievementsCatAhimsa: '☯ Ahimsa',
+achievementsCatLegend: '⭐ Legendary',
+
+achievementRank: '👑 Title',
+achievementsMotto: '☯  Every good deed leaves a mark',
   },
 };
 

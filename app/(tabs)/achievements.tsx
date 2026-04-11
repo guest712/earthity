@@ -1,6 +1,8 @@
 import { loadSave, updateSave } from '../../lib/storage';
 import { useEffect, useState } from 'react';
 import { SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { LANGS } from '../../lib/i18n';
+
 
 const ACHIEVEMENTS: Record<string, any>[] = [
   { id: 'first_deed', title: { ru: 'Искра', de: 'Funke', uk: 'Іскра', ar: 'شرارة', en: 'Spark' }, desc: { ru: 'Первое доброе дело', de: 'Erste gute Tat', uk: 'Перша добра справа', ar: 'أول عمل جيد', en: 'First good deed' }, emoji: '✨', reward: 10, category: 'first', condition: (s: any) => s.deeds >= 1 },
@@ -18,10 +20,28 @@ const ACHIEVEMENTS: Record<string, any>[] = [
   { id: 'dobri_2500', title: { ru: 'Добрый', de: 'Gütig', uk: 'Добрий', ar: 'طيب', en: 'Kind Soul' }, desc: { ru: 'Заработать 2500 добриков', de: '2500 Dobriki verdienen', uk: 'Заробити 2500 добриків', ar: 'كسب 2500 دوبريكي', en: 'Earn 2500 dobriki' }, emoji: '💛', reward: 100, category: 'legend', givesTitle: true, condition: (s: any) => s.totalDobri >= 2500 },
 ];
 
+
 export default function AchievementsScreen() {
   const [stats, setStats] = useState<any>({ deeds: 0, xp: 0, outdoorDeeds: 0, homeDeeds: 0, petDeeds: 0, totalDobri: 0 });
   const [lang, setLang] = useState('ru');
   const [selectedTitle, setSelectedTitle] = useState('');
+
+  const t = LANGS[lang] || LANGS.en;
+
+  const getCategoryTitle = (cat: string) => {
+  switch (cat) {
+    case 'first':
+      return t.achievementsCatFirst;
+    case 'eco':
+      return t.achievementsCatEco;
+    case 'home':
+      return t.achievementsCatHome;
+    case 'ahimsa':
+      return t.achievementsCatAhimsa;
+    default:
+      return t.achievementsCatLegend;
+  }
+};
 
 async function selectTitle(a: any) {
   if (!a.givesTitle) return;
@@ -106,19 +126,17 @@ if (hasChanges) {
       <ScrollView contentContainerStyle={styles.scroll}>
 
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>Достижения</Text>
-          <Text style={styles.headerSub}>{unlockedCount} / {ACHIEVEMENTS.length} открыто</Text>
+          <Text style={styles.headerTitle}>{t.achievementsTitle}</Text>
+<Text style={styles.headerSub}>
+  {unlockedCount} / {ACHIEVEMENTS.length} {t.achievementsOpened}
+</Text>
         </View>
 
         {categories.map(cat => (
   <View key={cat} style={styles.category}>
-    <Text style={styles.catTitle}>{
-      cat === 'first' ? (lang === 'en' ? '🌱 First Steps' : lang === 'de' ? '🌱 Erste Schritte' : lang === 'uk' ? '🌱 Перші кроки' : lang === 'ar' ? '🌱 الخطوات الأولى' : '🌱 Первые шаги') :
-      cat === 'eco' ? (lang === 'en' ? '🌍 Eco Warrior' : lang === 'de' ? '🌍 Öko-Kämpfer' : lang === 'uk' ? '🌍 Еко-воїн' : lang === 'ar' ? '🌍 المحارب البيئي' : '🌍 Эко-воин') :
-      cat === 'home' ? (lang === 'en' ? '🏠 Home Hero' : lang === 'de' ? '🏠 Heimheld' : lang === 'uk' ? '🏠 Домашній герой' : lang === 'ar' ? '🏠 بطل المنزل' : '🏠 Домашний герой') :
-      cat === 'ahimsa' ? '☯ Ahimsa' :
-      lang === 'en' ? '⭐ Legendary' : lang === 'de' ? '⭐ Legendär' : lang === 'uk' ? '⭐ Легендарні' : lang === 'ar' ? '⭐ أسطوري' : '⭐ Легендарные'
-    }</Text>
+    <Text style={styles.catTitle}>
+  {getCategoryTitle(cat)}
+</Text>
             {ACHIEVEMENTS.filter(a => a.category === cat).map(a => {
               const done = a.condition(stats);
               return (
@@ -132,7 +150,7 @@ if (hasChanges) {
                     <Text style={styles.rewardNum}>+{a.reward}</Text>
                     <Text style={styles.rewardLabel}>🪙</Text>
                     {a.givesTitle && (
-                      <Text style={styles.titleTag}>👑 Звание</Text>
+                      <Text style={styles.titleTag}>{t.achievementRank}</Text>
                     )}
                   </View>
                   {done && selectedTitle === a.id && (
@@ -145,7 +163,7 @@ if (hasChanges) {
         ))}
 
         <View style={styles.motto}>
-          <Text style={styles.mottoText}>☯  Каждое доброе дело оставляет след</Text>
+         <Text style={styles.mottoText}>{t.achievementsMotto}</Text>
         </View>
 
       </ScrollView>
