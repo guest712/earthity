@@ -1,28 +1,45 @@
 import { loadSave } from '../../lib/storage';
+import { LANGS } from '../../lib/i18n';
 import { useEffect, useState } from 'react';
 import { FlatList, Image, SafeAreaView, StyleSheet, Text, View } from 'react-native';
 
 const ITEMS = [
-  { id: 'watering_can', name: { ru: 'Лейка', en: 'Watering Can' }, image: require('../../assets/images/items/watercan.png'), quantity: 1 },
+  {
+    id: 'watering_can',
+    name: {
+      ru: 'Лейка',
+      de: 'Gießkanne',
+      uk: 'Лійка',
+      ar: 'إبريق السقي',
+      en: 'Watering Can',
+    },
+    image: require('../../assets/images/items/watercan.png'),
+    quantity: 1,
+  },
 ];
 
 const TOTAL_SLOTS = 12;
 
 export default function InventoryScreen() {
-    const [waterLevel, setWaterLevel] = useState(10);
+  const [waterLevel, setWaterLevel] = useState(10);
+  const [lang, setLang] = useState<'ru' | 'de' | 'uk' | 'ar' | 'en'>('en');
 
-useEffect(() => {
-  const load = async () => {
-  try {
-    const save = await loadSave();
-    setWaterLevel(save.waterLevel);
-  } catch (e) {
-    console.warn('Inventory load error', e);
-  }
-};
-  load();
-  
-}, []);
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const save = await loadSave();
+        setWaterLevel(save.waterLevel);
+        setLang(save.lang || 'en');
+      } catch (e) {
+        console.warn('Inventory load error', e);
+      }
+    };
+
+    load();
+  }, []);
+
+  const t = LANGS[lang];
+
   const slots = Array.from({ length: TOTAL_SLOTS }, (_, i) => {
     return ITEMS[i] || null;
   });
@@ -30,30 +47,32 @@ useEffect(() => {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>Инвентарь</Text>
+        <Text style={styles.title}>{t.inventoryTitle}</Text>
       </View>
+
       <FlatList
         data={slots}
         numColumns={3}
         keyExtractor={(_, index) => index.toString()}
         contentContainerStyle={styles.grid}
         renderItem={({ item }) => (
-  <View style={[styles.slot, item && styles.slotFilled]}>
-    {item ? (
-      <>
-        <Image source={item.image} style={{ width: 70, height: 70 }} resizeMode="contain" />
-        <Text style={styles.itemName}>{item.name.ru}</Text>
-        {item.id === 'watering_can' ? (
-          <Text style={{ fontSize: 11, color: '#7ab8f5' }}>
-            💧 {waterLevel} / 10
-          </Text>
-        ) : (
-          <Text style={styles.itemQty}>x{item.quantity}</Text>
+          <View style={[styles.slot, item && styles.slotFilled]}>
+            {item ? (
+              <>
+                <Image source={item.image} style={{ width: 70, height: 70 }} resizeMode="contain" />
+                <Text style={styles.itemName}>{item.name[lang] || item.name.en}</Text>
+
+                {item.id === 'watering_can' ? (
+                  <Text style={{ fontSize: 11, color: '#7ab8f5' }}>
+                    💧 {waterLevel} / 10
+                  </Text>
+                ) : (
+                  <Text style={styles.itemQty}>x{item.quantity}</Text>
+                )}
+              </>
+            ) : null}
+          </View>
         )}
-      </>
-    ) : null}
-  </View>
-)}
       />
     </SafeAreaView>
   );
@@ -78,7 +97,11 @@ const styles = StyleSheet.create({
   slotFilled: {
     borderColor: '#2d6a3f',
   },
-  itemEmoji: { fontSize: 28 },
-  itemName: { fontSize: 10, color: 'rgba(255,255,255,0.5)', marginTop: 4, textAlign: 'center' },
+  itemName: {
+    fontSize: 10,
+    color: 'rgba(255,255,255,0.5)',
+    marginTop: 4,
+    textAlign: 'center',
+  },
   itemQty: { fontSize: 11, color: '#e8c97a', fontWeight: '600' },
 });
