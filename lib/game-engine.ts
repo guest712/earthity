@@ -138,5 +138,3 @@ export const getCreatureRewardResult = (params: {
         : waterLevel,
   };
 };
-
-console.log('game-engine loaded', { canInteractWithCreature, getCreatureRewardResult });

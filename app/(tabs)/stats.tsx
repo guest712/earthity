@@ -1,75 +1,72 @@
 import { loadSave } from '../../lib/storage';
+import { LANGS } from '../../lib/i18n';
 import { useEffect, useState } from 'react';
 import { SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
 
+type LanguageCode = 'ru' | 'de' | 'uk' | 'ar' | 'en';
+
+function formatTemplate(template: string, values: Record<string, string | number>) {
+  return template.replace(/\{(\w+)\}/g, (_, key) => String(values[key] ?? ''));
+}
+
 export default function StatsScreen() {
   const [stats, setStats] = useState({
-    deeds: 0, xp: 0, dobri: 0, totalDobri: 0,
-    outdoorDeeds: 0, homeDeeds: 0, petDeeds: 0,
-    streak: 0, lang: 'en',
+    deeds: 0,
+    xp: 0,
+    dobri: 0,
+    totalDobri: 0,
+    outdoorDeeds: 0,
+    homeDeeds: 0,
+    petDeeds: 0,
+    streak: 0,
+    lang: 'en' as LanguageCode,
   });
 
   useEffect(() => {
     const load = async () => {
-  try {
-    const save = await loadSave();
+      try {
+        const save = await loadSave();
 
-    setStats({
-      deeds: save.deeds,
-      xp: save.xp,
-      dobri: save.dobri,
-      totalDobri: save.totalDobri,
-      outdoorDeeds: save.outdoorDeeds,
-      homeDeeds: save.homeDeeds,
-      petDeeds: save.petDeeds,
-      streak: save.streak,
-      lang: save.lang,
-    });
-  } catch (e) {
-    console.warn('Stats load error', e);
-  }
-};
+        setStats({
+          deeds: save.deeds,
+          xp: save.xp,
+          dobri: save.dobri,
+          totalDobri: save.totalDobri,
+          outdoorDeeds: save.outdoorDeeds,
+          homeDeeds: save.homeDeeds,
+          petDeeds: save.petDeeds,
+          streak: save.streak,
+          lang: (save.lang || 'en') as LanguageCode,
+        });
+      } catch (e) {
+        console.warn('Stats load error', e);
+      }
+    };
+
     load();
-    
   }, []);
 
-  const LABELS: Record<string, Record<string, string>> = {
-    title: { ru: 'Статистика', de: 'Statistik', uk: 'Статистика', ar: 'الإحصاءات', en: 'Statistics' },
-    totalDeeds: { ru: 'Всего добрых дел', de: 'Gute Taten gesamt', uk: 'Всього добрих справ', ar: 'إجمالي الأعمال الطيبة', en: 'Total good deeds' },
-    outdoor: { ru: 'Уличных квестов', de: 'Outdoor-Quests', uk: 'Вуличних квестів', ar: 'مهام خارجية', en: 'Outdoor quests' },
-    home: { ru: 'Домашних квестов', de: 'Heimquests', uk: 'Домашніх квестів', ar: 'مهام منزلية', en: 'Home quests' },
-    pet: { ru: 'Ахимса к питомцам', de: 'Ahimsa zu Haustieren', uk: 'Ахімса до тварин', ar: 'أهيمسا للحيوانات', en: 'Ahimsa to pets' },
-    xp: { ru: 'Опыта набрано', de: 'Erfahrung gesammelt', uk: 'Досвіду набрано', ar: 'خبرة مكتسبة', en: 'Experience gained' },
-    totalDobri: { ru: 'Добриков заработано', de: 'Dobriki verdient', uk: 'Добриків зароблено', ar: 'دوبريكي مكتسبة', en: 'Dobriki earned' },
-    streak: { ru: 'Дней подряд', de: 'Tage in Folge', uk: 'Днів поспіль', ar: 'أيام متتالية', en: 'Day streak' },
-    impact: { ru: 'Твой вклад', de: 'Dein Beitrag', uk: 'Твій внесок', ar: 'مساهمتك', en: 'Your impact' },
-    impactText: { 
-      ru: `Ты убрал примерно ${Math.round(stats.outdoorDeeds * 0.05 * 10) / 10} кг мусора.\nЭто ${stats.outdoorDeeds} существ которые не отравились.`, 
-      de: `Du hast etwa ${Math.round(stats.outdoorDeeds * 0.05 * 10) / 10} kg Müll aufgehoben.\nDas sind ${stats.outdoorDeeds} Lebewesen die nicht vergiftet wurden.`,
-      uk: `Ти прибрав приблизно ${Math.round(stats.outdoorDeeds * 0.05 * 10) / 10} кг сміття.\nЦе ${stats.outdoorDeeds} істот які не отруїлись.`,
-      ar: `لقد جمعت حوالي ${Math.round(stats.outdoorDeeds * 0.05 * 10) / 10} كجم من القمامة.\nهذا ${stats.outdoorDeeds} مخلوقاً لم يُسمَّم.`,
-      en: `You picked up about ${Math.round(stats.outdoorDeeds * 0.05 * 10) / 10} kg of litter.\nThat's ${stats.outdoorDeeds} creatures that weren't poisoned.`,
-    },
-  };
+  const t = LANGS[stats.lang] || LANGS.en;
+  const litterKg = Math.round(stats.outdoorDeeds * 0.05 * 10) / 10;
 
-  const l = stats.lang as string;
-  const label = (key: string) => LABELS[key]?.[l] || LABELS[key]?.en || key;
+  const impactLine1 = formatTemplate(t.statsImpactTextLitter, { kg: litterKg });
+  const impactLine2 = formatTemplate(t.statsImpactTextCreatures, { count: stats.outdoorDeeds });
 
   const STAT_CARDS = [
-    { label: label('totalDeeds'), value: stats.deeds, emoji: '💚', color: '#5aad6a' },
-    { label: label('outdoor'), value: stats.outdoorDeeds, emoji: '🌍', color: '#3d8b52' },
-    { label: label('home'), value: stats.homeDeeds, emoji: '🏠', color: '#6b9e6b' },
-    { label: label('pet'), value: stats.petDeeds, emoji: '🐾', color: '#7a9fc4' },
-    { label: label('xp'), value: stats.xp, emoji: '⭐', color: '#c9a84c' },
-    { label: label('totalDobri'), value: stats.totalDobri, emoji: '🪙', color: '#e8c97a' },
-    { label: label('streak'), value: stats.streak, emoji: '🔥', color: '#e87a3a' },
+    { label: t.statsTotalDeeds, value: stats.deeds, emoji: '💚', color: '#5aad6a' },
+    { label: t.statsOutdoor, value: stats.outdoorDeeds, emoji: '🌍', color: '#3d8b52' },
+    { label: t.statsHome, value: stats.homeDeeds, emoji: '🏠', color: '#6b9e6b' },
+    { label: t.statsPet, value: stats.petDeeds, emoji: '🐾', color: '#7a9fc4' },
+    { label: t.statsXp, value: stats.xp, emoji: '⭐', color: '#c9a84c' },
+    { label: t.statsTotalDobri, value: stats.totalDobri, emoji: '🪙', color: '#e8c97a' },
+    { label: t.statsStreak, value: stats.streak, emoji: '🔥', color: '#e87a3a' },
   ];
 
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scroll}>
         <View style={styles.header}>
-          <Text style={styles.title}>{label('title')}</Text>
+          <Text style={styles.title}>{t.statsTitle}</Text>
         </View>
 
         <View style={styles.grid}>
@@ -83,12 +80,16 @@ export default function StatsScreen() {
         </View>
 
         <View style={styles.impactBox}>
-          <Text style={styles.impactTitle}>{label('impact')}</Text>
-          <Text style={styles.impactText}>{label('impactText')}</Text>
+          <Text style={styles.impactTitle}>{t.statsImpact}</Text>
+          <Text style={styles.impactText}>
+            {impactLine1}
+            {'\n'}
+            {impactLine2}
+          </Text>
         </View>
 
         <View style={styles.motto}>
-          <Text style={styles.mottoText}>☯  {stats.lang === 'en' ? 'Every deed matters' : stats.lang === 'de' ? 'Jede Tat zählt' : stats.lang === 'uk' ? 'Кожна справа важлива' : stats.lang === 'ar' ? 'كل عمل مهم' : 'Каждое дело важно'}</Text>
+          <Text style={styles.mottoText}>{t.statsMotto}</Text>
         </View>
       </ScrollView>
     </SafeAreaView>
