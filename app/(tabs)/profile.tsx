@@ -1,19 +1,13 @@
 import { useEffect, useState } from 'react';
 import { Image, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { loadSave, updateSave } from '../../lib/storage';
+import { LANGS } from '../../lib/i18n';
 
 const AVATARS = [
   { id: 'lumi', image: require('../../assets/images/avatars/lumi.png') },
   { id: 'earthity', image: require('../../assets/images/avatars/earthity.png') },
   { id: 'loone', image: require('../../assets/images/avatars/loone.png') },
 ];
-
-const LEVEL_NAMES: Record<string, string> = {
-  level1: '🌱 Росток',
-  level2: '🌿 Эко',
-  level3: '🌳 Хранитель',
-  level4: '⭐ Герой',
-};
 
 const getLevelKey = (xp: number) =>
   xp < 50 ? 'level1' : xp < 150 ? 'level2' : xp < 300 ? 'level3' : 'level4';
@@ -41,10 +35,11 @@ export default function ProfileScreen() {
   const [availableTitles, setAvailableTitles] = useState<AvailableTitle[]>([]);
   const [lang, setLang] = useState<'ru' | 'de' | 'uk' | 'ar' | 'en'>('ru');
   const [selectedTitleId, setSelectedTitleId] = useState('');
+  const t = LANGS[lang];
 
   const currentAvatar = AVATARS.find(a => a.id === avatar) ?? AVATARS[0];
   const levelKey = getLevelKey(xp);
-  const levelName = LEVEL_NAMES[levelKey];
+  const levelName = t[levelKey];
   const nextXp = xp < 50 ? 50 : xp < 150 ? 150 : xp < 300 ? 300 : 500;
   const prevXp = xp < 50 ? 0 : xp < 150 ? 50 : xp < 300 ? 150 : 300;
   const xpProgress = Math.min(100, ((xp - prevXp) / (nextXp - prevXp)) * 100);
@@ -117,19 +112,25 @@ export default function ProfileScreen() {
           style={[styles.tabBtn, activeTab === 'profile' && styles.tabBtnActive]}
           onPress={() => setActiveTab('profile')}
         >
-          <Text style={[styles.tabText, activeTab === 'profile' && styles.tabTextActive]}>👤 Профиль</Text>
+          <Text style={[styles.tabText, activeTab === 'profile' && styles.tabTextActive]}>
+  👤 {t.profileTabProfile}
+</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.tabBtn, activeTab === 'stats' && styles.tabBtnActive]}
           onPress={() => setActiveTab('stats')}
         >
-          <Text style={[styles.tabText, activeTab === 'stats' && styles.tabTextActive]}>📊 Статистика</Text>
+          <Text style={[styles.tabText, activeTab === 'stats' && styles.tabTextActive]}>
+  📊 {t.profileTabStats}
+</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.tabBtn, activeTab === 'settings' && styles.tabBtnActive]}
           onPress={() => setActiveTab('settings')}
         >
-          <Text style={[styles.tabText, activeTab === 'settings' && styles.tabTextActive]}>⚙️ Настройки</Text>
+          <Text style={[styles.tabText, activeTab === 'settings' && styles.tabTextActive]}>
+  ⚙️ {t.profileTabSettings}
+</Text>
         </TouchableOpacity>
       </View>
 
@@ -140,7 +141,7 @@ export default function ProfileScreen() {
               <TouchableOpacity style={styles.avatarCircle} onPress={() => setPickingAvatar(!pickingAvatar)}>
                 <Image source={currentAvatar.image} style={styles.avatarImage} />
               </TouchableOpacity>
-              <Text style={styles.avatarHint}>Нажмите чтобы сменить аватар</Text>
+              <Text style={styles.avatarHint}>{t.profileChangeAvatar}</Text>
             </View>
 
             {pickingAvatar && (
@@ -159,7 +160,7 @@ export default function ProfileScreen() {
 
             <TouchableOpacity style={styles.titleSelector} onPress={() => setPickingTitle(!pickingTitle)}>
               <Text style={styles.titleSelectorText}>
-                {titleEmoji ? `${titleEmoji} ${getLocalizedText(title, lang)}` : '+ Выбрать звание'}
+                {titleEmoji ? `${titleEmoji} ${getLocalizedText(title, lang)}` : t.profileChooseTitle}
               </Text>
               <Text style={styles.titleSelectorArrow}>{pickingTitle ? '▲' : '▼'}</Text>
             </TouchableOpacity>
@@ -167,7 +168,7 @@ export default function ProfileScreen() {
             {pickingTitle && (
               <View style={styles.titleGrid}>
                 {availableTitles.length === 0 ? (
-                  <Text style={styles.noTitles}>Выполняйте достижения, чтобы открыть звания</Text>
+                  <Text style={styles.noTitles}>{t.profileNoTitles}</Text>
                 ) : (
                   availableTitles.map((t: any, i: number) => (
                     <TouchableOpacity
@@ -197,40 +198,40 @@ export default function ProfileScreen() {
             <View style={styles.statsRow}>
               <View style={styles.statCard}>
                 <Text style={styles.statNum}>{dobri}</Text>
-                <Text style={styles.statLabel}>добриков</Text>
+                <Text style={styles.statLabel}>{t.profileStatDobriki}</Text>
               </View>
               <View style={styles.statCard}>
                 <Text style={styles.statNumGreen}>{deeds}</Text>
-                <Text style={styles.statLabel}>добрых дел</Text>
+               <Text style={styles.statLabel}>{t.profileStatDeeds}</Text>
               </View>
               <View style={styles.statCard}>
                 <Text style={styles.statNumXp}>{xp}</Text>
-                <Text style={styles.statLabel}>опыта</Text>
+                <Text style={styles.statLabel}>{t.profileStatXp}</Text>
               </View>
             </View>
 
             <View style={styles.motto}>
               <Text style={styles.mottoSymbol}>☯</Text>
-              <Text style={styles.mottoText}>Ахимса — ненасилие{'\n'}по отношению ко всему живому</Text>
+              <Text style={styles.mottoText}>{t.profileMotto}</Text>
             </View>
           </>
         )}
 
         {activeTab === 'stats' && (
           <View style={styles.fullStatsContainer}>
-            <Text style={styles.sectionTitle}>📊 Полная статистика</Text>
-            <Text style={{ color: '#5aad6a', fontSize: 15, marginVertical: 40, textAlign: 'center' }}>
-              Полная статистика скоро будет здесь ✨
-            </Text>
+            <Text style={styles.sectionTitle}>📊 {t.profileFullStats}</Text>
+<Text style={{ color: '#5aad6a', fontSize: 15, marginVertical: 40, textAlign: 'center' }}>
+  {t.profileStatsSoon}
+</Text>
           </View>
         )}
 
         {activeTab === 'settings' && (
           <View style={styles.fullStatsContainer}>
-            <Text style={styles.sectionTitle}>⚙️ Настройки</Text>
-            <Text style={{ color: 'rgba(255,255,255,0.4)', textAlign: 'center', marginTop: 40 }}>
-              Раздел настроек в разработке
-            </Text>
+            <Text style={styles.sectionTitle}>⚙️ {t.profileSettingsTitle}</Text>
+<Text style={{ color: 'rgba(255,255,255,0.4)', textAlign: 'center', marginTop: 40 }}>
+  {t.profileSettingsSoon}
+</Text>
           </View>
         )}
       </ScrollView>

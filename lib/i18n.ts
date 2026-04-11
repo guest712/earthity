@@ -9,7 +9,16 @@ export const LANGS: Record<string, any> = {
     steps_home: ['Сделай дома', 'Будь осознанным', 'Нажми Выполнено'],
     empty: 'Вы убрали всё рядом. Отличная работа!',
     catAll: 'Все', catOutdoor: 'Улица', catHome: 'Дома',
+
+    tabHome: 'Главная',
+    tabProfile: 'Профиль',
+    tabAwards: 'Награды',
+    tabInventory: 'Инвентарь',
+
+    inventoryTitle: 'Инвентарь',
+    itemWateringCan: 'Лейка',
   },
+
   de: {
     level1: '🌱 Keimling', level2: '🌿 Öko', level3: '🌳 Hüter', level4: '⭐ Held',
     dobriki: 'Dobriki', deeds: 'Taten', nearby: 'Aufgaben in der Nähe', clean: '🌍 Sauber!',
@@ -20,7 +29,16 @@ export const LANGS: Record<string, any> = {
     steps_home: ['Zu Hause machen', 'Achtsam sein', 'Erledigt drücken'],
     empty: 'Alles aufgeräumt. Gut gemacht!',
     catAll: 'Alle', catOutdoor: 'Draußen', catHome: 'Zuhause',
+
+    tabHome: 'Start',
+    tabProfile: 'Profil',
+    tabAwards: 'Auszeichnungen',
+    tabInventory: 'Inventar',
+
+    inventoryTitle: 'Inventar',
+    itemWateringCan: 'Gießkanne',
   },
+
   uk: {
     level1: '🌱 Паросток', level2: '🌿 Еко', level3: '🌳 Хранитель', level4: '⭐ Герой',
     dobriki: 'добриків', deeds: 'справ', nearby: 'завдання поруч', clean: '🌍 Район чистий!',
@@ -31,7 +49,16 @@ export const LANGS: Record<string, any> = {
     steps_home: ['Зроби вдома', 'Будь усвідомленим', 'Натисни Виконано'],
     empty: 'Ви прибрали все поруч. Чудова робота!',
     catAll: 'Всі', catOutdoor: 'Вулиця', catHome: 'Вдома',
+
+    tabHome: 'Головна',
+    tabProfile: 'Профіль',
+    tabAwards: 'Нагороди',
+    tabInventory: 'Інвентар',
+
+    inventoryTitle: 'Інвентар',
+    itemWateringCan: 'Лійка',
   },
+
   ar: {
     level1: '🌱 بذرة', level2: '🌿 أخضر', level3: '🌳 حارس', level4: '⭐ بطل',
     dobriki: 'دوبريكي', deeds: 'أعمال', nearby: 'مهام قريبة', clean: '🌍 الحي نظيف!',
@@ -42,7 +69,16 @@ export const LANGS: Record<string, any> = {
     steps_home: ['افعل ذلك في المنزل', 'كن واعياً', 'اضغط تم'],
     empty: 'لقد نظفت كل شيء. عمل رائع!',
     catAll: 'الكل', catOutdoor: 'خارج', catHome: 'منزل',
+
+    tabHome: 'الرئيسية',
+    tabProfile: 'الملف',
+    tabAwards: 'الجوائز',
+    tabInventory: 'المخزون',
+
+    inventoryTitle: 'المخزون',
+    itemWateringCan: 'إبريق السقي',
   },
+
   en: {
     level1: '🌱 Sprout', level2: '🌿 Eco', level3: '🌳 Guardian', level4: '⭐ Hero',
     dobriki: 'dobriki', deeds: 'deeds', nearby: 'quests nearby', clean: '🌍 Area is clean!',
@@ -53,9 +89,15 @@ export const LANGS: Record<string, any> = {
     steps_home: ['Do it at home', 'Be mindful', 'Press Done'],
     empty: 'You cleaned everything nearby. Great job!',
     catAll: 'All', catOutdoor: 'Outdoor', catHome: 'Home',
+
+    tabHome: 'Home',
+    tabProfile: 'Profile',
+    tabAwards: 'Awards',
+    tabInventory: 'Inventory',
+
+    inventoryTitle: 'Inventory',
+    itemWateringCan: 'Watering Can',
   },
 };
-
-
 
 export const FLAG: Record<string, string> = { ru: '🇷🇺', de: '🇩🇪', uk: '🇺🇦', ar: '🇸🇦', en: '🇬🇧' };
