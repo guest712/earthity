@@ -331,9 +331,9 @@ const mindfulPhrase = selected
 
   if (!interaction.ok) {
     if (interaction.reason === 'too_far') {
-      alert('Подойдите ближе! 📍');
+      alert(t.alertTooFar);
     } else if (interaction.reason === 'no_water') {
-      alert('Лейка пуста! Найдите родник 💧');
+      alert(t.alertNoWater);
     } else if (interaction.reason === 'cooldown' && !isFeeding) {
       setSelectedCreature(null);
     }
@@ -364,7 +364,7 @@ startFeeding(() => {
 
   animateReward();
   playRewardSound();
-  scheduleCreatureNotification(creature);
+  scheduleCreatureNotification(creature, lang);
   setSelectedCreature(null);
 });
 }}
@@ -483,11 +483,11 @@ startFeeding(() => {
     }}
     onPress={() => {
       if (waterLevel >= 10) {
-        alert('Лейка уже полна! 💧');
+        alert(t.alertWaterFull);
         return;
       }
       setWaterLevel(10);
-      alert('Лейка пополнена! 💧');
+      alert(t.alertWaterRefilled);
     }}
   >
     <View style={{ alignItems: 'center' }}>
@@ -527,7 +527,9 @@ startFeeding(() => {
                   style={{ padding: 14, borderRadius: 12, borderWidth: 1, borderColor: '#1e3020' }}
                   onPress={() => setCompleted([])}
                 >
-                  <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 13 }}>🔄 Новые квесты</Text>
+                  <Text style={styles.newQuestsText}>
+  {t.newQuests}
+</Text>
                 </TouchableOpacity>
               </View>
             )}
@@ -611,4 +613,5 @@ const styles = StyleSheet.create({
   streak: { fontSize: 11, color: '#e8c97a', marginTop: 2, letterSpacing: 1 },
   mindfulBox: { backgroundColor: 'rgba(45,106,63,0.08)', borderLeftWidth: 2, borderLeftColor: '#3d8b52', borderRadius: 4, padding: 14, marginBottom: 20, width: '100%' },
   mindfulText: { fontSize: 13, color: 'rgba(255,255,255,0.5)', lineHeight: 20, fontStyle: 'italic' },
+  newQuestsText: { color: '#e8e4d8', fontSize: 16 },
 });
