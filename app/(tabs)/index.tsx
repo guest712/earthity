@@ -4,6 +4,7 @@ import { Audio } from 'expo-av';
 import { QUESTS, CREATURES, WATER_SPOTS, MINDFUL_PHRASES } from  '../../lib/game-data';
 import { LANGS, FLAG } from '../../lib/i18n';
 import { getDistance, getLevelKey, getLevelName } from '../../lib/game-utils';
+import React from 'react';
 import {
   applyQuestCompletion,
   canInteractWithCreature,
@@ -12,11 +13,11 @@ import {
   pruneCreatureSpawns,
   shouldRefreshCreatureSpawns,
   registerCreatureSeen,
-registerCreatureCared,
+  registerCreatureCared,
 } from '../../lib/game-engine';
 import { useEffect, useRef, useState } from 'react';
 import { Image, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import MapView, { Marker } from 'react-native-maps';
+import MapView, { Marker, Circle } from 'react-native-maps';
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withRepeat, withSequence, withSpring, withTiming } from 'react-native-reanimated';
 import Onboarding from './onboarding';
 import HomeHeader from '../../components/HomeHeader';
@@ -530,40 +531,73 @@ startFeeding(() => {
   const creature = CREATURES.find((c) => c.id === spawn.creatureId);
   if (!creature) return null;
 
-  return (
-    <Marker
-      key={spawn.spawnId}
-      coordinate={{
-        latitude: spawn.latitude,
-        longitude: spawn.longitude,
-      }}
-      onPress={() => {
-  setSelectedCreature(creature);
-  setSelectedSpawn(spawn);
+  const dist = location
+  ? getDistance(
+      location.latitude,
+      location.longitude,
+      spawn.latitude,
+      spawn.longitude
+    )
+  : 999;
 
-  setCareDiary((prev) =>
-    registerCreatureSeen({
-      diary: prev,
-      creatureId: creature.id,
-    })
-  );
-}}
-    >
-      <View style={{ alignItems: 'center' }}>
-        {creature.id === 'animal1' ? (
-          <Image
-            source={require('../../assets/images/creatures/fox.png')}
-            style={{ width: 40, height: 40 }}
-            resizeMode="contain"
-          />
-        ) : (
-          <Image
-            source={creature.image}
-            style={{ width: 40, height: 40 }}
-          />
-        )}
-      </View>
-    </Marker>
+const isClose = dist <= 150; 
+
+  return (
+    <React.Fragment key={spawn.spawnId}>
+      {selectedSpawn?.spawnId === spawn.spawnId && (
+       <Circle
+  center={{
+    latitude: spawn.latitude,
+    longitude: spawn.longitude,
+  }}
+  radius={150}
+  strokeWidth={2}
+  strokeColor={
+    isClose
+      ? "rgba(90,200,120,0.9)"
+      : "rgba(90,173,106,0.5)"
+  }
+  fillColor={
+    isClose
+      ? "rgba(90,200,120,0.25)"
+      : "rgba(90,173,106,0.1)"
+  }
+/>
+      )}
+
+      <Marker
+        coordinate={{
+          latitude: spawn.latitude,
+          longitude: spawn.longitude,
+        }}
+        onPress={() => {
+          setSelectedCreature(creature);
+          setSelectedSpawn(spawn);
+
+          setCareDiary((prev) =>
+            registerCreatureSeen({
+              diary: prev,
+              creatureId: creature.id,
+            })
+          );
+        }}
+      >
+        <View style={{ alignItems: 'center' }}>
+          {creature.id === 'animal1' ? (
+            <Image
+              source={require('../../assets/images/creatures/fox.png')}
+              style={{ width: 40, height: 40 }}
+              resizeMode="contain"
+            />
+          ) : (
+            <Image
+              source={creature.image}
+              style={{ width: 40, height: 40 }}
+            />
+          )}
+        </View>
+      </Marker>
+    </React.Fragment>
   );
 })}
 {WATER_SPOTS.map((spot, i) => (
