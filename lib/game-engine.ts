@@ -1,5 +1,6 @@
 import { Quest } from './types';
-import type { Creature } from './types';
+import { getDistance } from './game-utils';
+import type { Creature, SpawnedCreature, CareDiaryEntry, } from './types';
 
 type CompleteQuestResult = {
   completed: number[];
@@ -80,7 +81,7 @@ export function getCreaturePosition(
 
 export function isWithinInteractionDistance(
   distance: number,
-  maxDistance = 300
+  maxDistance = 150
 ): boolean {
   return distance <= maxDistance;
 }
@@ -103,7 +104,7 @@ export const canInteractWithCreature = (params: {
     waterLevel,
     lastInteractionTime,
     now,
-    maxDistance = 300,
+    maxDistance = 150,
   } = params;
 
   if (distance > maxDistance) {
@@ -138,3 +139,269 @@ export const getCreatureRewardResult = (params: {
         : waterLevel,
   };
 };
+
+function randomBetween(min: number, max: number) {
+  return Math.random() * (max - min) + min;
+}
+
+function metersToLatitude(meters: number) {
+  return meters / 111320;
+}
+
+function metersToLongitude(meters: number, latitude: number) {
+  return meters / (111320 * Math.cos((latitude * Math.PI) / 180));
+}
+
+export function generateCreatureSpawns(params: {
+  baseLatitude: number;
+  baseLongitude: number;
+  creatureIds: string[];
+  count?: number;
+  minRadiusMeters?: number;
+  maxRadiusMeters?: number;
+  lifetimeMs?: number;
+  now?: number;
+}): SpawnedCreature[] {
+  const {
+    baseLatitude,
+    baseLongitude,
+    creatureIds,
+    count = 5,
+    minRadiusMeters = 80,
+    maxRadiusMeters = 280,
+    lifetimeMs = 15 * 60 * 1000,
+    now = Date.now(),
+  } = params;
+
+  
+
+  const result: SpawnedCreature[] = [];
+
+  for (let i = 0; i < count; i++) {
+    const radius = randomBetween(minRadiusMeters, maxRadiusMeters);
+    const angle = Math.random() * Math.PI * 2;
+
+    const dx = Math.cos(angle) * radius;
+    const dy = Math.sin(angle) * radius;
+
+    const latOffset = metersToLatitude(dy);
+    const lonOffset = metersToLongitude(dx, baseLatitude);
+
+    const creatureId = creatureIds[i % creatureIds.length];
+
+    result.push({
+      spawnId: `${creatureId}_${now}_${i}_${Math.floor(Math.random() * 100000)}`,
+      creatureId,
+      latitude: baseLatitude + latOffset,
+      longitude: baseLongitude + lonOffset,
+      spawnedAt: now,
+      expiresAt: now + lifetimeMs,
+    });
+  }
+
+  return result;
+}
+
+export function generateCreatureSpawnsSpread(params: {
+  baseLatitude: number;
+  baseLongitude: number;
+  creatureIds: string[];
+  existingSpawns?: SpawnedCreature[];
+  count?: number;
+  minRadiusMeters?: number;
+  maxRadiusMeters?: number;
+  minGapMeters?: number;
+  lifetimeMs?: number;
+  now?: number;
+  maxAttemptsPerSpawn?: number;
+}): SpawnedCreature[] {
+  const {
+    baseLatitude,
+    baseLongitude,
+    creatureIds,
+    existingSpawns = [],
+    count = 5,
+    minRadiusMeters = 80,
+    maxRadiusMeters = 280,
+    minGapMeters = 70,
+    lifetimeMs = 15 * 60 * 1000,
+    now = Date.now(),
+    maxAttemptsPerSpawn = 12,
+  } = params;
+
+  const result: SpawnedCreature[] = [];
+
+  for (let i = 0; i < count; i++) {
+    let created: SpawnedCreature | null = null;
+
+    for (let attempt = 0; attempt < maxAttemptsPerSpawn; attempt++) {
+      const radius = randomBetween(minRadiusMeters, maxRadiusMeters);
+      const angle = Math.random() * Math.PI * 2;
+
+      const dx = Math.cos(angle) * radius;
+      const dy = Math.sin(angle) * radius;
+
+      const latOffset = metersToLatitude(dy);
+      const lonOffset = metersToLongitude(dx, baseLatitude);
+
+      const candidate: SpawnedCreature = {
+        spawnId: `${creatureIds[i % creatureIds.length]}_${now}_${i}_${attempt}_${Math.floor(Math.random() * 100000)}`,
+        creatureId: creatureIds[(i + attempt) % creatureIds.length],
+        latitude: baseLatitude + latOffset,
+        longitude: baseLongitude + lonOffset,
+        spawnedAt: now,
+        expiresAt: now + lifetimeMs,
+      };
+
+      const tooCloseToExisting = [...existingSpawns, ...result].some((spawn) => {
+        const distance = getDistance(
+          candidate.latitude,
+          candidate.longitude,
+          spawn.latitude,
+          spawn.longitude
+        );
+
+        return distance < minGapMeters;
+      });
+
+      if (!tooCloseToExisting) {
+        created = candidate;
+        break;
+      }
+    }
+
+    if (created) {
+      result.push(created);
+    }
+  }
+
+  return result;
+}
+
+export function pruneCreatureSpawns(params: {
+  spawns: SpawnedCreature[];
+  now?: number;
+  userLatitude: number;
+  userLongitude: number;
+  maxDistanceMeters?: number;
+}) {
+  const {
+    spawns,
+    now = Date.now(),
+    userLatitude,
+    userLongitude,
+    maxDistanceMeters = 450,
+  } = params;
+
+  return spawns.filter((spawn) => {
+    if (spawn.expiresAt <= now) return false;
+
+    const distance = getDistance(
+      userLatitude,
+      userLongitude,
+      spawn.latitude,
+      spawn.longitude
+    );
+
+    return distance <= maxDistanceMeters;
+  });
+}
+
+export function shouldRefreshCreatureSpawns(params: {
+  lastSpawnCenter: { latitude: number; longitude: number } | null;
+  currentLatitude: number;
+  currentLongitude: number;
+  lastRefreshAt: number;
+  now?: number;
+  refreshDistanceMeters?: number;
+  refreshIntervalMs?: number;
+}) {
+  const {
+    lastSpawnCenter,
+    currentLatitude,
+    currentLongitude,
+    lastRefreshAt,
+    now = Date.now(),
+    refreshDistanceMeters = 180,
+    refreshIntervalMs = 5 * 60 * 1000,
+  } = params;
+
+  if (!lastSpawnCenter) return true;
+  if (now - lastRefreshAt >= refreshIntervalMs) return true;
+
+  const movedDistance = getDistance(
+    lastSpawnCenter.latitude,
+    lastSpawnCenter.longitude,
+    currentLatitude,
+    currentLongitude
+  );
+
+  return movedDistance >= refreshDistanceMeters;
+}
+
+export function registerCreatureSeen(params: {
+  diary: CareDiaryEntry[];
+  creatureId: string;
+  now?: number;
+}): CareDiaryEntry[] {
+  const { diary, creatureId, now = Date.now() } = params;
+
+  const existing = diary.find((entry) => entry.creatureId === creatureId);
+
+  if (!existing) {
+    return [
+      ...diary,
+      {
+        creatureId,
+        firstSeenAt: now,
+        lastSeenAt: now,
+        interactions: 0,
+      },
+    ];
+  }
+
+  return diary.map((entry) =>
+    entry.creatureId === creatureId
+      ? {
+          ...entry,
+          lastSeenAt: now,
+        }
+      : entry
+  );
+}
+
+export function registerCreatureCared(params: {
+  diary: CareDiaryEntry[];
+  creatureId: string;
+  now?: number;
+}): CareDiaryEntry[] {
+  const { diary, creatureId, now = Date.now() } = params;
+
+  const existing = diary.find((entry) => entry.creatureId === creatureId);
+
+  if (!existing) {
+    return [
+      ...diary,
+      {
+        creatureId,
+        firstSeenAt: now,
+        lastSeenAt: now,
+        interactions: 1,
+        firstCaredAt: now,
+        lastCaredAt: now,
+      },
+    ];
+  }
+
+  return diary.map((entry) =>
+    entry.creatureId === creatureId
+      ? {
+          ...entry,
+          lastSeenAt: now,
+          interactions: entry.interactions + 1,
+          firstCaredAt: entry.firstCaredAt ?? now,
+          lastCaredAt: now,
+        }
+      : entry
+  );
+}

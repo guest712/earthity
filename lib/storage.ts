@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import type { EarthitySave } from '../types/game';
+import type { EarthitySave } from './types';
 
 const STORAGE_KEY = 'earthity_save';
 
@@ -27,6 +27,7 @@ export const defaultSave: EarthitySave = {
   selectedTitleName: '',
 
   unlockedTitles: [],
+  careDiary: [],
 };
 
 export async function loadSave(): Promise<EarthitySave> {

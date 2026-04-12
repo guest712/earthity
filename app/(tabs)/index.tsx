@@ -4,7 +4,16 @@ import { Audio } from 'expo-av';
 import { QUESTS, CREATURES, WATER_SPOTS, MINDFUL_PHRASES } from  '../../lib/game-data';
 import { LANGS, FLAG } from '../../lib/i18n';
 import { getDistance, getLevelKey, getLevelName } from '../../lib/game-utils';
-import { applyQuestCompletion, getCreaturePosition, canInteractWithCreature, getCreatureRewardResult, } from '../../lib/game-engine';
+import {
+  applyQuestCompletion,
+  canInteractWithCreature,
+  generateCreatureSpawnsSpread,
+  getCreatureRewardResult,
+  pruneCreatureSpawns,
+  shouldRefreshCreatureSpawns,
+  registerCreatureSeen,
+registerCreatureCared,
+} from '../../lib/game-engine';
 import { useEffect, useRef, useState } from 'react';
 import { Image, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
@@ -14,11 +23,11 @@ import HomeHeader from '../../components/HomeHeader';
 import CategoryTabs from '../../components/CategoryTabs';
 import QuestDetailCard from '../../components/QuestDetailCard';
 import CreaturePopup from '../../components/CreaturePopup';
-import { Creature } from '../../lib/types';
-import { Quest } from '../../lib/types';
+import { Creature, Quest } from '../../lib/types';
 import { useLocationState } from '../../lib/useLocationState';
 import { useCreatureSystem } from '../../lib/useCreatureSystem';
 import { useAppLanguage } from '../../lib/LanguageContext';
+import type { SpawnedCreature, CareDiaryEntry } from '../../lib/types';
 
 
 
@@ -41,6 +50,7 @@ export default function HomeScreen() {
 } = useCreatureSystem();
 
   const [selectedCreature, setSelectedCreature] = useState<Creature | null>(null);
+  const [selectedSpawn, setSelectedSpawn] = useState<SpawnedCreature | null>(null);
   const [completed, setCompleted] = useState<number[]>([]);
   const [selected, setSelected] = useState<Quest | null>(null);
   const [confirming, setConfirming] = useState(false);
@@ -52,6 +62,10 @@ export default function HomeScreen() {
   const [testDeeds, setTestDeeds] = useState(0);
   const [waterLevel, setWaterLevel] = useState(10);
   const [showConfirmBtn, setShowConfirmBtn] = useState(false);
+  const [activeSpawns, setActiveSpawns] = useState<SpawnedCreature[]>([]);
+  const [lastSpawnCenter, setLastSpawnCenter] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [lastSpawnRefreshAt, setLastSpawnRefreshAt] = useState(0);
+  const [careDiary, setCareDiary] = useState<CareDiaryEntry[]>([]);
   const playRewardSound = async () => {
   const { sound } = await Audio.Sound.createAsync(
     require('../../assets/sounds/reward.mp3')
@@ -125,6 +139,7 @@ const breathStyle = useAnimatedStyle(() => ({
       setTestDeeds(save.testDeeds);
       setWaterLevel(save.waterLevel);
       setTotalDobri(save.totalDobri || save.dobri || 0);
+      setCareDiary(save.careDiary || []);
 
       const today = new Date().toDateString();
       const last = save.lastOpenDate || '';
@@ -164,6 +179,7 @@ const breathStyle = useAnimatedStyle(() => ({
     lastOpenDate,
     testDeeds,
     waterLevel,
+    careDiary,
   }).catch((e) => {
     console.warn('Home save error', e);
   });
@@ -182,6 +198,7 @@ const breathStyle = useAnimatedStyle(() => ({
   lastOpenDate,
   testDeeds,
   waterLevel,
+  careDiary,
 ]);
 
   useEffect(() => {
@@ -191,6 +208,57 @@ const breathStyle = useAnimatedStyle(() => ({
     }
     prevLevelKey.current = currentKey;
   }, [xp]);
+
+  useEffect(() => {
+  if (!location) return;
+
+  const now = Date.now();
+
+  setActiveSpawns((prev) => {
+    const cleaned = pruneCreatureSpawns({
+      spawns: prev,
+      userLatitude: location.latitude,
+      userLongitude: location.longitude,
+      now,
+    });
+
+    const needsRefresh = shouldRefreshCreatureSpawns({
+      lastSpawnCenter,
+      currentLatitude: location.latitude,
+      currentLongitude: location.longitude,
+      lastRefreshAt: lastSpawnRefreshAt,
+      now,
+    });
+
+    if (!needsRefresh) {
+      return cleaned;
+    }
+
+    const targetCount = 5;
+    const missingCount = Math.max(0, targetCount - cleaned.length);
+
+    const newSpawns =
+  missingCount > 0
+    ? generateCreatureSpawnsSpread({
+        baseLatitude: location.latitude,
+        baseLongitude: location.longitude,
+        creatureIds: CREATURES.map((c) => c.id),
+        existingSpawns: cleaned,
+        count: missingCount,
+        minGapMeters: 70,
+        now,
+      })
+    : [];
+
+    setLastSpawnCenter({
+      latitude: location.latitude,
+      longitude: location.longitude,
+    });
+    setLastSpawnRefreshAt(now);
+
+    return [...cleaned, ...newSpawns];
+  });
+}, [location, lastSpawnCenter, lastSpawnRefreshAt]);
 
 
 
@@ -304,22 +372,17 @@ const mindfulPhrase = selected
     onPressAction={() => {
   const now = Date.now();
   const lastTime = creatureCooldowns[selectedCreature.id] || 0;
-  const creatureIndex = CREATURES.findIndex(c => c.id === selectedCreature.id);
+  
+if (!selectedSpawn) return;
 
-  const creaturePos = getCreaturePosition(
-    location?.latitude ?? 52.52,
-    location?.longitude ?? 13.405,
-    creatureIndex
-  );
-
-  const dist = location
-    ? getDistance(
-        location.latitude,
-        location.longitude,
-        creaturePos.latitude,
-        creaturePos.longitude
-      )
-    : 999;
+const dist = location
+  ? getDistance(
+      location.latitude,
+      location.longitude,
+      selectedSpawn.latitude,
+      selectedSpawn.longitude
+    )
+  : 999;
 
   const interaction = canInteractWithCreature({
     creature: selectedCreature,
@@ -343,7 +406,9 @@ const mindfulPhrase = selected
   if (isFeeding) return;
 
 const creature = selectedCreature;
-if (!creature) return;
+const spawn = selectedSpawn;
+
+if (!creature || !spawn) return;
 
 startFeeding(() => {
   const rewardResult = getCreatureRewardResult({
@@ -357,6 +422,7 @@ startFeeding(() => {
   setXp(rewardResult.xp);
   setWaterLevel(rewardResult.waterLevel);
 
+
   setCreatureCooldowns((p) => ({
     ...p,
     [creature.id]: Date.now(),
@@ -365,10 +431,26 @@ startFeeding(() => {
   animateReward();
   playRewardSound();
   scheduleCreatureNotification(creature, lang);
+
+  setCareDiary((prev) =>
+  registerCreatureCared({
+    diary: prev,
+    creatureId: creature.id,
+  })
+);
+
+  setActiveSpawns((prev) =>
+    prev.filter((item) => item.spawnId !== spawn.spawnId)
+  );
+
   setSelectedCreature(null);
+  setSelectedSpawn(null);
 });
 }}
-    onClose={() => setSelectedCreature(null)}
+    onClose={() => {
+  setSelectedCreature(null);
+  setSelectedSpawn(null);
+}}
   />
 )}
 
@@ -444,21 +526,31 @@ startFeeding(() => {
               />
             ))}
             
- {CREATURES.map((c, i) => {
-  const pos = getCreaturePosition(
-    location?.latitude ?? 52.52,
-    location?.longitude ?? 13.405,
-    i
-  );
+ {activeSpawns.map((spawn) => {
+  const creature = CREATURES.find((c) => c.id === spawn.creatureId);
+  if (!creature) return null;
 
   return (
     <Marker
-      key={c.id}
-      coordinate={pos}
-      onPress={() => setSelectedCreature(c)}
+      key={spawn.spawnId}
+      coordinate={{
+        latitude: spawn.latitude,
+        longitude: spawn.longitude,
+      }}
+      onPress={() => {
+  setSelectedCreature(creature);
+  setSelectedSpawn(spawn);
+
+  setCareDiary((prev) =>
+    registerCreatureSeen({
+      diary: prev,
+      creatureId: creature.id,
+    })
+  );
+}}
     >
       <View style={{ alignItems: 'center' }}>
-        {c.id === 'animal1' ? (
+        {creature.id === 'animal1' ? (
           <Image
             source={require('../../assets/images/creatures/fox.png')}
             style={{ width: 40, height: 40 }}
@@ -466,7 +558,7 @@ startFeeding(() => {
           />
         ) : (
           <Image
-            source={c.image}
+            source={creature.image}
             style={{ width: 40, height: 40 }}
           />
         )}

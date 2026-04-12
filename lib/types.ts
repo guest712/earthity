@@ -2,6 +2,24 @@ export type LanguageCode = 'ru' | 'de' | 'uk' | 'ar' | 'en';
 
 export type Translation = Record<LanguageCode, string>;
 
+export type Creature = {
+  id: string;
+  label: Translation;
+  reward: number;
+  cooldown: number;
+  type: CreatureType;
+  image: any; // позже можно типизировать через ImageSourcePropType
+};
+
+export type SpawnedCreature = {
+  spawnId: string;
+  creatureId: string;
+  latitude: number;
+  longitude: number;
+  spawnedAt: number;
+  expiresAt: number;
+};
+
 export type QuestType = 'trash' | 'help' | 'home' | 'test';
 
 export type Quest = {
@@ -15,16 +33,7 @@ export type Quest = {
 
 export type CreatureType = 'animal' | 'flower';
 
-export type Creature = {
-  id: string;
-  label: Translation;
-  reward: number;
-  cooldown: number;
-  type: CreatureType;
-  image: any; // позже можно типизировать через ImageSourcePropType
-};
-
-export type SaveData = {
+export type EarthitySave = {
   dobri: number;
   totalDobri: number;
   xp: number;
@@ -53,4 +62,14 @@ export type SaveData = {
   selectedTitleName: any;
 
   unlockedTitles: any[];
+  careDiary: CareDiaryEntry[];
+};
+
+export type CareDiaryEntry = {
+  creatureId: string;
+  firstSeenAt: number;
+  lastSeenAt: number;
+  interactions: number;
+  firstCaredAt?: number;
+  lastCaredAt?: number;
 };
