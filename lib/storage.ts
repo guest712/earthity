@@ -18,6 +18,11 @@ export const defaultSave: EarthitySave = {
   lastOpenDate: '',
   testDeeds: 0,
   waterLevel: 10,
+  feedCount: 0,
+
+  plastic: 0,
+glass: 0,
+paper: 0,
 
   avatar: 'lumi',
   name: 'Earthling',

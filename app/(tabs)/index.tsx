@@ -1,7 +1,7 @@
 import { loadSave, updateSave } from '../../lib/storage';
 import { requestNotificationPermissions, scheduleCreatureNotification } from '../../lib/notifications';
 import { Audio } from 'expo-av';
-import { QUESTS, CREATURES, WATER_SPOTS, MINDFUL_PHRASES } from  '../../lib/game-data';
+import { QUESTS, CREATURES, WATER_SPOTS, FEED_SPOTS, TRASH_SPOTS, MINDFUL_PHRASES } from  '../../lib/game-data';
 import { LANGS, FLAG } from '../../lib/i18n';
 import { getDistance, getLevelKey, getLevelName } from '../../lib/game-utils';
 import React from 'react';
@@ -62,6 +62,10 @@ export default function HomeScreen() {
   const [lastOpenDate, setLastOpenDate] = useState('');
   const [testDeeds, setTestDeeds] = useState(0);
   const [waterLevel, setWaterLevel] = useState(10);
+  const [feedCount, setFeedCount] = useState(0);
+  const [plastic, setPlastic] = useState(0);
+  const [glass, setGlass] = useState(0);
+  const [paper, setPaper] = useState(0);
   const [showConfirmBtn, setShowConfirmBtn] = useState(false);
   const [activeSpawns, setActiveSpawns] = useState<SpawnedCreature[]>([]);
   const [lastSpawnCenter, setLastSpawnCenter] = useState<{ latitude: number; longitude: number } | null>(null);
@@ -141,6 +145,10 @@ const breathStyle = useAnimatedStyle(() => ({
       setWaterLevel(save.waterLevel);
       setTotalDobri(save.totalDobri || save.dobri || 0);
       setCareDiary(save.careDiary || []);
+      setFeedCount(save.feedCount || 0);
+      setPlastic(save.plastic || 0);
+setGlass(save.glass || 0);
+setPaper(save.paper || 0);
 
       const today = new Date().toDateString();
       const last = save.lastOpenDate || '';
@@ -181,6 +189,10 @@ const breathStyle = useAnimatedStyle(() => ({
     testDeeds,
     waterLevel,
     careDiary,
+    feedCount,
+    plastic,
+    glass,
+    paper,
   }).catch((e) => {
     console.warn('Home save error', e);
   });
@@ -200,6 +212,10 @@ const breathStyle = useAnimatedStyle(() => ({
   testDeeds,
   waterLevel,
   careDiary,
+  feedCount,
+  plastic,
+glass,
+paper,
 ]);
 
   useEffect(() => {
@@ -394,8 +410,9 @@ const dist = location
   });
 
   if (!interaction.ok) {
+    
     if (interaction.reason === 'too_far') {
-      alert(t.alertTooFar);
+      alert(t.alertTooFarWater);
     } else if (interaction.reason === 'no_water') {
       alert(t.alertNoWater);
     } else if (interaction.reason === 'cooldown' && !isFeeding) {
@@ -403,6 +420,11 @@ const dist = location
     }
     return;
   }
+  
+  if (selectedCreature.type === 'animal' && feedCount <= 0) {
+  alert(t.alertNoFeed);
+  return;
+}
 
   if (isFeeding) return;
 
@@ -422,6 +444,10 @@ startFeeding(() => {
   setDobri(rewardResult.dobri);
   setXp(rewardResult.xp);
   setWaterLevel(rewardResult.waterLevel);
+
+  if (creature.type === 'animal') {
+  setFeedCount((prev) => Math.max(0, prev - 1));
+}
 
 
   setCreatureCooldowns((p) => ({
@@ -608,17 +634,134 @@ const isClose = dist <= 150;
       longitude: (location?.longitude ?? 13.405) + (Math.sin(i * 2.1) * 0.005),
     }}
     onPress={() => {
-      if (waterLevel >= 10) {
-        alert(t.alertWaterFull);
-        return;
-      }
-      setWaterLevel(10);
-      alert(t.alertWaterRefilled);
-    }}
+  const spotLat =
+    (location?.latitude ?? 52.52) + (Math.cos(i * 2.1) * 0.005);
+  const spotLng =
+    (location?.longitude ?? 13.405) + (Math.sin(i * 2.1) * 0.005);
+
+  const dist = location
+    ? getDistance(location.latitude, location.longitude, spotLat, spotLng)
+    : 999;
+
+  if (dist > 150) {
+    alert(t.alertTooFarWater);
+    return;
+  }
+
+  if (waterLevel >= 10) {
+    alert(t.alertWaterFull);
+    return;
+  }
+
+  setWaterLevel(10);
+  alert(t.alertWaterRefilled);
+}}
   >
     <View style={{ alignItems: 'center' }}>
       <Text style={{ fontSize: 28 }}>💧</Text>
     </View>
+  </Marker>
+))}
+{FEED_SPOTS.map((spot, i) => (
+  <Marker
+    key={spot.id}
+    coordinate={{
+      latitude: (location?.latitude ?? 52.52) + (Math.cos(i * 1.7) * 0.004),
+      longitude: (location?.longitude ?? 13.405) + (Math.sin(i * 1.7) * 0.004),
+    }}
+    onPress={() => {
+      const spotLat = (location?.latitude ?? 52.52) + (Math.cos(i * 1.7) * 0.004);
+      const spotLng = (location?.longitude ?? 13.405) + (Math.sin(i * 1.7) * 0.004);
+
+      const dist = location
+        ? getDistance(location.latitude, location.longitude, spotLat, spotLng)
+        : 999;
+
+      if (dist > 150) {
+        alert(t.alertTooFarFeed);
+        return;
+      }
+
+      if (feedCount >= 20) {
+        alert(t.alertFeedFull);
+        return;
+      }
+
+      setFeedCount((prev) => Math.min(20, prev + 2));
+      alert(t.alertFeedCollected);
+    }}
+  >
+    <View style={{ alignItems: 'center' }}>
+  <Image
+    source={require('../../assets/images/items/feed.png')}
+    style={{ width: 32, height: 32 }}
+    resizeMode="contain"
+  />
+</View>
+  </Marker> 
+))}
+{TRASH_SPOTS.map((spot, i) => (
+  <Marker
+    key={spot.id}
+    coordinate={{
+      latitude: (location?.latitude ?? 52.52) + (Math.cos(i * 1.3) * 0.004),
+      longitude: (location?.longitude ?? 13.405) + (Math.sin(i * 1.3) * 0.004),
+    }}
+    onPress={() => {
+      const spotLat = (location?.latitude ?? 52.52) + (Math.cos(i * 1.3) * 0.004)
+      const spotLng = (location?.longitude ?? 13.405) + (Math.sin(i * 1.3) * 0.004)
+
+      const dist = location
+        ? getDistance(location.latitude, location.longitude, spotLat, spotLng)
+        : 999;
+
+      if (dist > 150) {
+        alert(t.alertTooFarTrash);
+        return;
+      }
+
+      // логика ниже 👇
+    if (spot.type === 'plastic') {
+  if (plastic >= 150) {
+    alert(t.alertTrashFull);
+    return;
+  }
+  setPlastic((p) => Math.min(150, p + 5));
+}
+
+if (spot.type === 'glass') {
+  if (glass >= 150) {
+    alert(t.alertTrashFull);
+    return;
+  }
+  setGlass((p) => Math.min(150, p + 5));
+}
+
+if (spot.type === 'paper') {
+  if (paper >= 150) {
+    alert(t.alertTrashFull);
+    return;
+  }
+  setPaper((p) => Math.min(150, p + 5));
+}
+
+alert(t.alertTrashCollected);
+    }}
+  >
+    <View style={{ alignItems: 'center', justifyContent: 'center' }}>
+  <Image
+    source={
+      spot.type === 'plastic'
+        ? require('../../assets/images/items/plastictrash.png')
+        : spot.type === 'glass'
+        ? require('../../assets/images/items/glasstrash.png')
+        :spot.type === 'paper'
+        ? require('../../assets/images/items/papertrash.png')
+    : ''}
+    style={{ width: 30, height: 30 }}
+    resizeMode="contain"
+  />
+</View>
   </Marker>
 ))}
             

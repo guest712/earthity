@@ -52,6 +52,23 @@ function TabsContent() {
         }}
       />
       <Tabs.Screen
+  name="diary"
+  options={{
+    title: t.tabDiary,
+    tabBarIcon: ({ focused }) => (
+  <Text
+    style={{
+      fontSize: 22,
+      opacity: focused ? 1 : 0.5,
+    }}
+  >
+    📖
+  </Text>
+),
+  }}
+/>
+      
+      <Tabs.Screen
         name="stats"
         options={{ href: null }}
       />

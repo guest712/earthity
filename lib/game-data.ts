@@ -29,6 +29,18 @@ export const WATER_SPOTS = [
   { id: 'water3' },
 ];
 
+export const FEED_SPOTS = [
+  { id: 'feed1' },
+  { id: 'feed2' },
+  { id: 'feed3' },
+];
+
+export const TRASH_SPOTS = [
+  { id: 'trash1', type: 'plastic' },
+  { id: 'trash2', type: 'glass' },
+  { id: 'trash3', type: 'paper' },
+];
+
 export const MINDFUL_PHRASES = [
   { ru: 'Этот мусор лежит здесь потому что кто-то решил что земля — его мусорное ведро. Ты думаешь иначе.', en: 'This litter is here because someone decided the earth is their bin. You think differently.', de: 'Dieser Müll liegt hier, weil jemand die Erde als seine Mülltonne betrachtet. Du denkst anders.', uk: 'Це сміття тут тому що хтось вирішив що земля — його смітник. Ти думаєш інакше.', ar: 'هذه القمامة هنا لأن شخصاً ما قرر أن الأرض سلة مهملاته. أنت تفكر بشكل مختلف.' },
   { ru: 'Каждый убранный предмет — это существо которое не отравится. Спасибо тебе.', en: 'Every piece of litter removed is a creature that won\'t be poisoned. Thank you.', de: 'Jedes aufgehobene Stück ist ein Lebewesen das nicht vergiftet wird. Danke.', uk: 'Кожен прибраний предмет — це істота яка не отруїться. Дякую тобі.', ar: 'كل قطعة تُزال هي مخلوق لن يُسمَّم. شكراً لك.' },

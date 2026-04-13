@@ -3,7 +3,38 @@ import { LANGS } from '../../lib/i18n';
 import { useEffect, useState } from 'react';
 import { FlatList, Image, SafeAreaView, StyleSheet, Text, View } from 'react-native';
 
-const ITEMS = [
+
+const TOTAL_SLOTS = 12;
+
+export default function InventoryScreen() {
+  const [waterLevel, setWaterLevel] = useState(10);
+  const [feedCount, setFeedCount] = useState(0);
+  const [plastic, setPlastic] = useState(0);
+  const [glass, setGlass] = useState(0);
+  const [paper, setPaper] = useState(0);
+  const [lang, setLang] = useState<'ru' | 'de' | 'uk' | 'ar' | 'en'>('en');
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const save = await loadSave();
+        setWaterLevel(save.waterLevel);
+        setLang(save.lang || 'en');
+        setFeedCount(save.feedCount || 0);
+        setPlastic(save.plastic || 0);
+        setGlass(save.glass || 0);
+        setPaper(save.paper || 0);
+      } catch (e) {
+        console.warn('Inventory load error', e);
+      }
+    };
+
+    load();
+  }, []);
+
+  const t = LANGS[lang];
+
+  const ITEMS = [
   {
     id: 'watering_can',
     name: {
@@ -16,29 +47,56 @@ const ITEMS = [
     image: require('../../assets/images/items/watercan.png'),
     quantity: 1,
   },
-];
+  {
+  id: 'plastic',
+  name: {
+    ru: 'Пластик',
+    de: 'Plastik',
+    uk: 'Пластик',
+    ar: 'بلاستيك',
+    en: 'Plastic',
+  },
+  image: require('../../assets/images/items/plastictrash.png'),
+  quantity: plastic,
+},
+  {
+    id: 'glass',
+    name: {
+      ru: 'Стекло',
+      de: 'Glas',
+      uk: 'Скло',
+      ar: 'زجاج',
+      en: 'Glass',
+    },
+    image: require('../../assets/images/items/glasstrash.png'),
+    quantity: glass,
+  },
+  {
+    id: 'paper',
+    name: {
+      ru: 'Бумага',
+      de: 'Papier',
+      uk: 'Папір',
+      ar: 'ورق',
+      en: 'Paper',
+    },
+    image: require('../../assets/images/items/papertrash.png'),
+    quantity: paper,
+  },
+  {
+    id: 'feed',
+    name: {
+      ru: 'Корм',
+      de: 'Futter',
+      uk: 'Корм',
+      ar: 'طعام',
+      en: 'Feed',
+    },
+    image: require('../../assets/images/items/feed.png'),
+    quantity: feedCount,
+  },
+].filter((item) => item.id !== 'feed' || feedCount > 0);
 
-const TOTAL_SLOTS = 12;
-
-export default function InventoryScreen() {
-  const [waterLevel, setWaterLevel] = useState(10);
-  const [lang, setLang] = useState<'ru' | 'de' | 'uk' | 'ar' | 'en'>('en');
-
-  useEffect(() => {
-    const load = async () => {
-      try {
-        const save = await loadSave();
-        setWaterLevel(save.waterLevel);
-        setLang(save.lang || 'en');
-      } catch (e) {
-        console.warn('Inventory load error', e);
-      }
-    };
-
-    load();
-  }, []);
-
-  const t = LANGS[lang];
 
   const slots = Array.from({ length: TOTAL_SLOTS }, (_, i) => {
     return ITEMS[i] || null;

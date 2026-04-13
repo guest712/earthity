@@ -67,6 +67,21 @@ export const LANGS: Record<string, any> = {
     statsImpactTextLitter: 'Ты убрал примерно {kg} кг мусора.',
     statsImpactTextCreatures: 'Это {count} существ которые не отравились.',
     statsMotto: '☯  Каждое дело важно',
+
+    tabDiary : 'Дневник',
+
+    itemFeed: 'Корм',
+alertTooFarFeed: 'Подойдите ближе, чтобы подобрать корм 🥕',
+alertFeedCollected: 'Корм подобран! 🥕',
+alertFeedFull: 'Корм уже есть в инвентаре 🥕',
+alertNoFeed: 'У вас нет корма для животного 🥕',
+
+alertTooFarWater: 'Подойдите ближе к источнику 💧',
+alertFeedLimit: 'Инвентарь корма заполнен 🥕',
+
+alertTooFarTrash: 'Подойдите ближе, чтобы собрать мусор 🗑️',
+alertTrashCollected: 'Мусор собран ♻️',
+alertTrashFull: 'Лимит мусора достигнут ♻️',
   },
 
   de: {
@@ -137,7 +152,21 @@ export const LANGS: Record<string, any> = {
     statsImpactTextLitter: 'Du hast etwa {kg} kg Müll aufgehoben.',
     statsImpactTextCreatures: 'Das sind {count} Lebewesen die nicht vergiftet wurden.',
     statsMotto: '☯  Jede Tat zählt',
-  },
+    tabDiary: 'Tagebuch',
+
+    itemFeed: 'Futter',
+alertTooFarFeed: 'Komm näher, um das Futter aufzuheben 🥕',
+alertFeedCollected: 'Futter eingesammelt! 🥕',
+alertFeedFull: 'Du hast bereits Futter im Inventar 🥕',
+alertNoFeed: 'Du hast kein Futter für das Tier 🥕',
+
+alertTooFarWater: 'Komm näher zur Wasserquelle 💧',
+alertFeedLimit: 'Dein Futterinventar ist voll 🥕',
+
+alertTooFarTrash: 'Komm näher, um den Müll aufzuheben 🗑️',
+alertTrashCollected: 'Müll gesammelt ♻️',
+alertTrashFull: 'Müll-Limit erreicht ♻️',
+},
 
   uk: {
     level1: '🌱 Паросток', level2: '🌿 Еко', level3: '🌳 Хранитель', level4: '⭐ Герой',
@@ -207,6 +236,21 @@ export const LANGS: Record<string, any> = {
     statsImpactTextLitter: 'Ти прибрав приблизно {kg} кг сміття.',
     statsImpactTextCreatures: 'Це {count} істот які не отруїлись.',
     statsMotto: '☯  Кожна справа важлива',
+
+    tabDiary: 'Щоденник',
+
+    itemFeed: 'Корм',
+alertTooFarFeed: 'Підійдіть ближче, щоб підібрати корм 🥕',
+alertFeedCollected: 'Корм підібрано! 🥕',
+alertFeedFull: 'Корм уже є в інвентарі 🥕',
+alertNoFeed: 'У вас немає корму для тварини 🥕',
+
+alertTooFarWater: 'Підійдіть ближче до джерела 💧',
+alertFeedLimit: 'Інвентар корму заповнений 🥕',
+
+alertTooFarTrash: 'Підійдіть ближче, щоб зібрати сміття 🗑️',
+alertTrashCollected: 'Сміття зібрано ♻️',
+alertTrashFull: 'Ліміт сміття досягнуто ♻️',
   },
 
   ar: {
@@ -275,6 +319,21 @@ export const LANGS: Record<string, any> = {
     statsImpactTextLitter: 'لقد جمعت حوالي {kg} كجم من القمامة.',
     statsImpactTextCreatures: 'هذا {count} مخلوقاً لم يُسمَّم.',
     statsMotto: '☯  كل عمل مهم',
+
+    tabDiary: 'المذكرات',
+
+    itemFeed: 'طعام',
+alertTooFarFeed: 'اقترب أكثر لالتقاط الطعام 🥕',
+alertFeedCollected: 'تم جمع الطعام! 🥕',
+alertFeedFull: 'لديك طعام بالفعل في المخزون 🥕',
+alertNoFeed: 'ليس لديك طعام للحيوان 🥕',
+
+alertTooFarWater: 'اقترب أكثر من مصدر الماء 💧',
+alertFeedLimit: 'مخزون الطعام ممتلئ 🥕',
+
+alertTooFarTrash: 'اقترب أكثر لالتقاط القمامة 🗑️',
+alertTrashCollected: 'تم جمع القمامة! ♻️',
+alertTrashFull: 'تم الوصول إلى حد القمامة! ♻️',
   },
 
   en: {
@@ -331,6 +390,34 @@ export const LANGS: Record<string, any> = {
     alertWaterFull: 'Your watering can is already full! 💧',
     alertWaterRefilled: 'Watering can refilled! 💧',
     newQuests: '🔄 New quests',
+
+    statsTitle: 'Statistics',
+    statsTotalDeeds: 'Total good deeds',
+    statsOutdoor: 'Outdoor quests',
+    statsHome: 'Home quests',
+    statsPet: 'Ahimsa to pets',
+    statsXp: 'Experience gained',
+    statsTotalDobri: 'Dobriki earned',
+    statsStreak: 'Day streak',
+    statsImpact: 'Your impact',
+    statsImpactTextLitter: 'You picked up about {kg} kg of litter.',
+    statsImpactTextCreatures: "That's {count} creatures that weren't poisoned.",
+    statsMotto: '☯  Every deed matters',
+
+    tabDiary: 'Diary',
+
+    itemFeed: 'Feed',
+alertTooFarFeed: 'Move closer to collect feed 🥕',
+alertFeedCollected: 'Feed collected! 🥕',
+alertFeedFull: 'You already have feed in inventory 🥕',
+alertNoFeed: 'You have no feed for the animal 🥕',
+
+alertTooFarWater: 'Move closer to the water source 💧',
+alertFeedLimit: 'Your feed inventory is full 🥕',
+
+alertTooFarTrash: 'Move closer to collect litter 🗑️',
+alertTrashCollected: 'Litter collected! ♻️',
+alertTrashFull: 'Litter limit reached! ♻️',
   },
 };
 
