@@ -1,10 +1,15 @@
-import { loadSave, updateSave } from '../../lib/storage';
+import { loadSave, updateSave } from '../../lib/storage/storage';
 import { requestNotificationPermissions, scheduleCreatureNotification } from '../../lib/notifications';
 import { Audio } from 'expo-av';
-import { QUESTS, CREATURES, WATER_SPOTS, FEED_SPOTS, TRASH_SPOTS, MINDFUL_PHRASES } from  '../../lib/game-data';
-import { LANGS, FLAG } from '../../lib/i18n';
-import { getDistance, getLevelKey, getLevelName } from '../../lib/game-utils';
+import { QUESTS } from '../../features/quests/quest.constants';
+import { MINDFUL_PHRASES } from '../../features/quests/mindful-phrases';
+import { CREATURES } from '../../features/creatures/creature.constants';
+import { WATER_SPOTS, FEED_SPOTS, TRASH_SPOTS } from '../../features/resources/resource.constants';
+import { LANGS, FLAG } from '../../lib/i18n/i18n';
+import { getDistance, getLevelKey, getLevelName } from '../../lib/shared/game-utils';
 import React from 'react';
+import WorldMap from '../../components/map/WorldMap';
+import { Marker, Circle } from 'react-native-maps';
 import {
   applyQuestCompletion,
   canInteractWithCreature,
@@ -14,21 +19,20 @@ import {
   shouldRefreshCreatureSpawns,
   registerCreatureSeen,
   registerCreatureCared,
-} from '../../lib/game-engine';
+} from '../../lib/shared/game-engine';
 import { useEffect, useRef, useState } from 'react';
 import { Image, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import MapView, { Marker, Circle } from 'react-native-maps';
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withRepeat, withSequence, withSpring, withTiming } from 'react-native-reanimated';
 import Onboarding from './onboarding';
-import HomeHeader from '../../components/HomeHeader';
-import CategoryTabs from '../../components/CategoryTabs';
-import QuestDetailCard from '../../components/QuestDetailCard';
-import CreaturePopup from '../../components/CreaturePopup';
-import { Creature, Quest } from '../../lib/types';
-import { useLocationState } from '../../lib/useLocationState';
-import { useCreatureSystem } from '../../lib/useCreatureSystem';
-import { useAppLanguage } from '../../lib/LanguageContext';
-import type { SpawnedCreature, CareDiaryEntry } from '../../lib/types';
+import HomeHeader from '../../components/home/HomeHeader';
+import CategoryTabs from '../../components/home/CategoryTabs';
+import QuestDetailCard from '../../components/home/QuestDetailCard';
+import CreaturePopup from '../../components/home/CreaturePopup';
+import { Creature, Quest } from '../../lib/shared/types';
+import { useLocationState } from '../../features/location/useLocationState';
+import { useCreatureSystem } from '../../features/creatures/creature.hook';
+import { useAppLanguage } from '../../lib/i18n/LanguageContext';
+import type { SpawnedCreature, CareDiaryEntry } from '../../lib/shared/types';
 
 
 
@@ -521,23 +525,24 @@ startFeeding(() => {
               <Text style={styles.mapBtnText}>🛰️</Text>
             </TouchableOpacity>
           </View>
-          <MapView
-  style={{ height: 220, margin: 12, borderRadius: 16 }}
-  region={location ? {
-    latitude: location.latitude,
-    longitude: location.longitude,
-    latitudeDelta: 0.02,
-    longitudeDelta: 0.02,
-  } : {
-    latitude: 52.52,
-    longitude: 13.405,
-    latitudeDelta: 0.02,
-    longitudeDelta: 0.02,
-  }}
-  showsUserLocation={true}
-  showsMyLocationButton={true}
-  followsUserLocation={true}
-  mapType={mapMode}
+          
+          <WorldMap
+  region={
+    location
+      ? {
+          latitude: location.latitude,
+          longitude: location.longitude,
+          latitudeDelta: 0.02,
+          longitudeDelta: 0.02,
+        }
+      : {
+          latitude: 52.52,
+          longitude: 13.405,
+          latitudeDelta: 0.02,
+          longitudeDelta: 0.02,
+        }
+  }
+  mapMode={mapMode}
 >
           
             {filteredQuests.map(q => (
@@ -765,7 +770,7 @@ alert(t.alertTrashCollected);
   </Marker>
 ))}
             
-          </MapView>
+          </WorldMap>
           <CategoryTabs
   category={category}
   onChange={setCategory}

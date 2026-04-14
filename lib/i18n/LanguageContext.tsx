@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { loadSave, updateSave } from './storage';
+import { loadSave, updateSave } from '../storage/storage';
 
 export type LanguageCode = 'ru' | 'de' | 'uk' | 'ar' | 'en';
 

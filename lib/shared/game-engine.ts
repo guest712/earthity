@@ -1,5 +1,5 @@
 import { Quest } from './types';
-import { getDistance } from './shared/game-utils';
+import { getDistance } from './game-utils';
 import type { Creature, SpawnedCreature, CareDiaryEntry, } from './types';
 
 type CompleteQuestResult = {

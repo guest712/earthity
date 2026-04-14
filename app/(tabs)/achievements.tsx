@@ -1,7 +1,7 @@
-import { loadSave, updateSave } from '../../lib/storage';
+import { loadSave, updateSave } from '../../lib/storage/storage';
 import { useEffect, useState } from 'react';
 import { SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { LANGS } from '../../lib/i18n';
+import { LANGS } from '../../lib/i18n/i18n';
 
 
 const ACHIEVEMENTS: Record<string, any>[] = [

@@ -1,0 +1,1 @@
+export type TrashType = 'plastic' | 'glass' | 'paper';

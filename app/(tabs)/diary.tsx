@@ -1,8 +1,8 @@
 import { View, Text, FlatList } from 'react-native';
 import { useEffect, useState } from 'react';
-import { loadSave } from '../../lib/storage';
-import type { CareDiaryEntry } from '../../lib/types';
-import { CREATURES } from '../../lib/game-data';
+import { loadSave } from '../../lib/storage/storage';
+import type { CareDiaryEntry } from '../../lib/shared/types';
+import { CREATURES } from '../../features/creatures/creature.constants';
 
 export default function DiaryScreen() {
   const [diary, setDiary] = useState<CareDiaryEntry[]>([]);

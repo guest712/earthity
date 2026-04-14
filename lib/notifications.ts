@@ -1,6 +1,6 @@
 import * as Notifications from 'expo-notifications';
-import type { Creature, LanguageCode } from './types';
-import { LANGS } from './i18n';
+import type { Creature, LanguageCode } from './shared/types';
+import { LANGS } from './i18n/i18n';
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({

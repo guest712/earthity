@@ -1,5 +1,5 @@
-import { loadSave } from '../../lib/storage';
-import { LANGS } from '../../lib/i18n';
+import { loadSave } from '../../lib/storage/storage';
+import { LANGS } from '../../lib/i18n/i18n';
 import { useEffect, useState } from 'react';
 import { SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
 

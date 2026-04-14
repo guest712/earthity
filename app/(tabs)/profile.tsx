@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Image, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { loadSave, updateSave } from '../../lib/storage';
-import { LANGS } from '../../lib/i18n';
+import { loadSave, updateSave } from '../../lib/storage/storage';
+import { LANGS } from '../../lib/i18n/i18n';
 
 const AVATARS = [
   { id: 'lumi', image: require('../../assets/images/avatars/lumi.png') },
