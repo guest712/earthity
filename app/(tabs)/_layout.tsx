@@ -2,18 +2,15 @@ import { HapticTab } from '@/components/haptic-tab';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { LANGS } from '../../lib/i18n/i18n';
-import { LanguageProvider, useAppLanguage } from '../../lib/i18n/LanguageContext';
+import { LanguageProvider } from '../../lib/i18n/LanguageContext';
+import { useTranslation } from '../../lib/i18n/useTranslation';
 import { Tabs } from 'expo-router';
 import React from 'react';
 import { Text } from 'react-native';
 
 function TabsContent() {
   const colorScheme = useColorScheme();
-  const { lang } = useAppLanguage();
-
-  const safeLang = lang ?? 'en';
-  const t = LANGS[safeLang];
+  const { t } = useTranslation();
 
   return (
     <Tabs

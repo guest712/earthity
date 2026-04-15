@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Image, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { loadSave, updateSave } from '../../lib/storage/storage';
-import { LANGS } from '../../lib/i18n/i18n';
+import { useTranslation } from '../../lib/i18n/useTranslation';
 
 const AVATARS = [
   { id: 'lumi', image: require('../../assets/images/avatars/lumi.png') },
@@ -21,6 +21,7 @@ type AvailableTitle = {
 };
 
 export default function ProfileScreen() {
+  const { t, lang } = useTranslation();
   const [activeTab, setActiveTab] = useState<'profile' | 'stats' | 'settings'>('profile');
 
   const [dobri, setDobri] = useState(0);
@@ -33,9 +34,7 @@ export default function ProfileScreen() {
   const [pickingAvatar, setPickingAvatar] = useState(false);
   const [pickingTitle, setPickingTitle] = useState(false);
   const [availableTitles, setAvailableTitles] = useState<AvailableTitle[]>([]);
-  const [lang, setLang] = useState<'ru' | 'de' | 'uk' | 'ar' | 'en'>('ru');
   const [selectedTitleId, setSelectedTitleId] = useState('');
-  const t = LANGS[lang];
 
   const currentAvatar = AVATARS.find(a => a.id === avatar) ?? AVATARS[0];
   const levelKey = getLevelKey(xp);
@@ -65,8 +64,6 @@ export default function ProfileScreen() {
       setTitle(save.selectedTitleName || '');
       setTitleEmoji(save.selectedTitleEmoji || '');
       setSelectedTitleId(save.selectedTitle || '');
-      setLang(save.lang);
-
       if (save.unlockedTitles?.length) {
         setAvailableTitles(save.unlockedTitles);
       } else if (save.selectedTitleName && save.selectedTitleEmoji) {
@@ -92,16 +89,16 @@ export default function ProfileScreen() {
   await updateSave({ avatar: id });
 }
 
-  async function selectTitle(t: any) {
-  setTitle(t.title);
-  setSelectedTitleId(t.id);
-  setTitleEmoji(t.emoji);
+  async function selectTitle(titleEntry: AvailableTitle) {
+  setTitle(titleEntry.title);
+  setSelectedTitleId(titleEntry.id);
+  setTitleEmoji(titleEntry.emoji);
   setPickingTitle(false);
 
   await updateSave({
-    selectedTitle: t.id,
-    selectedTitleName: t.title,
-    selectedTitleEmoji: t.emoji,
+    selectedTitle: titleEntry.id,
+    selectedTitleName: titleEntry.title,
+    selectedTitleEmoji: titleEntry.emoji,
   });
 }
 
@@ -170,14 +167,14 @@ export default function ProfileScreen() {
                 {availableTitles.length === 0 ? (
                   <Text style={styles.noTitles}>{t.profileNoTitles}</Text>
                 ) : (
-                  availableTitles.map((t: any, i: number) => (
+                  availableTitles.map((titleOpt: AvailableTitle, i: number) => (
                     <TouchableOpacity
                       key={i}
-                      style={[styles.titleOption, selectedTitleId === t.id && styles.titleOptionActive]}
-                      onPress={() => selectTitle(t)}
+                      style={[styles.titleOption, selectedTitleId === titleOpt.id && styles.titleOptionActive]}
+                      onPress={() => selectTitle(titleOpt)}
                     >
-                      <Text style={styles.titleOptionEmoji}>{t.emoji}</Text>
-                      <Text style={styles.titleOptionName}>{getLocalizedText(t.title, lang)}</Text>
+                      <Text style={styles.titleOptionEmoji}>{titleOpt.emoji}</Text>
+                      <Text style={styles.titleOptionName}>{getLocalizedText(titleOpt.title, lang)}</Text>
                     </TouchableOpacity>
                   ))
                 )}

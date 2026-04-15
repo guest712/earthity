@@ -1,7 +1,7 @@
 import { loadSave, updateSave } from '../../lib/storage/storage';
+import { useTranslation } from '../../lib/i18n/useTranslation';
 import { useEffect, useState } from 'react';
 import { SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { LANGS } from '../../lib/i18n/i18n';
 
 
 const ACHIEVEMENTS: Record<string, any>[] = [
@@ -22,11 +22,9 @@ const ACHIEVEMENTS: Record<string, any>[] = [
 
 
 export default function AchievementsScreen() {
+  const { t, lang } = useTranslation();
   const [stats, setStats] = useState<any>({ deeds: 0, xp: 0, outdoorDeeds: 0, homeDeeds: 0, petDeeds: 0, totalDobri: 0 });
-  const [lang, setLang] = useState('ru');
   const [selectedTitle, setSelectedTitle] = useState('');
-
-  const t = LANGS[lang] || LANGS.en;
 
   const getCategoryTitle = (cat: string) => {
   switch (cat) {
@@ -107,7 +105,6 @@ if (hasChanges) {
   await updateSave({ unlockedTitles: merged });
 }
 
-      setLang(save.lang);
       setSelectedTitle(save.selectedTitle || '');
     } catch (e) {
       console.warn('Achievements load error', e);

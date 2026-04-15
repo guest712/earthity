@@ -4,8 +4,15 @@ import { Audio } from 'expo-av';
 import { QUESTS } from '../../features/quests/quest.constants';
 import { MINDFUL_PHRASES } from '../../features/quests/mindful-phrases';
 import { CREATURES } from '../../features/creatures/creature.constants';
-import { WATER_SPOTS, FEED_SPOTS, TRASH_SPOTS } from '../../features/resources/resource.constants';
+import {
+  WATER_SPOTS,
+  FEED_SPOTS,
+  TRASH_SPOTS,
+  MAX_WATER,
+  RESOURCE_INTERACTION_DISTANCE,
+} from '../../features/resources/resource.constants';
 import { LANGS, FLAG } from '../../lib/i18n/i18n';
+import { guessDeviceLanguage } from '../../lib/i18n/guess-locale';
 import { getDistance, getLevelKey, getLevelName } from '../../lib/shared/game-utils';
 import React from 'react';
 import WorldMap from '../../components/map/WorldMap';
@@ -32,7 +39,9 @@ import { Creature, Quest } from '../../lib/shared/types';
 import { useLocationState } from '../../features/location/useLocationState';
 import { useCreatureSystem } from '../../features/creatures/creature.hook';
 import { useAppLanguage } from '../../lib/i18n/LanguageContext';
-import type { SpawnedCreature, CareDiaryEntry } from '../../lib/shared/types';
+import type { SpawnedCreature, CareDiaryEntry, LanguageCode } from '../../lib/shared/types';
+import { Resources } from '../../features/resources/resource.types';
+import { addFeed, refillWater, addTrash } from '../../features/resources/resource.logic';
 
 
 
@@ -65,11 +74,21 @@ export default function HomeScreen() {
   const { location } = useLocationState();
   const [lastOpenDate, setLastOpenDate] = useState('');
   const [testDeeds, setTestDeeds] = useState(0);
-  const [waterLevel, setWaterLevel] = useState(10);
-  const [feedCount, setFeedCount] = useState(0);
-  const [plastic, setPlastic] = useState(0);
-  const [glass, setGlass] = useState(0);
-  const [paper, setPaper] = useState(0);
+  
+
+  const [resources, setResources] = useState<Resources>({
+  water: 10,
+  feed: 0,
+  trash: {
+    plastic: 0,
+    glass: 0,
+    paper: 0,
+  },
+});
+  const feedCount = resources.feed;
+  const plastic = resources.trash.plastic;
+  const glass = resources.trash.glass;
+  const paper = resources.trash.paper;
   const [showConfirmBtn, setShowConfirmBtn] = useState(false);
   const [activeSpawns, setActiveSpawns] = useState<SpawnedCreature[]>([]);
   const [lastSpawnCenter, setLastSpawnCenter] = useState<{ latitude: number; longitude: number } | null>(null);
@@ -146,13 +165,18 @@ const breathStyle = useAnimatedStyle(() => ({
       setHomeDeeds(save.homeDeeds);
       setPetDeeds(save.petDeeds);
       setTestDeeds(save.testDeeds);
-      setWaterLevel(save.waterLevel);
       setTotalDobri(save.totalDobri || save.dobri || 0);
       setCareDiary(save.careDiary || []);
-      setFeedCount(save.feedCount || 0);
-      setPlastic(save.plastic || 0);
-setGlass(save.glass || 0);
-setPaper(save.paper || 0);
+      const res = save.resources;
+      setResources({
+        water: res.water,
+        feed: res.feed,
+        trash: {
+          plastic: res.trash.plastic,
+          glass: res.trash.glass,
+          paper: res.trash.paper,
+        },
+      });
 
       const today = new Date().toDateString();
       const last = save.lastOpenDate || '';
@@ -191,9 +215,8 @@ setPaper(save.paper || 0);
     streak,
     lastOpenDate,
     testDeeds,
-    waterLevel,
     careDiary,
-    feedCount,
+    resources,
     plastic,
     glass,
     paper,
@@ -214,18 +237,15 @@ setPaper(save.paper || 0);
   streak,
   lastOpenDate,
   testDeeds,
-  waterLevel,
   careDiary,
-  feedCount,
-  plastic,
-glass,
-paper,
+  resources,
 ]);
 
   useEffect(() => {
     const currentKey = getLevelKey(xp);
     if (prevLevelKey.current && prevLevelKey.current !== currentKey) {
-      setDobri(prev => prev + 50);
+      setDobri((prev) => prev + 50);
+      setTotalDobri((prev) => prev + 50);
     }
     prevLevelKey.current = currentKey;
   }, [xp]);
@@ -284,14 +304,15 @@ paper,
 
 
   if (!lang) {
+    const pick = LANGS[guessDeviceLanguage()];
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.langScreen}>
           <Text style={styles.langSymbol}>🌍</Text>
           <Text style={styles.langTitle}>Earthity</Text>
-          <Text style={styles.langSub}>Choose your language</Text>
+          <Text style={styles.langSub}>{pick.langPickerSubtitle}</Text>
           <View style={styles.langGrid}>
-            {(Object.keys(LANGS) as Array<'ru' | 'de' | 'uk' | 'ar' | 'en'>).map(l => (
+            {(Object.keys(LANGS) as LanguageCode[]).map((l) => (
               <TouchableOpacity key={l} style={styles.langBtn} onPress={() => setAppLanguage(l)}>
                 <Text style={styles.langFlag}>{FLAG[l]}</Text>
                 <Text style={styles.langName}>{l.toUpperCase()}</Text>
@@ -304,7 +325,7 @@ paper,
   }
   
   if (!onboarded) {
-    return <Onboarding onDone={() => setOnboarded(true)} lang={lang} />;
+    return <Onboarding onDone={() => setOnboarded(true)} />;
   }
 
   const t = LANGS[lang];
@@ -383,9 +404,10 @@ const mindfulPhrase = selected
 />
       {selectedCreature && (
   <CreaturePopup
+    t={t}
     selectedCreature={selectedCreature}
     lang={lang}
-    waterLevel={waterLevel}
+    waterLevel={resources.water}
     isFeeding={isFeeding}
     feedingProgress={feedingProgress}
     breathStyle={breathStyle}
@@ -408,7 +430,7 @@ const dist = location
   const interaction = canInteractWithCreature({
     creature: selectedCreature,
     distance: dist,
-    waterLevel,
+    waterLevel: resources.water,
     lastInteractionTime: lastTime,
     now,
   });
@@ -416,7 +438,7 @@ const dist = location
   if (!interaction.ok) {
     
     if (interaction.reason === 'too_far') {
-      alert(t.alertTooFarWater);
+      alert(t.alertTooFar);
     } else if (interaction.reason === 'no_water') {
       alert(t.alertNoWater);
     } else if (interaction.reason === 'cooldown' && !isFeeding) {
@@ -441,18 +463,15 @@ startFeeding(() => {
   const rewardResult = getCreatureRewardResult({
     creature,
     dobri,
+    totalDobri,
     xp,
-    waterLevel,
+    waterLevel: resources.water,
   });
 
   setDobri(rewardResult.dobri);
+  setTotalDobri(rewardResult.totalDobri);
   setXp(rewardResult.xp);
-  setWaterLevel(rewardResult.waterLevel);
-
-  if (creature.type === 'animal') {
-  setFeedCount((prev) => Math.max(0, prev - 1));
-}
-
+  setResources((prev) => ({ ...prev, water: rewardResult.waterLevel }));
 
   setCreatureCooldowns((p) => ({
     ...p,
@@ -571,7 +590,7 @@ startFeeding(() => {
     )
   : 999;
 
-const isClose = dist <= 150; 
+const isClose = dist <= RESOURCE_INTERACTION_DISTANCE; 
 
   return (
     <React.Fragment key={spawn.spawnId}>
@@ -581,7 +600,7 @@ const isClose = dist <= 150;
     latitude: spawn.latitude,
     longitude: spawn.longitude,
   }}
-  radius={150}
+  radius={RESOURCE_INTERACTION_DISTANCE}
   strokeWidth={2}
   strokeColor={
     isClose
@@ -648,17 +667,17 @@ const isClose = dist <= 150;
     ? getDistance(location.latitude, location.longitude, spotLat, spotLng)
     : 999;
 
-  if (dist > 150) {
+  if (dist > RESOURCE_INTERACTION_DISTANCE) {
     alert(t.alertTooFarWater);
     return;
   }
 
-  if (waterLevel >= 10) {
+  if (resources.water >= MAX_WATER) {
     alert(t.alertWaterFull);
     return;
   }
 
-  setWaterLevel(10);
+  setResources((prev) => refillWater(prev));
   alert(t.alertWaterRefilled);
 }}
   >
@@ -682,7 +701,7 @@ const isClose = dist <= 150;
         ? getDistance(location.latitude, location.longitude, spotLat, spotLng)
         : 999;
 
-      if (dist > 150) {
+      if (dist > RESOURCE_INTERACTION_DISTANCE) {
         alert(t.alertTooFarFeed);
         return;
       }
@@ -692,7 +711,7 @@ const isClose = dist <= 150;
         return;
       }
 
-      setFeedCount((prev) => Math.min(20, prev + 2));
+      setResources((prev) => addFeed(prev, 2));
       alert(t.alertFeedCollected);
     }}
   >
@@ -720,7 +739,7 @@ const isClose = dist <= 150;
         ? getDistance(location.latitude, location.longitude, spotLat, spotLng)
         : 999;
 
-      if (dist > 150) {
+      if (dist > RESOURCE_INTERACTION_DISTANCE) {
         alert(t.alertTooFarTrash);
         return;
       }
@@ -731,7 +750,7 @@ const isClose = dist <= 150;
     alert(t.alertTrashFull);
     return;
   }
-  setPlastic((p) => Math.min(150, p + 5));
+  setResources((prev) => addTrash(prev, 'plastic', 5));
 }
 
 if (spot.type === 'glass') {
@@ -739,7 +758,7 @@ if (spot.type === 'glass') {
     alert(t.alertTrashFull);
     return;
   }
-  setGlass((p) => Math.min(150, p + 5));
+  setResources((prev) => addTrash(prev, 'glass', 5));
 }
 
 if (spot.type === 'paper') {
@@ -747,7 +766,7 @@ if (spot.type === 'paper') {
     alert(t.alertTrashFull);
     return;
   }
-  setPaper((p) => Math.min(150, p + 5));
+  setResources((prev) => addTrash(prev, 'paper', 5));
 }
 
 alert(t.alertTrashCollected);

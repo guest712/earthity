@@ -125,13 +125,15 @@ export const canInteractWithCreature = (params: {
 export const getCreatureRewardResult = (params: {
   creature: Creature;
   dobri: number;
+  totalDobri: number;
   xp: number;
   waterLevel: number;
 }) => {
-  const { creature, dobri, xp, waterLevel } = params;
+  const { creature, dobri, totalDobri, xp, waterLevel } = params;
 
   return {
     dobri: dobri + creature.reward,
+    totalDobri: totalDobri + creature.reward,
     xp: xp + creature.reward,
     waterLevel:
       creature.type === 'flower'

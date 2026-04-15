@@ -1,9 +1,14 @@
+import type { LocaleStrings } from '../../lib/i18n/locale-strings';
+import { formatTemplate } from '../../lib/i18n/formatTemplate';
+import { MAX_WATER } from '../../features/resources/resource.constants';
 import { Image, Text, TouchableOpacity, View, StyleSheet } from 'react-native';
 import Animated from 'react-native-reanimated';
+import type { LanguageCode } from '../../lib/shared/types';
 
 type Props = {
   selectedCreature: any;
-  lang: string;
+  lang: LanguageCode;
+  t: LocaleStrings;
   waterLevel: number;
   isFeeding: boolean;
   feedingProgress: number;
@@ -16,6 +21,7 @@ type Props = {
 export default function CreaturePopup({
   selectedCreature,
   lang,
+  t,
   waterLevel,
   isFeeding,
   feedingProgress,
@@ -27,6 +33,11 @@ export default function CreaturePopup({
   const isCoolingDown =
     creatureCooldowns[selectedCreature.id] &&
     Date.now() - creatureCooldowns[selectedCreature.id] < selectedCreature.cooldown;
+
+  const waterLine =
+    selectedCreature.type === 'flower'
+      ? formatTemplate(t.creatureWaterLabel, { current: waterLevel, max: MAX_WATER })
+      : '';
 
   return (
     <View style={styles.creaturePopup}>
@@ -46,7 +57,7 @@ export default function CreaturePopup({
       <Text style={styles.creatureReward}>+{selectedCreature.reward} 🪙</Text>
 
       {selectedCreature.type === 'flower' && (
-        <Text style={styles.waterText}>💧 Вода: {waterLevel} / 10</Text>
+        <Text style={styles.waterText}>{waterLine}</Text>
       )}
 
       {isFeeding && (
@@ -58,15 +69,15 @@ export default function CreaturePopup({
       <TouchableOpacity style={styles.creatureBtn} onPress={onPressAction}>
         <Text style={styles.creatureBtnText}>
           {isCoolingDown
-            ? '⏳ Подождите'
+            ? t.creaturePopupWait
             : selectedCreature.type === 'flower'
-            ? '💧 Полить'
-            : '🍃 Покормить'}
+              ? t.creaturePopupWaterFlower
+              : t.creaturePopupFeedAnimal}
         </Text>
       </TouchableOpacity>
 
       <TouchableOpacity onPress={onClose} style={{ padding: 10 }}>
-        <Text style={{ color: 'rgba(255,255,255,0.3)', fontSize: 13 }}>✕ Закрыть</Text>
+        <Text style={{ color: 'rgba(255,255,255,0.3)', fontSize: 13 }}>{t.creaturePopupClose}</Text>
       </TouchableOpacity>
     </View>
   );

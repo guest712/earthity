@@ -1,13 +1,8 @@
 import { loadSave } from '../../lib/storage/storage';
-import { LANGS } from '../../lib/i18n/i18n';
+import { formatTemplate } from '../../lib/i18n/formatTemplate';
+import { useTranslation } from '../../lib/i18n/useTranslation';
 import { useEffect, useState } from 'react';
 import { SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
-
-type LanguageCode = 'ru' | 'de' | 'uk' | 'ar' | 'en';
-
-function formatTemplate(template: string, values: Record<string, string | number>) {
-  return template.replace(/\{(\w+)\}/g, (_, key) => String(values[key] ?? ''));
-}
 
 export default function StatsScreen() {
   const [stats, setStats] = useState({
@@ -19,7 +14,6 @@ export default function StatsScreen() {
     homeDeeds: 0,
     petDeeds: 0,
     streak: 0,
-    lang: 'en' as LanguageCode,
   });
 
   useEffect(() => {
@@ -36,7 +30,6 @@ export default function StatsScreen() {
           homeDeeds: save.homeDeeds,
           petDeeds: save.petDeeds,
           streak: save.streak,
-          lang: (save.lang || 'en') as LanguageCode,
         });
       } catch (e) {
         console.warn('Stats load error', e);
@@ -46,7 +39,7 @@ export default function StatsScreen() {
     load();
   }, []);
 
-  const t = LANGS[stats.lang] || LANGS.en;
+  const { t } = useTranslation();
   const litterKg = Math.round(stats.outdoorDeeds * 0.05 * 10) / 10;
 
   const impactLine1 = formatTemplate(t.statsImpactTextLitter, { kg: litterKg });

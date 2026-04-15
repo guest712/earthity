@@ -1,7 +1,9 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
+import { I18nManager } from 'react-native';
 import { loadSave, updateSave } from '../storage/storage';
+import type { LanguageCode } from '../shared/types';
 
-export type LanguageCode = 'ru' | 'de' | 'uk' | 'ar' | 'en';
+export type { LanguageCode };
 
 type LanguageContextValue = {
   lang: LanguageCode | null;
@@ -27,6 +29,15 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
 
     loadLang();
   }, []);
+
+  useEffect(() => {
+    if (lang == null) return;
+    const rtl = lang === 'ar';
+    I18nManager.allowRTL(true);
+    if (I18nManager.isRTL !== rtl) {
+      I18nManager.forceRTL(rtl);
+    }
+  }, [lang]);
 
   const setAppLanguage = async (nextLang: LanguageCode) => {
     setLang(nextLang);

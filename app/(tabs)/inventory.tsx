@@ -1,102 +1,83 @@
 import { loadSave } from '../../lib/storage/storage';
-import { LANGS } from '../../lib/i18n/i18n';
-import { useEffect, useState } from 'react';
+import { formatTemplate } from '../../lib/i18n/formatTemplate';
+import { useTranslation } from '../../lib/i18n/useTranslation';
+import { MAX_WATER } from '../../features/resources/resource.constants';
+import { useCallback, useMemo, useState } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import { FlatList, Image, SafeAreaView, StyleSheet, Text, View } from 'react-native';
-
 
 const TOTAL_SLOTS = 12;
 
 export default function InventoryScreen() {
+  const { t, lang } = useTranslation();
   const [waterLevel, setWaterLevel] = useState(10);
   const [feedCount, setFeedCount] = useState(0);
   const [plastic, setPlastic] = useState(0);
   const [glass, setGlass] = useState(0);
   const [paper, setPaper] = useState(0);
-  const [lang, setLang] = useState<'ru' | 'de' | 'uk' | 'ar' | 'en'>('en');
 
-  useEffect(() => {
-    const load = async () => {
-      try {
-        const save = await loadSave();
-        setWaterLevel(save.waterLevel);
-        setLang(save.lang || 'en');
-        setFeedCount(save.feedCount || 0);
-        setPlastic(save.plastic || 0);
-        setGlass(save.glass || 0);
-        setPaper(save.paper || 0);
-      } catch (e) {
-        console.warn('Inventory load error', e);
-      }
-    };
+  useFocusEffect(
+    useCallback(() => {
+      let cancelled = false;
 
-    load();
-  }, []);
+      const load = async () => {
+        try {
+          const save = await loadSave();
+          if (cancelled) return;
+          const res = save.resources;
+          setWaterLevel(res.water);
+          setFeedCount(res.feed);
+          setPlastic(res.trash.plastic);
+          setGlass(res.trash.glass);
+          setPaper(res.trash.paper);
+        } catch (e) {
+          console.warn('Inventory load error', e);
+        }
+      };
 
-  const t = LANGS[lang];
+      load();
+      return () => {
+        cancelled = true;
+      };
+    }, [])
+  );
 
-  const ITEMS = [
-  {
-    id: 'watering_can',
-    name: {
-      ru: 'Лейка',
-      de: 'Gießkanne',
-      uk: 'Лійка',
-      ar: 'إبريق السقي',
-      en: 'Watering Can',
-    },
-    image: require('../../assets/images/items/watercan.png'),
-    quantity: 1,
-  },
-  {
-  id: 'plastic',
-  name: {
-    ru: 'Пластик',
-    de: 'Plastik',
-    uk: 'Пластик',
-    ar: 'بلاستيك',
-    en: 'Plastic',
-  },
-  image: require('../../assets/images/items/plastictrash.png'),
-  quantity: plastic,
-},
-  {
-    id: 'glass',
-    name: {
-      ru: 'Стекло',
-      de: 'Glas',
-      uk: 'Скло',
-      ar: 'زجاج',
-      en: 'Glass',
-    },
-    image: require('../../assets/images/items/glasstrash.png'),
-    quantity: glass,
-  },
-  {
-    id: 'paper',
-    name: {
-      ru: 'Бумага',
-      de: 'Papier',
-      uk: 'Папір',
-      ar: 'ورق',
-      en: 'Paper',
-    },
-    image: require('../../assets/images/items/papertrash.png'),
-    quantity: paper,
-  },
-  {
-    id: 'feed',
-    name: {
-      ru: 'Корм',
-      de: 'Futter',
-      uk: 'Корм',
-      ar: 'طعام',
-      en: 'Feed',
-    },
-    image: require('../../assets/images/items/feed.png'),
-    quantity: feedCount,
-  },
-].filter((item) => item.id !== 'feed' || feedCount > 0);
-
+  const ITEMS = useMemo(
+    () =>
+      [
+        {
+          id: 'watering_can',
+          label: t.itemWateringCan,
+          image: require('../../assets/images/items/watercan.png'),
+          quantity: 1,
+        },
+        {
+          id: 'plastic',
+          label: t.itemPlastic,
+          image: require('../../assets/images/items/plastictrash.png'),
+          quantity: plastic,
+        },
+        {
+          id: 'glass',
+          label: t.itemGlass,
+          image: require('../../assets/images/items/glasstrash.png'),
+          quantity: glass,
+        },
+        {
+          id: 'paper',
+          label: t.itemPaper,
+          image: require('../../assets/images/items/papertrash.png'),
+          quantity: paper,
+        },
+        {
+          id: 'feed',
+          label: t.itemFeed,
+          image: require('../../assets/images/items/feed.png'),
+          quantity: feedCount,
+        },
+      ].filter((item) => item.id !== 'feed' || feedCount > 0),
+    [t, plastic, glass, paper, feedCount]
+  );
 
   const slots = Array.from({ length: TOTAL_SLOTS }, (_, i) => {
     return ITEMS[i] || null;
@@ -112,17 +93,21 @@ export default function InventoryScreen() {
         data={slots}
         numColumns={3}
         keyExtractor={(_, index) => index.toString()}
+        extraData={lang}
         contentContainerStyle={styles.grid}
         renderItem={({ item }) => (
           <View style={[styles.slot, item && styles.slotFilled]}>
             {item ? (
               <>
                 <Image source={item.image} style={{ width: 70, height: 70 }} resizeMode="contain" />
-                <Text style={styles.itemName}>{item.name[lang] || item.name.en}</Text>
+                <Text style={styles.itemName}>{item.label}</Text>
 
                 {item.id === 'watering_can' ? (
                   <Text style={{ fontSize: 11, color: '#7ab8f5' }}>
-                    💧 {waterLevel} / 10
+                    {formatTemplate(t.creatureWaterLabel, {
+                      current: waterLevel,
+                      max: MAX_WATER,
+                    })}
                   </Text>
                 ) : (
                   <Text style={styles.itemQty}>x{item.quantity}</Text>

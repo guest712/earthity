@@ -1,5 +1,6 @@
 import * as Notifications from 'expo-notifications';
 import type { Creature, LanguageCode } from './shared/types';
+import { formatTemplate } from './i18n/formatTemplate';
 import { LANGS } from './i18n/i18n';
 
 Notifications.setNotificationHandler({
@@ -18,10 +19,6 @@ export async function requestNotificationPermissions() {
   } catch (error) {
     console.warn('Notification permission error', error);
   }
-}
-
-function formatTemplate(template: string, values: Record<string, string>) {
-  return template.replace(/\{(\w+)\}/g, (_, key) => values[key] ?? '');
 }
 
 export async function scheduleCreatureNotification(

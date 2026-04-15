@@ -69,6 +69,15 @@ export type EarthitySave = {
   plastic: number;
   glass: number;
   paper: number;
+  resources: {
+    water: number;
+    feed: number;
+    trash: {
+      plastic: number;
+      glass: number;
+      paper: number;
+    };
+  };
 
   avatar: string;
   name: string;

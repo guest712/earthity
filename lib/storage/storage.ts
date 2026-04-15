@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import type { EarthitySave } from './types';
+import type { EarthitySave } from '../shared/types';
 
 const STORAGE_KEY = 'earthity_save';
 
@@ -17,12 +17,21 @@ export const defaultSave: EarthitySave = {
   streak: 0,
   lastOpenDate: '',
   testDeeds: 0,
+
   waterLevel: 10,
   feedCount: 0,
-
   plastic: 0,
-glass: 0,
-paper: 0,
+  glass: 0,
+  paper: 0,
+  resources: {
+    water: 10,
+    feed: 0,
+    trash: {
+      plastic: 0,
+      glass: 0,
+      paper: 0,
+    },
+  },
 
   avatar: 'lumi',
   name: 'Earthling',
@@ -43,9 +52,26 @@ export async function loadSave(): Promise<EarthitySave> {
 
     const parsed = JSON.parse(raw);
 
-    return {
+    const merged = {
       ...defaultSave,
       ...parsed,
+    };
+    const resourcesBlock = parsed?.resources ?? {
+      water: merged.resources.water,
+      feed: merged.feedCount,
+      trash: {
+        plastic: merged.plastic,
+        glass: merged.glass,
+        paper: merged.paper,
+      },
+    };
+
+    const totalDobri = Math.max(merged.totalDobri ?? 0, merged.dobri ?? 0);
+
+    return {
+      ...merged,
+      totalDobri,
+      resources: resourcesBlock,
     };
   } catch (error) {
     console.warn('Failed to load save:', error);

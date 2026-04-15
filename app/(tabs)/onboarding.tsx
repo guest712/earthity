@@ -1,5 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useTranslation } from '../../lib/i18n/useTranslation';
+import { useState } from 'react';
 import { SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import type { LanguageCode } from '../../lib/shared/types';
 
 const SLIDES = [
   {
@@ -31,58 +33,50 @@ const SLIDES = [
 
 type Props = {
   onDone: () => void;
-  lang?: string;
 };
 
-export default function Onboarding({ onDone, lang: initialLang }: Props) {
+function slideText(block: Record<LanguageCode, string>, lang: LanguageCode): string {
+  return block[lang] || block.en;
+}
+
+export default function Onboarding({ onDone }: Props) {
+  const { t, lang } = useTranslation();
   const [step, setStep] = useState(0);
- const [lang, setLang] = useState<'ru' | 'de' | 'uk' | 'ar' | 'en'>(
-    (['ru','de','uk','ar','en'].includes(initialLang || '') ? initialLang : 'en') as any
-  );
-  useEffect(() => {
-  if (initialLang) setLang(initialLang as any);
-}, [initialLang]);
   const slide = SLIDES[step];
   const isLast = step === SLIDES.length - 1;
-
 
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.content}>
-        {/* Progress dots */}
         <View style={styles.dots}>
           {SLIDES.map((_, i) => (
             <View key={i} style={[styles.dot, i === step && styles.dotActive]} />
           ))}
         </View>
 
-        {/* Slide */}
         <View style={styles.slide}>
           <Text style={styles.emoji}>{slide.emoji}</Text>
-          <Text style={styles.title}>{typeof slide.title === 'object' ? slide.title[lang] || slide.title.en : slide.title}</Text>
-          <Text style={styles.text}>{typeof slide.text === 'object' ? slide.text[lang] || slide.text.en : slide.text}</Text>
+          <Text style={styles.title}>{slideText(slide.title, lang)}</Text>
+          <Text style={styles.text}>{slideText(slide.text, lang)}</Text>
         </View>
 
-        {/* Buttons */}
         <View style={styles.buttons}>
           <TouchableOpacity
             style={styles.btnMain}
-            onPress={() => isLast ? onDone() : setStep(s => s + 1)}
+            onPress={() => (isLast ? onDone() : setStep((s) => s + 1))}
           >
-            <Text style={styles.btnMainText}>
-              {isLast ? (lang === 'en' ? '🌱 Start' : lang === 'de' ? '🌱 Starten' : lang === 'uk' ? '🌱 Почати' : lang === 'ar' ? '🌱 ابدأ' : '🌱 Начать') : (lang === 'en' ? 'Next →' : lang === 'de' ? 'Weiter →' : lang === 'uk' ? 'Далі →' : lang === 'ar' ? 'التالي →' : 'Далее →')}
-            </Text>
+            <Text style={styles.btnMainText}>{isLast ? t.onboardingStart : t.onboardingNext}</Text>
           </TouchableOpacity>
 
           {step > 0 && (
-            <TouchableOpacity style={styles.btnBack} onPress={() => setStep(s => s - 1)}>
-              <Text style={styles.btnBackText}>{lang === 'en' ? '← Back' : lang === 'de' ? '← Zurück' : lang === 'uk' ? '← Назад' : lang === 'ar' ? 'رجوع →' : '← Назад'}</Text>
+            <TouchableOpacity style={styles.btnBack} onPress={() => setStep((s) => s - 1)}>
+              <Text style={styles.btnBackText}>{t.back}</Text>
             </TouchableOpacity>
           )}
 
           {!isLast && (
             <TouchableOpacity style={styles.btnSkip} onPress={onDone}>
-             <Text style={styles.btnSkipText}>{lang === 'en' ? 'Skip' : lang === 'de' ? 'Überspringen' : lang === 'uk' ? 'Пропустити' : lang === 'ar' ? 'تخطي' : 'Пропустить'}</Text>
+              <Text style={styles.btnSkipText}>{t.onboardingSkip}</Text>
             </TouchableOpacity>
           )}
         </View>
