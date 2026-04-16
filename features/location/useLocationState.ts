@@ -8,16 +8,29 @@ type UserLocation = {
 
 export function useLocationState() {
   const [location, setLocation] = useState<UserLocation>(null);
+  const [isLocationFallback, setIsLocationFallback] = useState(false);
 
   useEffect(() => {
     let subscription: Location.LocationSubscription | null = null;
+    let fallbackTimer: ReturnType<typeof setTimeout> | null = null;
 
     const loadLocation = async () => {
       try {
         const { status } = await Location.requestForegroundPermissionsAsync();
 
         if (status !== 'granted') {
+          if (__DEV__) {
+            setLocation({ latitude: 52.52, longitude: 13.405 });
+            setIsLocationFallback(true);
+          }
           return;
+        }
+
+        if (__DEV__) {
+          fallbackTimer = setTimeout(() => {
+            setLocation((prev) => prev ?? { latitude: 52.52, longitude: 13.405 });
+            setIsLocationFallback((prev) => prev || true);
+          }, 6000);
         }
 
         const current = await Location.getCurrentPositionAsync({
@@ -28,6 +41,7 @@ export function useLocationState() {
           latitude: current.coords.latitude,
           longitude: current.coords.longitude,
         });
+        setIsLocationFallback(false);
 
         subscription = await Location.watchPositionAsync(
           {
@@ -40,10 +54,15 @@ export function useLocationState() {
               latitude: loc.coords.latitude,
               longitude: loc.coords.longitude,
             });
+            setIsLocationFallback(false);
           }
         );
       } catch (error) {
         console.warn('Location load error', error);
+        if (__DEV__) {
+          setLocation((prev) => prev ?? { latitude: 52.52, longitude: 13.405 });
+          setIsLocationFallback(true);
+        }
       }
     };
 
@@ -51,8 +70,9 @@ export function useLocationState() {
 
     return () => {
       subscription?.remove();
+      if (fallbackTimer) clearTimeout(fallbackTimer);
     };
   }, []);
 
-  return { location };
+  return { location, isLocationFallback };
 }

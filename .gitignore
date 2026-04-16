@@ -45,3 +45,9 @@ app-example
 # generated native folders
 /ios
 /android
+
+# JetBrains
+.idea/
+
+# kintsugi
+frankintsugi.ini

@@ -1,7 +1,8 @@
 import { loadSave, updateSave } from '../../lib/storage/storage';
 import { useTranslation } from '../../lib/i18n/useTranslation';
-import { useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 
 
 const ACHIEVEMENTS: Record<string, any>[] = [
@@ -61,25 +62,16 @@ async function selectTitle(a: any) {
   });
 }
 
-  useEffect(() => {
-  const load = async () => {
-    try {
-      const save = await loadSave();
+  useFocusEffect(
+    useCallback(() => {
+      let cancelled = false;
 
-      setStats({
-        deeds: save.deeds,
-        xp: save.xp,
-        outdoorDeeds: save.outdoorDeeds,
-        homeDeeds: save.homeDeeds,
-        petDeeds: save.petDeeds,
-        totalDobri: save.totalDobri,
-        testDeeds: save.testDeeds,
-      });
+      const load = async () => {
+        try {
+          const save = await loadSave();
+          if (cancelled) return;
 
-      const newTitles = ACHIEVEMENTS.filter(
-        a =>
-          a.givesTitle &&
-          a.condition({
+          setStats({
             deeds: save.deeds,
             xp: save.xp,
             outdoorDeeds: save.outdoorDeeds,
@@ -87,33 +79,51 @@ async function selectTitle(a: any) {
             petDeeds: save.petDeeds,
             totalDobri: save.totalDobri,
             testDeeds: save.testDeeds,
-          })
-      ).map(a => ({ id: a.id, title: a.title, emoji: a.emoji }));
+          });
 
-      const existing = save.unlockedTitles || [];
-      const merged = [...existing];
+          const newTitles = ACHIEVEMENTS.filter(
+            a =>
+              a.givesTitle &&
+              a.condition({
+                deeds: save.deeds,
+                xp: save.xp,
+                outdoorDeeds: save.outdoorDeeds,
+                homeDeeds: save.homeDeeds,
+                petDeeds: save.petDeeds,
+                totalDobri: save.totalDobri,
+                testDeeds: save.testDeeds,
+              })
+          ).map(a => ({ id: a.id, title: a.title, emoji: a.emoji }));
 
-      newTitles.forEach((t: any) => {
-        if (!merged.find((e: any) => e.id === t.id)) merged.push(t);
-      });
+          const existing = save.unlockedTitles || [];
+          const merged = [...existing];
 
-      const hasChanges =
-  merged.length !== existing.length ||
-  merged.some((t: any, i: number) => existing[i]?.id !== t.id);
+          newTitles.forEach((t: any) => {
+            if (!merged.find((e: any) => e.id === t.id)) merged.push(t);
+          });
 
-if (hasChanges) {
-  await updateSave({ unlockedTitles: merged });
-}
+          const hasChanges =
+            merged.length !== existing.length ||
+            merged.some((t: any, i: number) => existing[i]?.id !== t.id);
 
-      setSelectedTitle(save.selectedTitle || '');
-    } catch (e) {
-      console.warn('Achievements load error', e);
-    }
-  };
+          if (hasChanges) {
+            await updateSave({ unlockedTitles: merged });
+          }
 
-  load();
-  
-}, []);
+          if (!cancelled) {
+            setSelectedTitle(save.selectedTitle || '');
+          }
+        } catch (e) {
+          console.warn('Achievements load error', e);
+        }
+      };
+
+      load();
+      return () => {
+        cancelled = true;
+      };
+    }, [])
+  );
 
   const categories = [...new Set(ACHIEVEMENTS.map(a => a.category))];
   const unlockedCount = ACHIEVEMENTS.filter(a => a.condition(stats)).length;

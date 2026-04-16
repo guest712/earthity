@@ -1,5 +1,5 @@
 import { Resources, Trash } from './resource.types';
-import { MAX_WATER, MAX_FEED } from './resource.constants';
+import { MAX_WATER, MAX_FEED, MAX_BIO, MAX_TRASH_PER_TYPE } from './resource.constants';
 
 export function addFeed(resources: Resources, amount: number): Resources {
   return {
@@ -27,11 +27,14 @@ export function addTrash(
   type: keyof Trash,
   amount: number
 ): Resources {
+  const max = type === 'bio' ? MAX_BIO : MAX_TRASH_PER_TYPE;
+  const nextValue = Math.min(resources.trash[type] + amount, max);
+
   return {
     ...resources,
     trash: {
       ...resources.trash,
-      [type]: resources.trash[type] + amount,
+      [type]: nextValue,
     },
   };
 }

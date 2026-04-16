@@ -49,6 +49,7 @@ export type UnlockedTitle = {
 };
 
 export type EarthitySave = {
+  saveVersion: number;
   dobri: number;
   totalDobri: number;
   xp: number;
@@ -64,11 +65,6 @@ export type EarthitySave = {
   streak: number;
   lastOpenDate: string;
   testDeeds: number;
-  waterLevel: number;
-  feedCount: number;
-  plastic: number;
-  glass: number;
-  paper: number;
   resources: {
     water: number;
     feed: number;
@@ -76,6 +72,7 @@ export type EarthitySave = {
       plastic: number;
       glass: number;
       paper: number;
+      bio: number;
     };
   };
 

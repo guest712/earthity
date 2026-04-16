@@ -1,4 +1,4 @@
-import { Quest, Creature } from './types';
+import { Quest, Creature } from './shared/types';
 
 
 export const QUESTS: Quest[] = [

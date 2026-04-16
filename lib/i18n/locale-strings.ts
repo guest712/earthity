@@ -35,6 +35,7 @@ export interface LocaleStrings {
   itemPlastic: string;
   itemGlass: string;
   itemPaper: string;
+  itemBio: string;
   profileTabProfile: string;
   profileTabStats: string;
   profileTabSettings: string;
@@ -87,6 +88,9 @@ export interface LocaleStrings {
   alertTooFarTrash: string;
   alertTrashCollected: string;
   alertTrashFull: string;
+  alertTooFarBio: string;
+  alertBioCollected: string;
+  alertBioFull: string;
   langPickerSubtitle: string;
   creatureWaterLabel: string;
   creaturePopupWait: string;

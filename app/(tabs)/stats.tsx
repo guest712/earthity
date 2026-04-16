@@ -1,8 +1,9 @@
 import { loadSave } from '../../lib/storage/storage';
 import { formatTemplate } from '../../lib/i18n/formatTemplate';
 import { useTranslation } from '../../lib/i18n/useTranslation';
-import { useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 
 export default function StatsScreen() {
   const [stats, setStats] = useState({
@@ -16,28 +17,36 @@ export default function StatsScreen() {
     streak: 0,
   });
 
-  useEffect(() => {
-    const load = async () => {
-      try {
-        const save = await loadSave();
+  useFocusEffect(
+    useCallback(() => {
+      let cancelled = false;
 
-        setStats({
-          deeds: save.deeds,
-          xp: save.xp,
-          dobri: save.dobri,
-          totalDobri: save.totalDobri,
-          outdoorDeeds: save.outdoorDeeds,
-          homeDeeds: save.homeDeeds,
-          petDeeds: save.petDeeds,
-          streak: save.streak,
-        });
-      } catch (e) {
-        console.warn('Stats load error', e);
-      }
-    };
+      const load = async () => {
+        try {
+          const save = await loadSave();
+          if (cancelled) return;
 
-    load();
-  }, []);
+          setStats({
+            deeds: save.deeds,
+            xp: save.xp,
+            dobri: save.dobri,
+            totalDobri: save.totalDobri,
+            outdoorDeeds: save.outdoorDeeds,
+            homeDeeds: save.homeDeeds,
+            petDeeds: save.petDeeds,
+            streak: save.streak,
+          });
+        } catch (e) {
+          console.warn('Stats load error', e);
+        }
+      };
+
+      load();
+      return () => {
+        cancelled = true;
+      };
+    }, [])
+  );
 
   const { t } = useTranslation();
   const litterKg = Math.round(stats.outdoorDeeds * 0.05 * 10) / 10;

@@ -1,4 +1,4 @@
-import { loadSave, updateSave } from '../../lib/storage/storage';
+import { getSave, patchSave, resetSaveToDefaults } from '../../lib/storage/save.repository';
 import { requestNotificationPermissions, scheduleCreatureNotification } from '../../lib/notifications';
 import { Audio } from 'expo-av';
 import { QUESTS } from '../../features/quests/quest.constants';
@@ -8,13 +8,21 @@ import {
   WATER_SPOTS,
   FEED_SPOTS,
   TRASH_SPOTS,
+  BIO_SPOTS,
   MAX_WATER,
+  MAX_FEED,
+  MAX_TRASH_PER_TYPE,
+  MAX_BIO,
+  FEED_PICKUP_AMOUNT,
+  TRASH_PICKUP_AMOUNT,
+  BIO_PICKUP_AMOUNT,
   RESOURCE_INTERACTION_DISTANCE,
+  ACTION_COOLDOWN_MS,
 } from '../../features/resources/resource.constants';
 import { LANGS, FLAG } from '../../lib/i18n/i18n';
 import { guessDeviceLanguage } from '../../lib/i18n/guess-locale';
 import { getDistance, getLevelKey, getLevelName } from '../../lib/shared/game-utils';
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import WorldMap from '../../components/map/WorldMap';
 import { Marker, Circle } from 'react-native-maps';
 import {
@@ -27,9 +35,8 @@ import {
   registerCreatureSeen,
   registerCreatureCared,
 } from '../../lib/shared/game-engine';
-import { useEffect, useRef, useState } from 'react';
 import { Image, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import Animated, { Easing, useAnimatedStyle, useSharedValue, withRepeat, withSequence, withSpring, withTiming } from 'react-native-reanimated';
+import { Easing, useAnimatedStyle, useSharedValue, withRepeat, withSequence, withSpring, withTiming } from 'react-native-reanimated';
 import Onboarding from './onboarding';
 import HomeHeader from '../../components/home/HomeHeader';
 import CategoryTabs from '../../components/home/CategoryTabs';
@@ -42,6 +49,7 @@ import { useAppLanguage } from '../../lib/i18n/LanguageContext';
 import type { SpawnedCreature, CareDiaryEntry, LanguageCode } from '../../lib/shared/types';
 import { Resources } from '../../features/resources/resource.types';
 import { addFeed, refillWater, addTrash } from '../../features/resources/resource.logic';
+import { AVATARS, DEFAULT_AVATAR_ID } from '../../features/profile/avatar.constants';
 
 
 
@@ -60,7 +68,6 @@ export default function HomeScreen() {
   feedingProgress,
   isFeeding,
   startFeeding,
-  stopFeeding,
 } = useCreatureSystem();
 
   const [selectedCreature, setSelectedCreature] = useState<Creature | null>(null);
@@ -71,29 +78,42 @@ export default function HomeScreen() {
   const [category, setCategory] = useState<'all' | 'outdoor' | 'home'>('all');
   const [onboarded, setOnboarded] = useState(false);
   const [streak, setStreak] = useState(0);
-  const { location } = useLocationState();
+  const { location, isLocationFallback } = useLocationState();
   const [lastOpenDate, setLastOpenDate] = useState('');
   const [testDeeds, setTestDeeds] = useState(0);
   
 
   const [resources, setResources] = useState<Resources>({
-  water: 10,
-  feed: 0,
-  trash: {
-    plastic: 0,
-    glass: 0,
-    paper: 0,
-  },
-});
+    water: 10,
+    feed: 0,
+    trash: {
+      plastic: 0,
+      glass: 0,
+      paper: 0,
+      bio: 0,
+    },
+  });
   const feedCount = resources.feed;
   const plastic = resources.trash.plastic;
   const glass = resources.trash.glass;
   const paper = resources.trash.paper;
+  const bio = resources.trash.bio;
   const [showConfirmBtn, setShowConfirmBtn] = useState(false);
   const [activeSpawns, setActiveSpawns] = useState<SpawnedCreature[]>([]);
   const [lastSpawnCenter, setLastSpawnCenter] = useState<{ latitude: number; longitude: number } | null>(null);
   const [lastSpawnRefreshAt, setLastSpawnRefreshAt] = useState(0);
   const [careDiary, setCareDiary] = useState<CareDiaryEntry[]>([]);
+  const [isHydrated, setIsHydrated] = useState(false);
+  const [showDevPanel, setShowDevPanel] = useState(false);
+  const [avatar, setAvatar] = useState(DEFAULT_AVATAR_ID);
+  const autosaveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastActionAtRef = useRef({
+    creature: 0,
+    water: 0,
+    feed: 0,
+    trash: 0,
+    bio: 0,
+  });
   const playRewardSound = async () => {
   const { sound } = await Audio.Sound.createAsync(
     require('../../assets/sounds/reward.mp3')
@@ -127,6 +147,15 @@ export default function HomeScreen() {
       rewardOpacity.value = withTiming(1, { duration: 500 });
     }, 800);
   }
+
+  function isActionCoolingDown(kind: keyof typeof lastActionAtRef.current): boolean {
+    const now = Date.now();
+    if (now - lastActionAtRef.current[kind] < ACTION_COOLDOWN_MS) {
+      return true;
+    }
+    lastActionAtRef.current[kind] = now;
+    return false;
+  }
   const [outdoorDeeds, setOutdoorDeeds] = useState(0);
   const [homeDeeds, setHomeDeeds] = useState(0);
   const [petDeeds, setPetDeeds] = useState(0);
@@ -138,7 +167,7 @@ useEffect(() => {
     -1,
     true
   );
-}, []);
+}, [breathScale]);
 
 const breathStyle = useAnimatedStyle(() => ({
   transform: [{ scale: breathScale.value }],
@@ -154,7 +183,7 @@ const breathStyle = useAnimatedStyle(() => ({
  useEffect(() => {
   const loadHome = async () => {
     try {
-      const save = await loadSave();
+      const save = await getSave();
 
       setDobri(save.dobri);
       setXp(save.xp);
@@ -167,6 +196,7 @@ const breathStyle = useAnimatedStyle(() => ({
       setTestDeeds(save.testDeeds);
       setTotalDobri(save.totalDobri || save.dobri || 0);
       setCareDiary(save.careDiary || []);
+      setAvatar(save.avatar || DEFAULT_AVATAR_ID);
       const res = save.resources;
       setResources({
         water: res.water,
@@ -175,6 +205,7 @@ const breathStyle = useAnimatedStyle(() => ({
           plastic: res.trash.plastic,
           glass: res.trash.glass,
           paper: res.trash.paper,
+          bio: res.trash.bio,
         },
       });
 
@@ -191,38 +222,49 @@ const breathStyle = useAnimatedStyle(() => ({
       }
 
       setLastOpenDate(today);
+      setIsHydrated(true);
     } catch (e) {
       console.warn('Home load error', e);
+      setIsHydrated(true);
     }
   };
 
   loadHome();
 }, []);
  useEffect(() => {
-  if (!lang) return;
+  if (!lang || !isHydrated) return;
 
-  updateSave({
-    dobri,
-    xp,
-    deeds,
-    completed,
-    lang,
-    onboarded,
-    outdoorDeeds,
-    homeDeeds,
-    petDeeds,
-    totalDobri,
-    streak,
-    lastOpenDate,
-    testDeeds,
-    careDiary,
-    resources,
-    plastic,
-    glass,
-    paper,
-  }).catch((e) => {
-    console.warn('Home save error', e);
-  });
+  if (autosaveTimeoutRef.current) {
+    clearTimeout(autosaveTimeoutRef.current);
+  }
+
+  autosaveTimeoutRef.current = setTimeout(() => {
+    patchSave({
+      dobri,
+      xp,
+      deeds,
+      completed,
+      lang,
+      onboarded,
+      outdoorDeeds,
+      homeDeeds,
+      petDeeds,
+      totalDobri,
+      streak,
+      lastOpenDate,
+      testDeeds,
+      careDiary,
+      resources,
+    }).catch((e) => {
+      console.warn('Home save error', e);
+    });
+  }, 500);
+
+  return () => {
+    if (autosaveTimeoutRef.current) {
+      clearTimeout(autosaveTimeoutRef.current);
+    }
+  };
 }, [
   dobri,
   xp,
@@ -239,6 +281,7 @@ const breathStyle = useAnimatedStyle(() => ({
   testDeeds,
   careDiary,
   resources,
+  isHydrated,
 ]);
 
   useEffect(() => {
@@ -349,6 +392,7 @@ const breathStyle = useAnimatedStyle(() => ({
 const mindfulPhrase = selected
   ? MINDFUL_PHRASES[selected.id % MINDFUL_PHRASES.length][lang]
   : '';
+  const currentAvatar = AVATARS.find((item) => item.id === avatar) ?? AVATARS[0];
 
 
 
@@ -388,20 +432,135 @@ const mindfulPhrase = selected
 
   return (
     <SafeAreaView style={styles.container}>
-        <HomeHeader
-  level={level}
-  streak={streak}
-  dobri={dobri}
-  deeds={deeds}
-  xp={xp}
-  nextXp={nextXp}
-  xpProgress={xpProgress}
-  dobrikiLabel={t.dobriki}
-  deedsLabel={t.deeds}
-  flag={FLAG[lang]}
-  onPressLanguage={openLanguagePicker}
-  rewardAnimStyle={rewardAnimStyle}
-/>
+      <HomeHeader
+        level={level}
+        streak={streak}
+        dobri={dobri}
+        deeds={deeds}
+        xp={xp}
+        nextXp={nextXp}
+        xpProgress={xpProgress}
+        dobrikiLabel={t.dobriki}
+        deedsLabel={t.deeds}
+        flag={FLAG[lang]}
+        onPressLanguage={openLanguagePicker}
+        rewardAnimStyle={rewardAnimStyle}
+      />
+      <View style={styles.resourcesStrip}>
+        <View style={styles.resourcePill}>
+          <Text style={styles.resourceEmoji}>💧</Text>
+          <Text style={styles.resourceText}>{resources.water}</Text>
+        </View>
+        <View style={styles.resourcePill}>
+          <Image
+            source={require('../../assets/images/items/feed.png')}
+            style={{ width: 18, height: 18 }}
+            resizeMode="contain"
+          />
+          <Text style={styles.resourceText}>{feedCount}</Text>
+        </View>
+        <View style={styles.resourcePill}>
+          <Image
+            source={require('../../assets/images/items/plastictrash.png')}
+            style={{ width: 18, height: 18 }}
+            resizeMode="contain"
+          />
+          <Text style={styles.resourceText}>{plastic}</Text>
+        </View>
+        <View style={styles.resourcePill}>
+          <Image
+            source={require('../../assets/images/items/glasstrash.png')}
+            style={{ width: 18, height: 18 }}
+            resizeMode="contain"
+          />
+          <Text style={styles.resourceText}>{glass}</Text>
+        </View>
+        <View style={styles.resourcePill}>
+          <Image
+            source={require('../../assets/images/items/papertrash.png')}
+            style={{ width: 18, height: 18 }}
+            resizeMode="contain"
+          />
+          <Text style={styles.resourceText}>{paper}</Text>
+        </View>
+        <View style={styles.resourcePill}>
+          <Image
+            source={require('../../assets/images/items/bio.png')}
+            style={{ width: 18, height: 18 }}
+            resizeMode="contain"
+          />
+          <Text style={styles.resourceText}>{bio}</Text>
+        </View>
+      </View>
+      {__DEV__ && isLocationFallback && (
+        <View style={styles.devGeoHint}>
+          <Text style={styles.devGeoHintText}>DEV GEO: fallback location active</Text>
+        </View>
+      )}
+      {__DEV__ && (
+        <View style={styles.devDock}>
+          <TouchableOpacity style={styles.devBtn} onPress={() => setShowDevPanel((prev) => !prev)}>
+            <Text style={styles.devBtnText}>DEV</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+      {__DEV__ && showDevPanel && (
+        <View style={styles.devPanel}>
+          <TouchableOpacity
+            style={styles.devPanelBtn}
+            onPress={() =>
+              setResources((prev) => ({
+                ...prev,
+                water: Math.min(MAX_WATER, prev.water + 3),
+              }))
+            }
+          >
+            <Text style={styles.devPanelBtnText}>+3 water</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.devPanelBtn}
+            onPress={() =>
+              setResources((prev) => ({
+                ...prev,
+                feed: Math.min(MAX_FEED, prev.feed + 3),
+              }))
+            }
+          >
+            <Text style={styles.devPanelBtnText}>+3 feed</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.devPanelBtn}
+            onPress={() =>
+              setResources((prev) => addTrash(prev, 'bio', BIO_PICKUP_AMOUNT))
+            }
+          >
+            <Text style={styles.devPanelBtnText}>+bio</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.devPanelBtnDanger}
+            onPress={async () => {
+              const reset = await resetSaveToDefaults();
+              setDobri(reset.dobri);
+              setTotalDobri(reset.totalDobri);
+              setXp(reset.xp);
+              setDeeds(reset.deeds);
+              setCompleted(reset.completed);
+              setOnboarded(reset.onboarded);
+              setOutdoorDeeds(reset.outdoorDeeds);
+              setHomeDeeds(reset.homeDeeds);
+              setPetDeeds(reset.petDeeds);
+              setTestDeeds(reset.testDeeds);
+              setCareDiary(reset.careDiary);
+              setResources(reset.resources);
+              setStreak(reset.streak);
+              setLastOpenDate(reset.lastOpenDate);
+              alert('DEV: save reset');
+            }}
+          >
+            <Text style={styles.devPanelBtnText}>reset save</Text>
+          </TouchableOpacity>
+        </View>
+      )}
       {selectedCreature && (
   <CreaturePopup
     t={t}
@@ -413,6 +572,7 @@ const mindfulPhrase = selected
     breathStyle={breathStyle}
     creatureCooldowns={creatureCooldowns}
     onPressAction={() => {
+  if (isActionCoolingDown('creature')) return;
   const now = Date.now();
   const lastTime = creatureCooldowns[selectedCreature.id] || 0;
   
@@ -471,7 +631,14 @@ startFeeding(() => {
   setDobri(rewardResult.dobri);
   setTotalDobri(rewardResult.totalDobri);
   setXp(rewardResult.xp);
-  setResources((prev) => ({ ...prev, water: rewardResult.waterLevel }));
+  setResources((prev) => ({
+    ...prev,
+    water: rewardResult.waterLevel,
+    feed:
+      creature.type === 'animal'
+        ? Math.max(prev.feed - 1, 0)
+        : prev.feed,
+  }));
 
   setCreatureCooldowns((p) => ({
     ...p,
@@ -562,6 +729,8 @@ startFeeding(() => {
         }
   }
   mapMode={mapMode}
+  userLocation={location}
+  userAvatarSource={currentAvatar.image}
 >
           
             {filteredQuests.map(q => (
@@ -658,6 +827,7 @@ const isClose = dist <= RESOURCE_INTERACTION_DISTANCE;
       longitude: (location?.longitude ?? 13.405) + (Math.sin(i * 2.1) * 0.005),
     }}
     onPress={() => {
+  if (isActionCoolingDown('water')) return;
   const spotLat =
     (location?.latitude ?? 52.52) + (Math.cos(i * 2.1) * 0.005);
   const spotLng =
@@ -694,6 +864,7 @@ const isClose = dist <= RESOURCE_INTERACTION_DISTANCE;
       longitude: (location?.longitude ?? 13.405) + (Math.sin(i * 1.7) * 0.004),
     }}
     onPress={() => {
+      if (isActionCoolingDown('feed')) return;
       const spotLat = (location?.latitude ?? 52.52) + (Math.cos(i * 1.7) * 0.004);
       const spotLng = (location?.longitude ?? 13.405) + (Math.sin(i * 1.7) * 0.004);
 
@@ -706,12 +877,12 @@ const isClose = dist <= RESOURCE_INTERACTION_DISTANCE;
         return;
       }
 
-      if (feedCount >= 20) {
+      if (feedCount >= MAX_FEED) {
         alert(t.alertFeedFull);
         return;
       }
 
-      setResources((prev) => addFeed(prev, 2));
+      setResources((prev) => addFeed(prev, FEED_PICKUP_AMOUNT));
       alert(t.alertFeedCollected);
     }}
   >
@@ -732,6 +903,7 @@ const isClose = dist <= RESOURCE_INTERACTION_DISTANCE;
       longitude: (location?.longitude ?? 13.405) + (Math.sin(i * 1.3) * 0.004),
     }}
     onPress={() => {
+      if (isActionCoolingDown('trash')) return;
       const spotLat = (location?.latitude ?? 52.52) + (Math.cos(i * 1.3) * 0.004)
       const spotLng = (location?.longitude ?? 13.405) + (Math.sin(i * 1.3) * 0.004)
 
@@ -746,27 +918,27 @@ const isClose = dist <= RESOURCE_INTERACTION_DISTANCE;
 
       // логика ниже 👇
     if (spot.type === 'plastic') {
-  if (plastic >= 150) {
+  if (plastic >= MAX_TRASH_PER_TYPE) {
     alert(t.alertTrashFull);
     return;
   }
-  setResources((prev) => addTrash(prev, 'plastic', 5));
+  setResources((prev) => addTrash(prev, 'plastic', TRASH_PICKUP_AMOUNT));
 }
 
 if (spot.type === 'glass') {
-  if (glass >= 150) {
+  if (glass >= MAX_TRASH_PER_TYPE) {
     alert(t.alertTrashFull);
     return;
   }
-  setResources((prev) => addTrash(prev, 'glass', 5));
+  setResources((prev) => addTrash(prev, 'glass', TRASH_PICKUP_AMOUNT));
 }
 
 if (spot.type === 'paper') {
-  if (paper >= 150) {
+  if (paper >= MAX_TRASH_PER_TYPE) {
     alert(t.alertTrashFull);
     return;
   }
-  setResources((prev) => addTrash(prev, 'paper', 5));
+  setResources((prev) => addTrash(prev, 'paper', TRASH_PICKUP_AMOUNT));
 }
 
 alert(t.alertTrashCollected);
@@ -786,6 +958,45 @@ alert(t.alertTrashCollected);
     resizeMode="contain"
   />
 </View>
+  </Marker>
+))}
+{BIO_SPOTS.map((spot, i) => (
+  <Marker
+    key={spot.id}
+    coordinate={{
+      latitude: (location?.latitude ?? 52.52) + (Math.cos(i * 2.6) * 0.006),
+      longitude: (location?.longitude ?? 13.405) + (Math.sin(i * 2.6) * 0.006),
+    }}
+    onPress={() => {
+      if (isActionCoolingDown('bio')) return;
+      const spotLat = (location?.latitude ?? 52.52) + (Math.cos(i * 2.6) * 0.006);
+      const spotLng = (location?.longitude ?? 13.405) + (Math.sin(i * 2.6) * 0.006);
+
+      const dist = location
+        ? getDistance(location.latitude, location.longitude, spotLat, spotLng)
+        : 999;
+
+      if (dist > RESOURCE_INTERACTION_DISTANCE) {
+        alert(t.alertTooFarBio);
+        return;
+      }
+
+      if (bio >= MAX_BIO) {
+        alert(t.alertBioFull);
+        return;
+      }
+
+      setResources((prev) => addTrash(prev, 'bio', BIO_PICKUP_AMOUNT));
+      alert(t.alertBioCollected);
+    }}
+  >
+    <View style={{ alignItems: 'center', justifyContent: 'center' }}>
+      <Image
+        source={require('../../assets/images/items/bio.png')}
+        style={{ width: 30, height: 30 }}
+        resizeMode="contain"
+      />
+    </View>
   </Marker>
 ))}
             
@@ -907,4 +1118,94 @@ const styles = StyleSheet.create({
   mindfulBox: { backgroundColor: 'rgba(45,106,63,0.08)', borderLeftWidth: 2, borderLeftColor: '#3d8b52', borderRadius: 4, padding: 14, marginBottom: 20, width: '100%' },
   mindfulText: { fontSize: 13, color: 'rgba(255,255,255,0.5)', lineHeight: 20, fontStyle: 'italic' },
   newQuestsText: { color: '#e8e4d8', fontSize: 16 },
+  resourcesStrip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingBottom: 8,
+    gap: 6,
+  },
+  resourcePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 999,
+    backgroundColor: '#0f1a0f',
+    borderWidth: 1,
+    borderColor: '#1e3020',
+    gap: 4,
+  },
+  resourceEmoji: {
+    fontSize: 14,
+  },
+  resourceText: {
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.8)',
+  },
+  devGeoHint: {
+    marginHorizontal: 16,
+    marginBottom: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 10,
+    backgroundColor: 'rgba(246,188,64,0.2)',
+    borderWidth: 1,
+    borderColor: 'rgba(246,188,64,0.35)',
+  },
+  devGeoHintText: {
+    color: '#f6bc40',
+    fontSize: 11,
+    letterSpacing: 0.3,
+  },
+  devDock: {
+    position: 'absolute',
+    right: 14,
+    bottom: 18,
+    zIndex: 120,
+  },
+  devBtn: {
+    backgroundColor: '#3b235a',
+    borderColor: '#8a4df3',
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+  },
+  devBtnText: {
+    color: '#ffffff',
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.8,
+  },
+  devPanel: {
+    position: 'absolute',
+    right: 14,
+    bottom: 64,
+    zIndex: 120,
+    backgroundColor: '#101510',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#1e3020',
+    padding: 8,
+    gap: 6,
+    minWidth: 130,
+  },
+  devPanelBtn: {
+    backgroundColor: '#1e3020',
+    borderRadius: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+  },
+  devPanelBtnDanger: {
+    backgroundColor: '#5c1f1f',
+    borderRadius: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+  },
+  devPanelBtnText: {
+    color: '#e8e4d8',
+    fontSize: 12,
+    textAlign: 'center',
+  },
 });

@@ -1,4 +1,4 @@
-import { loadSave } from '../../lib/storage/storage';
+import { getResources } from '../../lib/storage/save.repository';
 import { formatTemplate } from '../../lib/i18n/formatTemplate';
 import { useTranslation } from '../../lib/i18n/useTranslation';
 import { MAX_WATER } from '../../features/resources/resource.constants';
@@ -15,6 +15,7 @@ export default function InventoryScreen() {
   const [plastic, setPlastic] = useState(0);
   const [glass, setGlass] = useState(0);
   const [paper, setPaper] = useState(0);
+  const [bio, setBio] = useState(0);
 
   useFocusEffect(
     useCallback(() => {
@@ -22,14 +23,14 @@ export default function InventoryScreen() {
 
       const load = async () => {
         try {
-          const save = await loadSave();
+          const res = await getResources();
           if (cancelled) return;
-          const res = save.resources;
           setWaterLevel(res.water);
           setFeedCount(res.feed);
           setPlastic(res.trash.plastic);
           setGlass(res.trash.glass);
           setPaper(res.trash.paper);
+          setBio(res.trash.bio);
         } catch (e) {
           console.warn('Inventory load error', e);
         }
@@ -70,13 +71,19 @@ export default function InventoryScreen() {
           quantity: paper,
         },
         {
+          id: 'bio',
+          label: t.itemBio,
+          image: require('../../assets/images/items/bio.png'),
+          quantity: bio,
+        },
+        {
           id: 'feed',
           label: t.itemFeed,
           image: require('../../assets/images/items/feed.png'),
           quantity: feedCount,
         },
       ].filter((item) => item.id !== 'feed' || feedCount > 0),
-    [t, plastic, glass, paper, feedCount]
+    [t, plastic, glass, paper, bio, feedCount]
   );
 
   const slots = Array.from({ length: TOTAL_SLOTS }, (_, i) => {

@@ -1,10 +1,11 @@
 import { View, Text, FlatList } from 'react-native';
-import { useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { loadSave } from '../../lib/storage/storage';
 import type { CareDiaryEntry, LanguageCode } from '../../lib/shared/types';
 import { CREATURES } from '../../features/creatures/creature.constants';
 import { useTranslation } from '../../lib/i18n/useTranslation';
 import { formatTemplate } from '../../lib/i18n/formatTemplate';
+import { useFocusEffect } from '@react-navigation/native';
 
 function dateLocaleTag(lang: LanguageCode): string {
   switch (lang) {
@@ -25,14 +26,23 @@ export default function DiaryScreen() {
   const { t, lang } = useTranslation();
   const [diary, setDiary] = useState<CareDiaryEntry[]>([]);
 
-  useEffect(() => {
-    const load = async () => {
-      const save = await loadSave();
-      setDiary(save.careDiary || []);
-    };
+  useFocusEffect(
+    useCallback(() => {
+      let cancelled = false;
 
-    load();
-  }, []);
+      const load = async () => {
+        const save = await loadSave();
+        if (!cancelled) {
+          setDiary(save.careDiary || []);
+        }
+      };
+
+      load();
+      return () => {
+        cancelled = true;
+      };
+    }, [])
+  );
 
   const getCreature = (id: string) => CREATURES.find((c) => c.id === id);
 

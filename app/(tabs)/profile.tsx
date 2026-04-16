@@ -1,13 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { Image, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { loadSave, updateSave } from '../../lib/storage/storage';
 import { useTranslation } from '../../lib/i18n/useTranslation';
-
-const AVATARS = [
-  { id: 'lumi', image: require('../../assets/images/avatars/lumi.png') },
-  { id: 'earthity', image: require('../../assets/images/avatars/earthity.png') },
-  { id: 'loone', image: require('../../assets/images/avatars/loone.png') },
-];
+import { useFocusEffect } from '@react-navigation/native';
+import { AVATARS, DEFAULT_AVATAR_ID } from '../../features/profile/avatar.constants';
 
 const getLevelKey = (xp: number) =>
   xp < 50 ? 'level1' : xp < 150 ? 'level2' : xp < 300 ? 'level3' : 'level4';
@@ -27,7 +23,7 @@ export default function ProfileScreen() {
   const [dobri, setDobri] = useState(0);
   const [xp, setXp] = useState(0);
   const [deeds, setDeeds] = useState(0);
-  const [avatar, setAvatar] = useState('lumi');
+  const [avatar, setAvatar] = useState(DEFAULT_AVATAR_ID);
   const [name, setName] = useState('Earthling');
   const [title, setTitle] = useState<TitleType>('');
   const [titleEmoji, setTitleEmoji] = useState('');
@@ -36,7 +32,7 @@ export default function ProfileScreen() {
   const [availableTitles, setAvailableTitles] = useState<AvailableTitle[]>([]);
   const [selectedTitleId, setSelectedTitleId] = useState('');
 
-  const currentAvatar = AVATARS.find(a => a.id === avatar) ?? AVATARS[0];
+  const currentAvatar = AVATARS.find((a) => a.id === avatar) ?? AVATARS[0];
   const levelKey = getLevelKey(xp);
   const levelName = t[levelKey];
   const nextXp = xp < 50 ? 50 : xp < 150 ? 150 : xp < 300 ? 300 : 500;
@@ -51,37 +47,45 @@ export default function ProfileScreen() {
     return '';
   };
 
- useEffect(() => {
-  const loadProfile = async () => {
-    try {
-      const save = await loadSave();
+  useFocusEffect(
+    useCallback(() => {
+      let cancelled = false;
 
-      setDobri(save.dobri);
-      setXp(save.xp);
-      setDeeds(save.deeds);
-      setAvatar(save.avatar);
-      setName(save.name);
-      setTitle(save.selectedTitleName || '');
-      setTitleEmoji(save.selectedTitleEmoji || '');
-      setSelectedTitleId(save.selectedTitle || '');
-      if (save.unlockedTitles?.length) {
-        setAvailableTitles(save.unlockedTitles);
-      } else if (save.selectedTitleName && save.selectedTitleEmoji) {
-        setAvailableTitles([
-          {
-            id: save.selectedTitle || 'existing',
-            title: save.selectedTitleName,
-            emoji: save.selectedTitleEmoji,
-          },
-        ]);
-      }
-    } catch (e) {
-      console.warn('Profile load error', e);
-    }
-  };
+      const loadProfile = async () => {
+        try {
+          const save = await loadSave();
+          if (cancelled) return;
 
-  loadProfile();
-}, []);
+          setDobri(save.dobri);
+          setXp(save.xp);
+          setDeeds(save.deeds);
+          setAvatar(save.avatar);
+          setName(save.name);
+          setTitle(save.selectedTitleName || '');
+          setTitleEmoji(save.selectedTitleEmoji || '');
+          setSelectedTitleId(save.selectedTitle || '');
+          if (save.unlockedTitles?.length) {
+            setAvailableTitles(save.unlockedTitles);
+          } else if (save.selectedTitleName && save.selectedTitleEmoji) {
+            setAvailableTitles([
+              {
+                id: save.selectedTitle || 'existing',
+                title: save.selectedTitleName,
+                emoji: save.selectedTitleEmoji,
+              },
+            ]);
+          }
+        } catch (e) {
+          console.warn('Profile load error', e);
+        }
+      };
+
+      loadProfile();
+      return () => {
+        cancelled = true;
+      };
+    }, [])
+  );
 
   async function saveAvatar(id: string) {
   setAvatar(id);
