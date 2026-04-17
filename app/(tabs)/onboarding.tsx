@@ -1,6 +1,7 @@
 import { useTranslation } from '../../lib/i18n/useTranslation';
 import { useState } from 'react';
-import { SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import type { LanguageCode } from '../../lib/shared/types';
 
 const SLIDES = [

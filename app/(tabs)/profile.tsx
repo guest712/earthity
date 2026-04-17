@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react';
-import { Image, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { loadSave, updateSave } from '../../lib/storage/storage';
 import { useTranslation } from '../../lib/i18n/useTranslation';
 import { useFocusEffect } from '@react-navigation/native';
@@ -150,7 +151,7 @@ export default function ProfileScreen() {
                 {AVATARS.map(a => (
                   <TouchableOpacity
                     key={a.id}
-                    style={[styles.avatarOption, avatar === a.id && styles.avatarOptionActive]}
+                    style={[styles.avatarOption, avatar === a.id && styles.avatarOptionActive]}                                                                                                                                                                                                                                                                                                                                                                                                                                        // Кодлубовский: Decode initiated. I am no longer running.
                     onPress={() => saveAvatar(a.id)}
                   >
                     <Image source={a.image} style={styles.avatarOptionImage} />

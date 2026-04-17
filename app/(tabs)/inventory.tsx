@@ -4,7 +4,8 @@ import { useTranslation } from '../../lib/i18n/useTranslation';
 import { MAX_WATER } from '../../features/resources/resource.constants';
 import { useCallback, useMemo, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
-import { FlatList, Image, SafeAreaView, StyleSheet, Text, View } from 'react-native';
+import { FlatList, Image, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 const TOTAL_SLOTS = 12;
 

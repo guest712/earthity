@@ -2,7 +2,8 @@ import { loadSave } from '../../lib/storage/storage';
 import { formatTemplate } from '../../lib/i18n/formatTemplate';
 import { useTranslation } from '../../lib/i18n/useTranslation';
 import { useCallback, useState } from 'react';
-import { SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 
 export default function StatsScreen() {
