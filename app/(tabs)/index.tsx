@@ -24,7 +24,7 @@ import { guessDeviceLanguage } from '../../lib/i18n/guess-locale';
 import { getDistance, getLevelKey, getLevelName } from '../../lib/shared/game-utils';
 import React, { useEffect, useRef, useState } from 'react';
 import WorldMap from '../../components/map/WorldMap';
-import { Marker, Circle } from 'react-native-maps';
+import RNMapView, { Marker, Circle } from 'react-native-maps';
 import {
   applyQuestCompletion,
   canInteractWithCreature,
@@ -114,6 +114,7 @@ export default function HomeScreen() {
     trash: 0,
     bio: 0,
   });
+  const mapRef = useRef<RNMapView | null>(null);
   const playRewardSound = async () => {
   const { sound } = await Audio.Sound.createAsync(
     require('../../assets/sounds/reward.mp3')
@@ -710,9 +711,28 @@ startFeeding(() => {
             >
               <Text style={styles.mapBtnText}>🛰️</Text>
             </TouchableOpacity>
+            {location ? (
+              <TouchableOpacity
+                style={styles.mapBtn}
+                onPress={() => {
+                  mapRef.current?.animateToRegion(
+                    {
+                      latitude: location.latitude,
+                      longitude: location.longitude,
+                      latitudeDelta: 0.02,
+                      longitudeDelta: 0.02,
+                    },
+                    250
+                  );
+                }}
+              >
+                <Text style={styles.mapBtnText}>📍</Text>
+              </TouchableOpacity>
+            ) : null}
           </View>
           
           <WorldMap
+  ref={mapRef}
   region={
     location
       ? {

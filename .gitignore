@@ -42,12 +42,12 @@ yarn-error.*
 
 app-example
 
-# generated native folders
+# Native projects from `expo prebuild` / `expo run:android|ios` — machine-local, regenerate anytime
 /ios
 /android
 
 # JetBrains
 .idea/
 
-# kintsugi
-frankintsugi.ini
+# kintsugi / IDE repair metadata (covers renames, e.g. frankintsugi.ini.bak)
+frankintsugi*.ini

@@ -1,6 +1,6 @@
-import { Image, StyleSheet, View } from 'react-native';
+import { Image, StyleSheet, Text, View } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
-import { ReactNode } from 'react';
+import { forwardRef, ReactNode, useEffect, useState } from 'react';
 import type { ImageSourcePropType } from 'react-native';
 
 type Props = {
@@ -11,31 +11,56 @@ type Props = {
   children?: ReactNode;
 };
 
-export default function WorldMap({ region, mapMode, userLocation, userAvatarSource, children }: Props) {
+const WorldMap = forwardRef<MapView, Props>(function WorldMap(
+  { region, mapMode, userLocation, userAvatarSource, children },
+  ref
+) {
+  const useNativeUser = userLocation == null;
+  const [userMarkerTracksView, setUserMarkerTracksView] = useState(true);
+
+  useEffect(() => {
+    if (!userLocation) return;
+    setUserMarkerTracksView(true);
+    const t = setTimeout(() => setUserMarkerTracksView(false), 600);
+    return () => clearTimeout(t);
+  }, [userLocation, userAvatarSource]);
+
   return (
     <MapView
+      ref={ref}
       style={{ height: 220, margin: 12, borderRadius: 16 }}
       region={region}
-      showsUserLocation={false}
-      showsMyLocationButton
-      followsUserLocation
+      showsUserLocation={useNativeUser}
+      showsMyLocationButton={useNativeUser}
+      followsUserLocation={useNativeUser}
       mapType={mapMode}
     >
-      {userLocation && userAvatarSource && (
+      {userLocation != null && (
         <Marker
           coordinate={userLocation}
           anchor={{ x: 0.5, y: 0.5 }}
-          tracksViewChanges={false}
+          zIndex={1000}
+          tracksViewChanges={userMarkerTracksView}
         >
           <View style={styles.userMarkerWrap}>
-            <Image source={userAvatarSource} style={styles.userMarkerAvatar} />
+            {userAvatarSource != null ? (
+              <Image
+                source={userAvatarSource}
+                style={styles.userMarkerAvatar}
+                resizeMode="cover"
+              />
+            ) : (
+              <Text style={styles.userMarkerFallback}>📍</Text>
+            )}
           </View>
         </Marker>
       )}
       {children}
     </MapView>
   );
-}
+});
+
+export default WorldMap;
 
 const styles = StyleSheet.create({
   userMarkerWrap: {
@@ -58,6 +83,8 @@ const styles = StyleSheet.create({
     height: 44,
     borderRadius: 22,
   },
+  userMarkerFallback: {
+    fontSize: 26,
+    lineHeight: 30,
+  },
 });
-
-
