@@ -1,8 +1,8 @@
-import type { ImageSourcePropType } from 'react-native';
+import type { ImageRequireSource } from 'react-native';
 
 export type AvatarOption = {
   id: string;
-  image: ImageSourcePropType;
+  image: ImageRequireSource;
 };
 
 export const AVATARS: AvatarOption[] = [

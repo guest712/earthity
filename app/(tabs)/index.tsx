@@ -22,7 +22,8 @@ import {
 import { LANGS, FLAG } from '../../lib/i18n/i18n';
 import { guessDeviceLanguage } from '../../lib/i18n/guess-locale';
 import { getDistance, getLevelKey, getLevelName } from '../../lib/shared/game-utils';
-import React, { useEffect, useRef, useState } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import WorldMap from '../../components/map/WorldMap';
 import RNMapView, { Marker, Circle } from 'react-native-maps';
 import {
@@ -35,7 +36,8 @@ import {
   registerCreatureSeen,
   registerCreatureCared,
 } from '../../lib/shared/game-engine';
-import { Image, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Easing, useAnimatedStyle, useSharedValue, withRepeat, withSequence, withSpring, withTiming } from 'react-native-reanimated';
 import Onboarding from './onboarding';
 import HomeHeader from '../../components/home/HomeHeader';
@@ -116,19 +118,23 @@ export default function HomeScreen() {
   });
   const mapRef = useRef<RNMapView | null>(null);
   const playRewardSound = async () => {
-  const { sound } = await Audio.Sound.createAsync(
-    require('../../assets/sounds/reward.mp3')
-  );
-  try {
-    await sound.playAsync();
-  } finally {
-    sound.setOnPlaybackStatusUpdate((status) => {
-      if ('didJustFinish' in status && status.didJustFinish) {
-        sound.unloadAsync();
+    try {
+      const { sound } = await Audio.Sound.createAsync(
+        require('../../assets/sounds/reward.mp3')
+      );
+      try {
+        await sound.playAsync();
+      } finally {
+        sound.setOnPlaybackStatusUpdate((status) => {
+          if ('didJustFinish' in status && status.didJustFinish) {
+            void sound.unloadAsync();
+          }
+        });
       }
-    });
-  }
-};
+    } catch {
+      /* audio / keep-awake timing on Android dev — ignore */
+    }
+  };
   const prevLevelKey = useRef('');const rewardScale = useSharedValue(1);
   const rewardOpacity = useSharedValue(1);
 
@@ -232,6 +238,26 @@ const breathStyle = useAnimatedStyle(() => ({
 
   loadHome();
 }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      let cancelled = false;
+      (async () => {
+        try {
+          const save = await getSave();
+          if (!cancelled) {
+            setAvatar(save.avatar || DEFAULT_AVATAR_ID);
+          }
+        } catch {
+          /* keep current avatar */
+        }
+      })();
+      return () => {
+        cancelled = true;
+      };
+    }, [])
+  );
+
  useEffect(() => {
   if (!lang || !isHydrated) return;
 
@@ -751,6 +777,7 @@ startFeeding(() => {
   mapMode={mapMode}
   userLocation={location}
   userAvatarSource={currentAvatar.image}
+  userAvatarId={avatar}
 >
           
             {filteredQuests.map(q => (

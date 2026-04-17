@@ -4,7 +4,7 @@
     "slug": "earthity",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/E_Icon.png",
     "scheme": "earthity",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
