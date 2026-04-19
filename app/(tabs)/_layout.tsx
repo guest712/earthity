@@ -1,10 +1,11 @@
 import { HapticTab } from '@/components/haptic-tab';
+import { useKeepAwake } from 'expo-keep-awake';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { LanguageProvider } from '../../lib/i18n/LanguageContext';
 import { useTranslation } from '../../lib/i18n/useTranslation';
-import { Tabs } from 'expo-router';
+import { Tabs, Stack } from 'expo-router';
 import React from 'react';
 import { Text } from 'react-native';
 

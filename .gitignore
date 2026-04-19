@@ -36,6 +36,7 @@ yarn-error.*
 
 # local env files (API keys, etc.)
 .env
+.env.*
 .env*.local
 
 # typescript
@@ -52,3 +53,8 @@ app-example
 
 # kintsugi / IDE repair metadata (covers renames, e.g. frankintsugi.ini.bak)
 frankintsugi*.ini
+
+#Ini
+Instruction.ini
+
+backup/
