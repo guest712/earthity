@@ -103,6 +103,9 @@ export const LANGS: Record<LanguageCode, LocaleStrings> = {
     onboardingNext: 'Далее →',
     onboardingStart: '🌱 Начать',
     onboardingSkip: 'Пропустить',
+    dropToastPrefix: '✨ Получено:',
+    questLockedNeed: 'Нужно',
+    questUnlockedToast: '🔓 Квест открыт!',
   },
 
   de: {
@@ -206,6 +209,9 @@ export const LANGS: Record<LanguageCode, LocaleStrings> = {
     onboardingNext: 'Weiter →',
     onboardingStart: '🌱 Starten',
     onboardingSkip: 'Überspringen',
+    dropToastPrefix: '✨ Erhalten:',
+    questLockedNeed: 'Benötigt',
+    questUnlockedToast: '🔓 Quest freigeschaltet!',
   },
 
   uk: {
@@ -309,6 +315,9 @@ export const LANGS: Record<LanguageCode, LocaleStrings> = {
     onboardingNext: 'Далі →',
     onboardingStart: '🌱 Почати',
     onboardingSkip: 'Пропустити',
+    dropToastPrefix: '✨ Отримано:',
+    questLockedNeed: 'Потрібно',
+    questUnlockedToast: '🔓 Квест відкрито!',
   },
 
   ar: {
@@ -412,6 +421,9 @@ export const LANGS: Record<LanguageCode, LocaleStrings> = {
     onboardingNext: 'التالي →',
     onboardingStart: '🌱 ابدأ',
     onboardingSkip: 'تخطي',
+    dropToastPrefix: '✨ تم الحصول على:',
+    questLockedNeed: 'مطلوب',
+    questUnlockedToast: '🔓 مهمة جديدة!',
   },
 
   en: {
@@ -515,6 +527,9 @@ export const LANGS: Record<LanguageCode, LocaleStrings> = {
     onboardingNext: 'Next →',
     onboardingStart: '🌱 Start',
     onboardingSkip: 'Skip',
+    dropToastPrefix: '✨ Received:',
+    questLockedNeed: 'Need',
+    questUnlockedToast: '🔓 Quest unlocked!',
   },
 };
 

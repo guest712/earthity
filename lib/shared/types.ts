@@ -4,6 +4,13 @@ export type Translation = Record<LanguageCode, string>;
 
 export type QuestType = 'trash' | 'help' | 'home' | 'test';
 
+export type DropId = 'feather' | 'petal' | 'paw_print' | 'seed' | 'scale';
+
+export type QuestUnlockCondition = {
+  dropId: DropId;
+  amount: number;
+};
+
 export type Quest = {
   id: number;
   title: Translation;
@@ -11,6 +18,7 @@ export type Quest = {
   reward: number;
   type: QuestType;
   emoji: string;
+  unlockedBy?: QuestUnlockCondition;
 };
 
 export type CreatureType = 'animal' | 'flower';
@@ -85,4 +93,5 @@ export type EarthitySave = {
 
   unlockedTitles: UnlockedTitle[];
   careDiary: CareDiaryEntry[];
+  drops: Partial<Record<DropId, number>>;
 };

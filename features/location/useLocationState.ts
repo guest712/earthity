@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import * as Location from 'expo-location';
 
 type UserLocation = {
@@ -6,12 +6,17 @@ type UserLocation = {
   longitude: number;
 } | null;
 
+const HEADING_CHANGE_THRESHOLD = 5;
+
 export function useLocationState() {
   const [location, setLocation] = useState<UserLocation>(null);
   const [isLocationFallback, setIsLocationFallback] = useState(false);
+  const [heading, setHeading] = useState<number | null>(null);
+  const lastHeadingRef = useRef<number | null>(null);
 
   useEffect(() => {
-    let subscription: Location.LocationSubscription | null = null;
+    let positionSub: Location.LocationSubscription | null = null;
+    let headingSub: Location.LocationSubscription | null = null;
     let fallbackTimer: ReturnType<typeof setTimeout> | null = null;
 
     const loadLocation = async () => {
@@ -43,7 +48,7 @@ export function useLocationState() {
         });
         setIsLocationFallback(false);
 
-        subscription = await Location.watchPositionAsync(
+        positionSub = await Location.watchPositionAsync(
           {
             accuracy: Location.Accuracy.Balanced,
             timeInterval: 5000,
@@ -57,6 +62,15 @@ export function useLocationState() {
             setIsLocationFallback(false);
           }
         );
+
+        headingSub = await Location.watchHeadingAsync((h) => {
+          const raw = h.trueHeading >= 0 ? h.trueHeading : h.magHeading;
+          const prev = lastHeadingRef.current;
+          if (prev === null || Math.abs(raw - prev) >= HEADING_CHANGE_THRESHOLD) {
+            lastHeadingRef.current = raw;
+            setHeading(raw);
+          }
+        });
       } catch (error) {
         console.warn('Location load error', error);
         if (__DEV__) {
@@ -69,10 +83,11 @@ export function useLocationState() {
     loadLocation();
 
     return () => {
-      subscription?.remove();
+      positionSub?.remove();
+      headingSub?.remove();
       if (fallbackTimer) clearTimeout(fallbackTimer);
     };
   }, []);
 
-  return { location, isLocationFallback };
+  return { location, isLocationFallback, heading };
 }

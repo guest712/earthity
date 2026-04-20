@@ -1,6 +1,38 @@
 import { Quest } from './types';
 import { getDistance } from './game-utils';
-import type { Creature, SpawnedCreature, CareDiaryEntry, } from './types';
+import type { Creature, SpawnedCreature, CareDiaryEntry, DropId } from './types';
+
+export const DROP_INFO: Record<DropId, { emoji: string; label: Record<string, string> }> = {
+  feather:   { emoji: '🪶', label: { ru: 'Пёрышко',    en: 'Feather',    de: 'Feder',         uk: 'Пір\'ячко',      ar: 'ريشة'  } },
+  petal:     { emoji: '🌸', label: { ru: 'Лепесток',   en: 'Petal',      de: 'Blütenblatt',   uk: 'Пелюстка',       ar: 'بتلة'  } },
+  paw_print: { emoji: '🐾', label: { ru: 'След лапки', en: 'Paw Print',  de: 'Pfote',         uk: 'Відбиток лапи',  ar: 'بصمة'  } },
+  seed:      { emoji: '🌱', label: { ru: 'Семечко',    en: 'Seed',       de: 'Samen',         uk: 'Насінина',       ar: 'بذرة'  } },
+  scale:     { emoji: '🐢', label: { ru: 'Чешуйка',    en: 'Scale',      de: 'Schuppe',       uk: 'Лусочка',        ar: 'قشرة'  } },
+};
+
+const CREATURE_DROP_MAP: Partial<Record<string, DropId>> = {
+  animal1:     'feather',
+  animal2:     'scale',
+  animal3:     'paw_print',
+  flower1:     'petal',
+  flower2:     'seed',
+  codariocalyx: 'seed',
+};
+
+const DROP_CHANCE: Partial<Record<string, number>> = {
+  animal1: 0.25,
+  animal2: 0.20,
+  animal3: 0.30,
+  flower1: 0.20,
+  flower2: 0.20,
+  codariocalyx: 0.25,
+};
+
+export function rollCreatureDrop(creature: Creature): DropId | null {
+  const chance = DROP_CHANCE[creature.id] ?? 0.20;
+  if (Math.random() > chance) return null;
+  return CREATURE_DROP_MAP[creature.id] ?? null;
+}
 
 type CompleteQuestResult = {
   completed: number[];

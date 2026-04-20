@@ -31,7 +31,7 @@ import { buildAvatarMarkerUri } from './buildAvatarMarker';
  */
 type Props = {
   region: any;
-  mapMode: 'standard' | 'satellite';
+  mapTileStyle: 'standard' | 'satellite';
   userLocation?: { latitude: number; longitude: number } | null;
   userAvatarSource?: ImageRequireSource | ImageURISource;
   userAvatarId?: string;
@@ -119,7 +119,7 @@ async function resolveResizedUri(
 // ─── component ──────────────────────────────────────────────────────────────
 
 const WorldMap = forwardRef<MapView, Props>(function WorldMap(
-  { region, mapMode, userLocation, userAvatarSource, userAvatarId, children },
+  { region, mapTileStyle, userLocation, userAvatarSource, userAvatarId, children },
   ref
 ) {
   const useNativeUser = userLocation == null;
@@ -181,7 +181,7 @@ const WorldMap = forwardRef<MapView, Props>(function WorldMap(
       showsUserLocation={useNativeUser}
       showsMyLocationButton={useNativeUser}
       followsUserLocation={useNativeUser}
-      mapType={mapMode}
+      mapType={mapTileStyle}
     >
       {userLocation != null && (
         <>

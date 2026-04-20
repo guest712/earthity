@@ -91,6 +91,13 @@ function normalizeSave(input: unknown): EarthitySave {
       )
     : defaultSave.careDiary;
 
+  const drops: EarthitySave['drops'] =
+    source.drops && typeof source.drops === 'object'
+      ? Object.fromEntries(
+          Object.entries(source.drops).map(([k, v]) => [k, toNonNegativeNumber(v, 0)])
+        )
+      : {};
+
   const totalDobri = Math.max(
     toNonNegativeNumber(source.totalDobri, defaultSave.totalDobri),
     toNonNegativeNumber(source.dobri, defaultSave.dobri)
@@ -133,6 +140,7 @@ function normalizeSave(input: unknown): EarthitySave {
         : defaultSave.selectedTitleName,
     unlockedTitles,
     careDiary,
+    drops,
   };
 }
 
@@ -200,6 +208,7 @@ export const defaultSave: EarthitySave = {
 
   unlockedTitles: [],
   careDiary: [],
+  drops: {},
 };
 
 export async function loadSave(): Promise<EarthitySave> {

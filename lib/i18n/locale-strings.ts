@@ -103,4 +103,7 @@ export interface LocaleStrings {
   onboardingNext: string;
   onboardingStart: string;
   onboardingSkip: string;
+  dropToastPrefix: string;
+  questLockedNeed: string;
+  questUnlockedToast: string;
 }

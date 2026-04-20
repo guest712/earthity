@@ -35,10 +35,13 @@ import {
   shouldRefreshCreatureSpawns,
   registerCreatureSeen,
   registerCreatureCared,
+  rollCreatureDrop,
+  DROP_INFO,
 } from '../../lib/shared/game-engine';
+import type { DropId } from '../../lib/shared/types';
 import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Easing, useAnimatedStyle, useSharedValue, withRepeat, withSequence, withSpring, withTiming } from 'react-native-reanimated';
+import Animated, { Easing, useAnimatedStyle, useSharedValue, withRepeat, withSequence, withSpring, withTiming } from 'react-native-reanimated';
 import Onboarding from './onboarding';
 import HomeHeader from '../../components/home/HomeHeader';
 import CategoryTabs from '../../components/home/CategoryTabs';
@@ -62,7 +65,8 @@ export default function HomeScreen() {
   const [totalDobri, setTotalDobri] = useState(0);
   const [xp, setXp] = useState(0);
   const [deeds, setDeeds] = useState(0);
-  const [mapMode, setMapMode] = useState<'standard' | 'satellite'>('standard');
+  const [mapTileStyle, setMapTileStyle] = useState<'standard' | 'satellite'>('standard');
+  const [mapMode, setMapMode] = useState<'2D' | '3D_Tilt'>('2D');
 
   const {
   creatureCooldowns,
@@ -80,7 +84,7 @@ export default function HomeScreen() {
   const [category, setCategory] = useState<'all' | 'outdoor' | 'home'>('all');
   const [onboarded, setOnboarded] = useState(false);
   const [streak, setStreak] = useState(0);
-  const { location, isLocationFallback } = useLocationState();
+  const { location, isLocationFallback, heading } = useLocationState();
   const [lastOpenDate, setLastOpenDate] = useState('');
   const [testDeeds, setTestDeeds] = useState(0);
   
@@ -108,6 +112,10 @@ export default function HomeScreen() {
   const [isHydrated, setIsHydrated] = useState(false);
   const [showDevPanel, setShowDevPanel] = useState(false);
   const [avatar, setAvatar] = useState(DEFAULT_AVATAR_ID);
+  const [drops, setDrops] = useState<Partial<Record<DropId, number>>>({});
+  const [dropToast, setDropToast] = useState<{ dropId: DropId; msg: string } | null>(null);
+  const dropToastOpacity = useSharedValue(0);
+  const dropToastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const autosaveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastActionAtRef = useRef({
     creature: 0,
@@ -180,6 +188,66 @@ const breathStyle = useAnimatedStyle(() => ({
   transform: [{ scale: breathScale.value }],
 }));
 
+const dropToastStyle = useAnimatedStyle(() => ({
+  opacity: dropToastOpacity.value,
+  transform: [{ translateY: (1 - dropToastOpacity.value) * 16 }],
+}));
+
+function triggerDropToast(dropId: DropId, lang: string) {
+  const info = DROP_INFO[dropId];
+  const label = info.label[lang] ?? info.label['en'];
+  const msg = `${info.emoji} ${label}`;
+  setDropToast({ dropId, msg });
+  dropToastOpacity.value = withTiming(1, { duration: 250 });
+  if (dropToastTimerRef.current) clearTimeout(dropToastTimerRef.current);
+  dropToastTimerRef.current = setTimeout(() => {
+    dropToastOpacity.value = withTiming(0, { duration: 400 });
+    setTimeout(() => setDropToast(null), 450);
+  }, 2500);
+}
+
+const prevMapModeRef = useRef<'2D' | '3D_Tilt'>('2D');
+
+useEffect(() => {
+  if (!location) return;
+
+  const bear = heading ?? 0;
+  const isSwitching = prevMapModeRef.current !== mapMode;
+  prevMapModeRef.current = mapMode;
+
+  if (mapMode === '3D_Tilt') {
+    const OFFSET_M = 120;
+    const R = 6371000;
+    const bearRad = (bear * Math.PI) / 180;
+    const dLat = (OFFSET_M / R) * (180 / Math.PI) * Math.cos(bearRad);
+    const dLng =
+      ((OFFSET_M / R) * (180 / Math.PI) * Math.sin(bearRad)) /
+      Math.cos((location.latitude * Math.PI) / 180);
+
+    mapRef.current?.animateCamera(
+      {
+        center: {
+          latitude: location.latitude + dLat,
+          longitude: location.longitude + dLng,
+        },
+        pitch: 60,
+        heading: bear,
+        zoom: 18,
+      },
+      { duration: isSwitching ? 700 : 300 }
+    );
+  } else {
+    mapRef.current?.animateCamera(
+      {
+        center: { latitude: location.latitude, longitude: location.longitude },
+        pitch: 0,
+        heading: 0,
+        zoom: 17,
+      },
+      { duration: isSwitching ? 700 : 300 }
+    );
+  }
+}, [mapMode, location, heading]);
 
   useEffect(() => {
     requestNotificationPermissions();
@@ -204,6 +272,7 @@ const breathStyle = useAnimatedStyle(() => ({
       setTotalDobri(save.totalDobri || save.dobri || 0);
       setCareDiary(save.careDiary || []);
       setAvatar(save.avatar || DEFAULT_AVATAR_ID);
+      setDrops(save.drops || {});
       const res = save.resources;
       setResources({
         water: res.water,
@@ -282,6 +351,7 @@ const breathStyle = useAnimatedStyle(() => ({
       testDeeds,
       careDiary,
       resources,
+      drops,
     }).catch((e) => {
       console.warn('Home save error', e);
     });
@@ -308,6 +378,7 @@ const breathStyle = useAnimatedStyle(() => ({
   testDeeds,
   careDiary,
   resources,
+  drops,
   isHydrated,
 ]);
 
@@ -399,8 +470,19 @@ const breathStyle = useAnimatedStyle(() => ({
   }
 
   const t = LANGS[lang];
-  const activeQuests = QUESTS.filter(q => !completed.includes(q.id));
+  const isQuestUnlocked = (q: typeof QUESTS[number]) => {
+    if (!q.unlockedBy) return true;
+    return (drops[q.unlockedBy.dropId] ?? 0) >= q.unlockedBy.amount;
+  };
+
+  const activeQuests = QUESTS.filter(q => !completed.includes(q.id) && isQuestUnlocked(q));
   const filteredQuests = activeQuests.filter(q => {
+    if (category === 'outdoor') return q.type === 'trash' || q.type === 'help';
+    if (category === 'home') return q.type === 'home';
+    return true;
+  });
+
+  const lockedQuests = QUESTS.filter(q => !completed.includes(q.id) && !isQuestUnlocked(q)).filter(q => {
     if (category === 'outdoor') return q.type === 'trash' || q.type === 'help';
     if (category === 'home') return q.type === 'home';
     return true;
@@ -689,6 +771,15 @@ startFeeding(() => {
 
   setSelectedCreature(null);
   setSelectedSpawn(null);
+
+  const droppedId = rollCreatureDrop(creature);
+  if (droppedId) {
+    setDrops((prev) => {
+      const next = { ...prev, [droppedId]: (prev[droppedId] ?? 0) + 1 };
+      return next;
+    });
+    triggerDropToast(droppedId, lang);
+  }
 });
 }}
     onClose={() => {
@@ -726,30 +817,59 @@ startFeeding(() => {
   <>
            <View style={styles.mapControls}>
             <TouchableOpacity
-              style={[styles.mapBtn, mapMode === 'standard' && styles.mapBtnActive]}
-              onPress={() => setMapMode('standard')}
+              style={[styles.mapBtn, mapTileStyle === 'standard' && styles.mapBtnActive]}
+              onPress={() => setMapTileStyle('standard')}
             >
               <Text style={styles.mapBtnText}>🗺️</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.mapBtn, mapMode === 'satellite' && styles.mapBtnActive]}
-              onPress={() => setMapMode('satellite')}
+              style={[styles.mapBtn, mapTileStyle === 'satellite' && styles.mapBtnActive]}
+              onPress={() => setMapTileStyle('satellite')}
             >
               <Text style={styles.mapBtnText}>🛰️</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.mapBtn, mapMode === '3D_Tilt' && styles.mapBtnActive3D]}
+              onPress={() => setMapMode((prev) => (prev === '2D' ? '3D_Tilt' : '2D'))}
+            >
+              <Text style={styles.mapBtnText}>{mapMode === '3D_Tilt' ? '🧭' : '2D'}</Text>
             </TouchableOpacity>
             {location ? (
               <TouchableOpacity
                 style={styles.mapBtn}
                 onPress={() => {
-                  mapRef.current?.animateToRegion(
-                    {
-                      latitude: location.latitude,
-                      longitude: location.longitude,
-                      latitudeDelta: 0.02,
-                      longitudeDelta: 0.02,
-                    },
-                    250
-                  );
+                  if (mapMode === '3D_Tilt') {
+                    const bear = heading ?? 0;
+                    const OFFSET_M = 120;
+                    const R = 6371000;
+                    const bearRad = (bear * Math.PI) / 180;
+                    const dLat = (OFFSET_M / R) * (180 / Math.PI) * Math.cos(bearRad);
+                    const dLng =
+                      ((OFFSET_M / R) * (180 / Math.PI) * Math.sin(bearRad)) /
+                      Math.cos((location.latitude * Math.PI) / 180);
+                    mapRef.current?.animateCamera(
+                      {
+                        center: {
+                          latitude: location.latitude + dLat,
+                          longitude: location.longitude + dLng,
+                        },
+                        pitch: 60,
+                        heading: bear,
+                        zoom: 18,
+                      },
+                      { duration: 400 }
+                    );
+                  } else {
+                    mapRef.current?.animateToRegion(
+                      {
+                        latitude: location.latitude,
+                        longitude: location.longitude,
+                        latitudeDelta: 0.02,
+                        longitudeDelta: 0.02,
+                      },
+                      250
+                    );
+                  }
                 }}
               >
                 <Text style={styles.mapBtnText}>📍</Text>
@@ -774,7 +894,7 @@ startFeeding(() => {
           longitudeDelta: 0.02,
         }
   }
-  mapMode={mapMode}
+  mapTileStyle={mapTileStyle}
   userLocation={location}
   userAvatarSource={currentAvatar.image}
   userAvatarId={avatar}
@@ -1071,21 +1191,48 @@ alert(t.alertTrashCollected);
                 <Text style={styles.cardReward}>+{q.reward}🪙</Text>
               </TouchableOpacity>
             ))}
-            {filteredQuests.length === 0 && (
+            {filteredQuests.length === 0 && lockedQuests.length === 0 && (
               <View style={{ alignItems: 'center', marginTop: 40, gap: 16 }}>
                 <Text style={styles.empty}>{t.empty}</Text>
                 <TouchableOpacity
                   style={{ padding: 14, borderRadius: 12, borderWidth: 1, borderColor: '#1e3020' }}
                   onPress={() => setCompleted([])}
                 >
-                  <Text style={styles.newQuestsText}>
-  {t.newQuests}
-</Text>
+                  <Text style={styles.newQuestsText}>{t.newQuests}</Text>
                 </TouchableOpacity>
               </View>
             )}
+            {lockedQuests.length > 0 && (
+              <>
+                <Text style={[styles.sectionTitle, { marginTop: 12, color: 'rgba(255,255,255,0.25)' }]}>
+                  🔒 {lockedQuests.length}
+                </Text>
+                {lockedQuests.map(q => {
+                  const cond = q.unlockedBy!;
+                  const have = drops[cond.dropId] ?? 0;
+                  const info = DROP_INFO[cond.dropId];
+                  return (
+                    <View key={q.id} style={styles.cardLocked}>
+                      <Text style={styles.cardEmoji}>{q.emoji}</Text>
+                      <View style={styles.cardBody}>
+                        <Text style={styles.cardTitleLocked}>{q.title[lang]}</Text>
+                        <Text style={styles.cardDesc}>
+                          {t.questLockedNeed}: {have}/{cond.amount} {info.emoji}
+                        </Text>
+                      </View>
+                      <Text style={styles.cardRewardLocked}>+{q.reward}🪙</Text>
+                    </View>
+                  );
+                })}
+              </>
+            )}
           </ScrollView>
         </>
+      )}
+      {dropToast && (
+        <Animated.View style={[styles.dropToast, dropToastStyle]} pointerEvents="none">
+          <Text style={styles.dropToastText}>{t.dropToastPrefix} {dropToast.msg}</Text>
+        </Animated.View>
       )}
     </SafeAreaView>
   );
@@ -1152,6 +1299,7 @@ const styles = StyleSheet.create({
   mapControls: { flexDirection: 'row', gap: 8, paddingHorizontal: 12, paddingTop: 8 },
   mapBtn: { paddingVertical: 6, paddingHorizontal: 14, borderRadius: 10, borderWidth: 1, borderColor: '#1e3020', backgroundColor: '#0f1a0f' },
   mapBtnActive: { borderColor: '#3d8b52', backgroundColor: '#1e3020' },
+  mapBtnActive3D: { borderColor: '#e8c97a', backgroundColor: '#2a2010' },
   mapBtnText: { fontSize: 16 },
   creaturePopup: { position: 'absolute', bottom: 100, left: 20, right: 20, backgroundColor: '#0f1a0f', borderRadius: 16, padding: 20, alignItems: 'center', borderWidth: 1, borderColor: '#2d6a3f', zIndex: 100 },
   creatureEmoji: { fontSize: 52, marginBottom: 8 },
@@ -1250,6 +1398,23 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 10,
   },
+  cardLocked: {
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: 'rgba(15,26,15,0.5)',
+    borderRadius: 12, padding: 16, marginBottom: 10,
+    borderWidth: 1, borderColor: 'rgba(30,48,32,0.5)',
+    opacity: 0.55,
+  },
+  cardTitleLocked: { fontSize: 15, color: 'rgba(232,228,216,0.5)', fontWeight: '500' },
+  cardRewardLocked: { fontSize: 13, color: 'rgba(232,201,122,0.4)', fontWeight: '600' },
+  dropToast: {
+    position: 'absolute', bottom: 90, alignSelf: 'center',
+    backgroundColor: '#1a2a1a', borderRadius: 20,
+    paddingHorizontal: 18, paddingVertical: 10,
+    borderWidth: 1, borderColor: '#3d8b52',
+    zIndex: 200,
+  },
+  dropToastText: { color: '#e8e4d8', fontSize: 14, fontWeight: '500' },
   devPanelBtnText: {
     color: '#e8e4d8',
     fontSize: 12,
