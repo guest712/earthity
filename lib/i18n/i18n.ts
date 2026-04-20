@@ -106,6 +106,9 @@ export const LANGS: Record<LanguageCode, LocaleStrings> = {
     dropToastPrefix: '✨ Получено:',
     questLockedNeed: 'Нужно',
     questUnlockedToast: '🔓 Квест открыт!',
+    invCatResources: 'Ресурсы',
+    invCatFood: 'Корм',
+    invCatQuestItems: 'Квестовые',
   },
 
   de: {
@@ -212,6 +215,9 @@ export const LANGS: Record<LanguageCode, LocaleStrings> = {
     dropToastPrefix: '✨ Erhalten:',
     questLockedNeed: 'Benötigt',
     questUnlockedToast: '🔓 Quest freigeschaltet!',
+    invCatResources: 'Ressourcen',
+    invCatFood: 'Futter',
+    invCatQuestItems: 'Quest',
   },
 
   uk: {
@@ -318,6 +324,9 @@ export const LANGS: Record<LanguageCode, LocaleStrings> = {
     dropToastPrefix: '✨ Отримано:',
     questLockedNeed: 'Потрібно',
     questUnlockedToast: '🔓 Квест відкрито!',
+    invCatResources: 'Ресурси',
+    invCatFood: 'Корм',
+    invCatQuestItems: 'Квестові',
   },
 
   ar: {
@@ -424,6 +433,9 @@ export const LANGS: Record<LanguageCode, LocaleStrings> = {
     dropToastPrefix: '✨ تم الحصول على:',
     questLockedNeed: 'مطلوب',
     questUnlockedToast: '🔓 مهمة جديدة!',
+    invCatResources: 'الموارد',
+    invCatFood: 'طعام',
+    invCatQuestItems: 'المهام',
   },
 
   en: {
@@ -530,6 +542,9 @@ export const LANGS: Record<LanguageCode, LocaleStrings> = {
     dropToastPrefix: '✨ Received:',
     questLockedNeed: 'Need',
     questUnlockedToast: '🔓 Quest unlocked!',
+    invCatResources: 'Resources',
+    invCatFood: 'Food',
+    invCatQuestItems: 'Quest Items',
   },
 };
 

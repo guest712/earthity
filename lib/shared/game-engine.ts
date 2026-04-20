@@ -1,37 +1,42 @@
 import { Quest } from './types';
 import { getDistance } from './game-utils';
-import type { Creature, SpawnedCreature, CareDiaryEntry, DropId } from './types';
+import type { Creature, CreatureGroup, SpawnedCreature, CareDiaryEntry, DropId } from './types';
 
 export const DROP_INFO: Record<DropId, { emoji: string; label: Record<string, string> }> = {
-  feather:   { emoji: '🪶', label: { ru: 'Пёрышко',    en: 'Feather',    de: 'Feder',         uk: 'Пір\'ячко',      ar: 'ريشة'  } },
-  petal:     { emoji: '🌸', label: { ru: 'Лепесток',   en: 'Petal',      de: 'Blütenblatt',   uk: 'Пелюстка',       ar: 'بتلة'  } },
-  paw_print: { emoji: '🐾', label: { ru: 'След лапки', en: 'Paw Print',  de: 'Pfote',         uk: 'Відбиток лапи',  ar: 'بصمة'  } },
-  seed:      { emoji: '🌱', label: { ru: 'Семечко',    en: 'Seed',       de: 'Samen',         uk: 'Насінина',       ar: 'بذرة'  } },
-  scale:     { emoji: '🐢', label: { ru: 'Чешуйка',    en: 'Scale',      de: 'Schuppe',       uk: 'Лусочка',        ar: 'قشرة'  } },
+  feather: { emoji: '🪶', label: { ru: 'Пёрышко',  en: 'Feather', de: 'Feder',        uk: 'Пір\'ячко', ar: 'ريشة'      } },
+  wool:    { emoji: '🧶', label: { ru: 'Шерсть',   en: 'Wool',    de: 'Wolle',        uk: 'Вовна',     ar: 'صوف'       } },
+  pollen:  { emoji: '🌼', label: { ru: 'Пыльца',   en: 'Pollen',  de: 'Pollen',       uk: 'Пилок',     ar: 'حبوب اللقاح' } },
+  scale:   { emoji: '🐢', label: { ru: 'Чешуйка',  en: 'Scale',   de: 'Schuppe',      uk: 'Лусочка',   ar: 'قشرة'      } },
+  petal:   { emoji: '🌸', label: { ru: 'Лепесток', en: 'Petal',   de: 'Blütenblatt',  uk: 'Пелюстка',  ar: 'بتلة'      } },
+  seed:    { emoji: '🌱', label: { ru: 'Семечко',  en: 'Seed',    de: 'Samen',        uk: 'Насінина',  ar: 'بذرة'      } },
 };
 
-const CREATURE_DROP_MAP: Partial<Record<string, DropId>> = {
-  animal1:     'feather',
-  animal2:     'scale',
-  animal3:     'paw_print',
-  flower1:     'petal',
-  flower2:     'seed',
-  codariocalyx: 'seed',
+const GROUP_DROP_MAP: Record<CreatureGroup, DropId> = {
+  mammal:       'wool',
+  bird:         'feather',
+  insect:       'pollen',
+  reptile:      'scale',
+  flora_flower: 'petal',
+  flora_seed:   'seed',
 };
 
-const DROP_CHANCE: Partial<Record<string, number>> = {
-  animal1: 0.25,
-  animal2: 0.20,
-  animal3: 0.30,
-  flower1: 0.20,
-  flower2: 0.20,
-  codariocalyx: 0.25,
+const GROUP_DROP_CHANCE: Record<CreatureGroup, number> = {
+  mammal:       0.25,
+  bird:         0.25,
+  insect:       0.30,
+  reptile:      0.20,
+  flora_flower: 0.20,
+  flora_seed:   0.22,
 };
+
+export function getCreatureDropId(creature: Creature): DropId | null {
+  return GROUP_DROP_MAP[creature.group] ?? null;
+}
 
 export function rollCreatureDrop(creature: Creature): DropId | null {
-  const chance = DROP_CHANCE[creature.id] ?? 0.20;
+  const chance = GROUP_DROP_CHANCE[creature.group] ?? 0.20;
   if (Math.random() > chance) return null;
-  return CREATURE_DROP_MAP[creature.id] ?? null;
+  return getCreatureDropId(creature);
 }
 
 type CompleteQuestResult = {

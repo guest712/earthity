@@ -4,6 +4,7 @@ import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { LanguageProvider } from '../../lib/i18n/LanguageContext';
+import { InventoryProvider } from '../../features/inventory/inventory.context';
 import { useTranslation } from '../../lib/i18n/useTranslation';
 import { Tabs, Stack } from 'expo-router';
 import React from 'react';
@@ -81,7 +82,9 @@ function TabsContent() {
 export default function TabLayout() {
   return (
     <LanguageProvider>
-      <TabsContent />
+      <InventoryProvider>
+        <TabsContent />
+      </InventoryProvider>
     </LanguageProvider>
   );
 }

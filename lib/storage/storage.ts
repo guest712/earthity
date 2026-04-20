@@ -1,5 +1,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import type { EarthitySave } from '../shared/types';
+import type { DropId, EarthitySave } from '../shared/types';
+
+const VALID_DROP_IDS: DropId[] = ['feather', 'wool', 'pollen', 'scale', 'petal', 'seed'];
+const VALID_DROP_SET = new Set<string>(VALID_DROP_IDS);
 
 const STORAGE_KEY = 'earthity_save';
 const STORAGE_BACKUP_KEY = 'earthity_save_backup';
@@ -94,7 +97,9 @@ function normalizeSave(input: unknown): EarthitySave {
   const drops: EarthitySave['drops'] =
     source.drops && typeof source.drops === 'object'
       ? Object.fromEntries(
-          Object.entries(source.drops).map(([k, v]) => [k, toNonNegativeNumber(v, 0)])
+          Object.entries(source.drops)
+            .filter(([k]) => VALID_DROP_SET.has(k))
+            .map(([k, v]) => [k, toNonNegativeNumber(v, 0)])
         )
       : {};
 

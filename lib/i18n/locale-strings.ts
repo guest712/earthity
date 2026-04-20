@@ -106,4 +106,7 @@ export interface LocaleStrings {
   dropToastPrefix: string;
   questLockedNeed: string;
   questUnlockedToast: string;
+  invCatResources: string;
+  invCatFood: string;
+  invCatQuestItems: string;
 }

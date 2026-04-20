@@ -18,7 +18,7 @@ export const QUESTS: Quest[] = [
     title: { ru: 'По лисьим следам', en: 'Fox Trails', de: 'Fuchsspuren', uk: 'Лисячими стежками', ar: 'على آثار الثعلب' },
     desc:  { ru: 'Найди следы дикой природы рядом', en: 'Find wildlife signs nearby', de: 'Wildtierspuren suchen', uk: 'Знайди сліди дикої природи', ar: 'ابحث عن علامات الحياة البرية' },
     reward: 50, emoji: '🦊', type: 'help',
-    unlockedBy: { dropId: 'feather', amount: 2 },
+    unlockedBy: { dropId: 'wool', amount: 2 },
   },
   {
     id: 21,

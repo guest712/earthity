@@ -4,7 +4,31 @@ export type Translation = Record<LanguageCode, string>;
 
 export type QuestType = 'trash' | 'help' | 'home' | 'test';
 
-export type DropId = 'feather' | 'petal' | 'paw_print' | 'seed' | 'scale';
+export type DropId = 'feather' | 'wool' | 'pollen' | 'scale' | 'petal' | 'seed';
+
+export type CreatureGroup =
+  | 'mammal'
+  | 'bird'
+  | 'insect'
+  | 'reptile'
+  | 'flora_flower'
+  | 'flora_seed';
+
+export type ResourceRewardKind = 'dobri' | 'water' | 'feed';
+
+export type ResourceReward = {
+  kind: ResourceRewardKind;
+  amount: number;
+};
+
+export type TrashId = 'plastic' | 'glass' | 'paper' | 'bio';
+
+export type InventoryItemId =
+  | 'water'
+  | 'feed'
+  | TrashId
+  | 'watering_can'
+  | DropId;
 
 export type QuestUnlockCondition = {
   dropId: DropId;
@@ -29,7 +53,10 @@ export type Creature = {
   reward: number;
   cooldown: number;
   type: CreatureType;
+  group: CreatureGroup;
   image: any;
+  requiredItem?: InventoryItemId;
+  rewardResource?: ResourceReward;
 };
 
 export type SpawnedCreature = {

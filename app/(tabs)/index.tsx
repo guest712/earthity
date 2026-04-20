@@ -52,8 +52,7 @@ import { useLocationState } from '../../features/location/useLocationState';
 import { useCreatureSystem } from '../../features/creatures/creature.hook';
 import { useAppLanguage } from '../../lib/i18n/LanguageContext';
 import type { SpawnedCreature, CareDiaryEntry, LanguageCode } from '../../lib/shared/types';
-import { Resources } from '../../features/resources/resource.types';
-import { addFeed, refillWater, addTrash } from '../../features/resources/resource.logic';
+import { useInventory } from '../../features/inventory/inventory.context';
 import { AVATARS, DEFAULT_AVATAR_ID } from '../../features/profile/avatar.constants';
 
 
@@ -89,16 +88,18 @@ export default function HomeScreen() {
   const [testDeeds, setTestDeeds] = useState(0);
   
 
-  const [resources, setResources] = useState<Resources>({
-    water: 10,
-    feed: 0,
-    trash: {
-      plastic: 0,
-      glass: 0,
-      paper: 0,
-      bio: 0,
-    },
-  });
+  const {
+    resources,
+    drops,
+    addDrop,
+    consumeFeed,
+    consumeWater,
+    addFeed: addFeedInv,
+    addWater: addWaterInv,
+    addTrash: addTrashInv,
+    refillWater: refillWaterInv,
+    reload: reloadInventory,
+  } = useInventory();
   const feedCount = resources.feed;
   const plastic = resources.trash.plastic;
   const glass = resources.trash.glass;
@@ -112,7 +113,6 @@ export default function HomeScreen() {
   const [isHydrated, setIsHydrated] = useState(false);
   const [showDevPanel, setShowDevPanel] = useState(false);
   const [avatar, setAvatar] = useState(DEFAULT_AVATAR_ID);
-  const [drops, setDrops] = useState<Partial<Record<DropId, number>>>({});
   const [dropToast, setDropToast] = useState<{ dropId: DropId; msg: string } | null>(null);
   const dropToastOpacity = useSharedValue(0);
   const dropToastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -272,18 +272,6 @@ useEffect(() => {
       setTotalDobri(save.totalDobri || save.dobri || 0);
       setCareDiary(save.careDiary || []);
       setAvatar(save.avatar || DEFAULT_AVATAR_ID);
-      setDrops(save.drops || {});
-      const res = save.resources;
-      setResources({
-        water: res.water,
-        feed: res.feed,
-        trash: {
-          plastic: res.trash.plastic,
-          glass: res.trash.glass,
-          paper: res.trash.paper,
-          bio: res.trash.bio,
-        },
-      });
 
       const today = new Date().toDateString();
       const last = save.lastOpenDate || '';
@@ -350,8 +338,6 @@ useEffect(() => {
       lastOpenDate,
       testDeeds,
       careDiary,
-      resources,
-      drops,
     }).catch((e) => {
       console.warn('Home save error', e);
     });
@@ -377,8 +363,6 @@ useEffect(() => {
   lastOpenDate,
   testDeeds,
   careDiary,
-  resources,
-  drops,
   isHydrated,
 ]);
 
@@ -617,31 +601,19 @@ const mindfulPhrase = selected
         <View style={styles.devPanel}>
           <TouchableOpacity
             style={styles.devPanelBtn}
-            onPress={() =>
-              setResources((prev) => ({
-                ...prev,
-                water: Math.min(MAX_WATER, prev.water + 3),
-              }))
-            }
+            onPress={() => addWaterInv(3)}
           >
             <Text style={styles.devPanelBtnText}>+3 water</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.devPanelBtn}
-            onPress={() =>
-              setResources((prev) => ({
-                ...prev,
-                feed: Math.min(MAX_FEED, prev.feed + 3),
-              }))
-            }
+            onPress={() => addFeedInv(3)}
           >
             <Text style={styles.devPanelBtnText}>+3 feed</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.devPanelBtn}
-            onPress={() =>
-              setResources((prev) => addTrash(prev, 'bio', BIO_PICKUP_AMOUNT))
-            }
+            onPress={() => addTrashInv('bio', BIO_PICKUP_AMOUNT)}
           >
             <Text style={styles.devPanelBtnText}>+bio</Text>
           </TouchableOpacity>
@@ -660,7 +632,7 @@ const mindfulPhrase = selected
               setPetDeeds(reset.petDeeds);
               setTestDeeds(reset.testDeeds);
               setCareDiary(reset.careDiary);
-              setResources(reset.resources);
+              await reloadInventory();
               setStreak(reset.streak);
               setLastOpenDate(reset.lastOpenDate);
               alert('DEV: save reset');
@@ -740,14 +712,11 @@ startFeeding(() => {
   setDobri(rewardResult.dobri);
   setTotalDobri(rewardResult.totalDobri);
   setXp(rewardResult.xp);
-  setResources((prev) => ({
-    ...prev,
-    water: rewardResult.waterLevel,
-    feed:
-      creature.type === 'animal'
-        ? Math.max(prev.feed - 1, 0)
-        : prev.feed,
-  }));
+  if (creature.type === 'flower') {
+    consumeWater(1);
+  } else if (creature.type === 'animal') {
+    consumeFeed(1);
+  }
 
   setCreatureCooldowns((p) => ({
     ...p,
@@ -774,10 +743,7 @@ startFeeding(() => {
 
   const droppedId = rollCreatureDrop(creature);
   if (droppedId) {
-    setDrops((prev) => {
-      const next = { ...prev, [droppedId]: (prev[droppedId] ?? 0) + 1 };
-      return next;
-    });
+    addDrop(droppedId, 1);
     triggerDropToast(droppedId, lang);
   }
 });
@@ -1014,7 +980,7 @@ const isClose = dist <= RESOURCE_INTERACTION_DISTANCE;
     return;
   }
 
-  setResources((prev) => refillWater(prev));
+  refillWaterInv();
   alert(t.alertWaterRefilled);
 }}
   >
@@ -1049,7 +1015,7 @@ const isClose = dist <= RESOURCE_INTERACTION_DISTANCE;
         return;
       }
 
-      setResources((prev) => addFeed(prev, FEED_PICKUP_AMOUNT));
+      addFeedInv(FEED_PICKUP_AMOUNT);
       alert(t.alertFeedCollected);
     }}
   >
@@ -1089,7 +1055,7 @@ const isClose = dist <= RESOURCE_INTERACTION_DISTANCE;
     alert(t.alertTrashFull);
     return;
   }
-  setResources((prev) => addTrash(prev, 'plastic', TRASH_PICKUP_AMOUNT));
+  addTrashInv('plastic', TRASH_PICKUP_AMOUNT);
 }
 
 if (spot.type === 'glass') {
@@ -1097,7 +1063,7 @@ if (spot.type === 'glass') {
     alert(t.alertTrashFull);
     return;
   }
-  setResources((prev) => addTrash(prev, 'glass', TRASH_PICKUP_AMOUNT));
+  addTrashInv('glass', TRASH_PICKUP_AMOUNT);
 }
 
 if (spot.type === 'paper') {
@@ -1105,7 +1071,7 @@ if (spot.type === 'paper') {
     alert(t.alertTrashFull);
     return;
   }
-  setResources((prev) => addTrash(prev, 'paper', TRASH_PICKUP_AMOUNT));
+  addTrashInv('paper', TRASH_PICKUP_AMOUNT);
 }
 
 alert(t.alertTrashCollected);
@@ -1153,7 +1119,7 @@ alert(t.alertTrashCollected);
         return;
       }
 
-      setResources((prev) => addTrash(prev, 'bio', BIO_PICKUP_AMOUNT));
+      addTrashInv('bio', BIO_PICKUP_AMOUNT);
       alert(t.alertBioCollected);
     }}
   >
