@@ -1,24 +1,14 @@
 import { Asset } from 'expo-asset';
 import * as ImageManipulator from 'expo-image-manipulator';
-import { Image, PixelRatio, Platform, StyleSheet, View } from 'react-native';
+import { Image, PixelRatio } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
 import { forwardRef, ReactNode, useEffect, useMemo, useState } from 'react';
 import type { ImageRequireSource, ImageURISource } from 'react-native';
-import Animated, {
-  Easing,
-  useAnimatedStyle,
-  useSharedValue,
-  withRepeat,
-  withSequence,
-  withTiming,
-} from 'react-native-reanimated';
 
 import { buildAvatarMarkerUri } from './buildAvatarMarker';
 
 /**
  * Map marker strategy:
- *
- * PULSE — separate Marker with Reanimated (always tracksViewChanges=true).
  *
  * AVATAR — native `Marker.image` fed with a `data:image/png;base64,...` URI.
  *   We use Skia offscreen CPU rendering (`buildAvatarMarkerUri`) to composite:
@@ -30,7 +20,8 @@ import { buildAvatarMarkerUri } from './buildAvatarMarker';
  *   `Marker.image` is the only reliable approach on Android.
  */
 type Props = {
-  region: any;
+  /** Initial viewport only; do not pass changing coordinates here or the map will fight user pan/zoom. */
+  initialRegion: any;
   mapTileStyle: 'standard' | 'satellite';
   userLocation?: { latitude: number; longitude: number } | null;
   userAvatarSource?: ImageRequireSource | ImageURISource;
@@ -119,7 +110,7 @@ async function resolveResizedUri(
 // ─── component ──────────────────────────────────────────────────────────────
 
 const WorldMap = forwardRef<MapView, Props>(function WorldMap(
-  { region, mapTileStyle, userLocation, userAvatarSource, userAvatarId, children },
+  { initialRegion, mapTileStyle, userLocation, userAvatarSource, userAvatarId, children },
   ref
 ) {
   const useNativeUser = userLocation == null;
@@ -150,74 +141,27 @@ const WorldMap = forwardRef<MapView, Props>(function WorldMap(
     return () => { cancelled = true; };
   }, [userAvatarSource, userAvatarId, maxResizePx]);
 
-  // ── pulse animation ──────────────────────────────────────────────────────
-  const pulse = useSharedValue(0);
-  useEffect(() => {
-    pulse.value = withRepeat(
-      withSequence(
-        withTiming(1, { duration: 1700, easing: Easing.out(Easing.quad) }),
-        withTiming(0, { duration: 0 })
-      ),
-      -1,
-      false
-    );
-  }, [pulse]);
-
-  const pulseRingStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: 1 + pulse.value * 0.95 }],
-    opacity: 0.5 * (1 - pulse.value),
-  }));
-
-  // Total dp size of the composite marker (ring outer edge)
-  const markerDp = AVATAR_DIAMETER_DP + AVATAR_RING_DP * 2;
-  const pulseBaseDp = markerDp + 8;
-  const pulseHitBoxDp = Math.ceil(pulseBaseDp * 2.05);
-
   return (
     <MapView
       ref={ref}
       style={{ height: 220, margin: 12, borderRadius: 16 }}
-      region={region}
+      initialRegion={initialRegion}
       showsUserLocation={useNativeUser}
       showsMyLocationButton={useNativeUser}
       followsUserLocation={useNativeUser}
       mapType={mapTileStyle}
     >
       {userLocation != null && (
-        <>
-          {/* Pulse ring — separate Marker so Reanimated doesn't conflict with image Marker */}
+        markerImageUri != null && (
           <Marker
+            key={userAvatarId ?? markerImageUri}
             coordinate={userLocation}
             anchor={{ x: 0.5, y: 0.5 }}
-            zIndex={999}
-            tracksViewChanges
-          >
-            <View
-              style={[styles.pulseHitBox, { width: pulseHitBoxDp, height: pulseHitBoxDp }]}
-              collapsable={Platform.OS === 'android' ? false : undefined}
-            >
-              <Animated.View
-                style={[
-                  styles.pulseRing,
-                  { width: pulseBaseDp, height: pulseBaseDp, borderRadius: pulseBaseDp / 2 },
-                  pulseRingStyle,
-                ]}
-              />
-            </View>
-          </Marker>
-
-          {/* Avatar — pure native image, no children, tracksViewChanges=false */}
-          {markerImageUri != null && (
-            <Marker
-              key={userAvatarId ?? markerImageUri}
-              coordinate={userLocation}
-              anchor={{ x: 0.5, y: 0.5 }}
-              zIndex={1001}
-              tracksViewChanges={false}
-              image={{ uri: markerImageUri }}
-            />
-          )}
-        </>
+            zIndex={1001}
+            tracksViewChanges={false}
+            image={{ uri: markerImageUri }}
+          />
+        )
       )}
       {children}
     </MapView>
@@ -225,17 +169,3 @@ const WorldMap = forwardRef<MapView, Props>(function WorldMap(
 });
 
 export default WorldMap;
-
-const styles = StyleSheet.create({
-  pulseHitBox: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    overflow: 'visible',
-  },
-  pulseRing: {
-    position: 'absolute',
-    borderWidth: 2,
-    borderColor: 'rgba(90, 173, 106, 0.95)',
-    backgroundColor: 'transparent',
-  },
-});

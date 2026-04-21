@@ -20,22 +20,12 @@ const GROUP_DROP_MAP: Record<CreatureGroup, DropId> = {
   flora_seed:   'seed',
 };
 
-const GROUP_DROP_CHANCE: Record<CreatureGroup, number> = {
-  mammal:       0.25,
-  bird:         0.25,
-  insect:       0.30,
-  reptile:      0.20,
-  flora_flower: 0.20,
-  flora_seed:   0.22,
-};
-
 export function getCreatureDropId(creature: Creature): DropId | null {
   return GROUP_DROP_MAP[creature.group] ?? null;
 }
 
 export function rollCreatureDrop(creature: Creature): DropId | null {
-  const chance = GROUP_DROP_CHANCE[creature.group] ?? 0.20;
-  if (Math.random() > chance) return null;
+  // Deterministic rewards: every successful care action gives the group item.
   return getCreatureDropId(creature);
 }
 

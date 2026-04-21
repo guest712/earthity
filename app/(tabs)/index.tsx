@@ -18,6 +18,7 @@ import {
   BIO_PICKUP_AMOUNT,
   RESOURCE_INTERACTION_DISTANCE,
   ACTION_COOLDOWN_MS,
+  RESOURCE_SPOT_RESPAWN_MS,
 } from '../../features/resources/resource.constants';
 import { LANGS, FLAG } from '../../lib/i18n/i18n';
 import { guessDeviceLanguage } from '../../lib/i18n/guess-locale';
@@ -43,6 +44,7 @@ import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'rea
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withRepeat, withSequence, withSpring, withTiming } from 'react-native-reanimated';
 import Onboarding from './onboarding';
+import { Redirect, useRouter } from 'expo-router';
 import HomeHeader from '../../components/home/HomeHeader';
 import CategoryTabs from '../../components/home/CategoryTabs';
 import QuestDetailCard from '../../components/home/QuestDetailCard';
@@ -55,10 +57,24 @@ import type { SpawnedCreature, CareDiaryEntry, LanguageCode } from '../../lib/sh
 import { useInventory } from '../../features/inventory/inventory.context';
 import { AVATARS, DEFAULT_AVATAR_ID } from '../../features/profile/avatar.constants';
 
+/**
+ * Dev flag: keep false for normal app flow.
+ * Toggle to true only when you want to boot directly into the 3D test route.
+ */
+const USE_3D_TEST_SCREEN = false;
+
 
 
 
 export default function HomeScreen() {
+  if (USE_3D_TEST_SCREEN) {
+    return <Redirect href="/three-test" />;
+  }
+  return <HomeScreenInner />;
+}
+
+function HomeScreenInner() {
+  const router = useRouter();
   const { lang, setAppLanguage, openLanguagePicker } = useAppLanguage();
   const [dobri, setDobri] = useState(0);
   const [totalDobri, setTotalDobri] = useState(0);
@@ -112,10 +128,16 @@ export default function HomeScreen() {
   const [careDiary, setCareDiary] = useState<CareDiaryEntry[]>([]);
   const [isHydrated, setIsHydrated] = useState(false);
   const [showDevPanel, setShowDevPanel] = useState(false);
+  const [devIgnoreInteractionDistance, setDevIgnoreInteractionDistance] = useState(false);
+  const [autoCompass2DEnabled, setAutoCompass2DEnabled] = useState(false);
+  const [autoCompass3DEnabled, setAutoCompass3DEnabled] = useState(true);
+  const devBypassDistance = __DEV__ && devIgnoreInteractionDistance;
   const [avatar, setAvatar] = useState(DEFAULT_AVATAR_ID);
   const [dropToast, setDropToast] = useState<{ dropId: DropId; msg: string } | null>(null);
   const dropToastOpacity = useSharedValue(0);
   const dropToastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [resourceRespawnUntil, setResourceRespawnUntil] = useState<Record<string, number>>({});
+  const resourceRespawnTimersRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
   const autosaveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastActionAtRef = useRef({
     creature: 0,
@@ -145,6 +167,8 @@ export default function HomeScreen() {
   };
   const prevLevelKey = useRef('');const rewardScale = useSharedValue(1);
   const rewardOpacity = useSharedValue(1);
+  const isAutoCompassCurrentModeEnabled =
+    mapMode === '3D_Tilt' ? autoCompass3DEnabled : autoCompass2DEnabled;
 
   const rewardAnimStyle = useAnimatedStyle(() => ({
     transform: [{ scale: rewardScale.value }],
@@ -206,14 +230,53 @@ function triggerDropToast(dropId: DropId, lang: string) {
   }, 2500);
 }
 
-const prevMapModeRef = useRef<'2D' | '3D_Tilt'>('2D');
+const isResourceSpotActive = useCallback(
+  (spotId: string) => (resourceRespawnUntil[spotId] ?? 0) <= Date.now(),
+  [resourceRespawnUntil]
+);
 
+const despawnResourceSpot = useCallback((spotId: string, respawnMs = RESOURCE_SPOT_RESPAWN_MS) => {
+  const respawnAt = Date.now() + respawnMs;
+  setResourceRespawnUntil((prev) => ({ ...prev, [spotId]: respawnAt }));
+
+  const existingTimer = resourceRespawnTimersRef.current[spotId];
+  if (existingTimer) clearTimeout(existingTimer);
+
+  resourceRespawnTimersRef.current[spotId] = setTimeout(() => {
+    setResourceRespawnUntil((prev) => {
+      if ((prev[spotId] ?? 0) > Date.now()) return prev;
+      const next = { ...prev };
+      delete next[spotId];
+      return next;
+    });
+    delete resourceRespawnTimersRef.current[spotId];
+  }, respawnMs + 100);
+}, []);
+
+useEffect(() => {
+  return () => {
+    Object.values(resourceRespawnTimersRef.current).forEach((timer) => clearTimeout(timer));
+    resourceRespawnTimersRef.current = {};
+  };
+}, []);
+
+const lastMapCameraModeRef = useRef<'2D' | '3D_Tilt' | null>(null);
+
+/** Recenters the map only when switching 2D/3D or when location first becomes available — not on every GPS tick. */
 useEffect(() => {
   if (!location) return;
 
+  const prevMode = lastMapCameraModeRef.current;
+  const modeChanged = prevMode !== mapMode;
+  if (prevMode !== null && !modeChanged) {
+    return;
+  }
+  const isSwitching = prevMode !== null && prevMode !== mapMode;
+  lastMapCameraModeRef.current = mapMode;
+
   const bear = heading ?? 0;
-  const isSwitching = prevMapModeRef.current !== mapMode;
-  prevMapModeRef.current = mapMode;
+  const heading2D = autoCompass2DEnabled ? bear : 0;
+  const heading3D = autoCompass3DEnabled ? bear : 0;
 
   if (mapMode === '3D_Tilt') {
     const OFFSET_M = 120;
@@ -231,7 +294,7 @@ useEffect(() => {
           longitude: location.longitude + dLng,
         },
         pitch: 60,
-        heading: bear,
+        heading: heading3D,
         zoom: 18,
       },
       { duration: isSwitching ? 700 : 300 }
@@ -241,13 +304,41 @@ useEffect(() => {
       {
         center: { latitude: location.latitude, longitude: location.longitude },
         pitch: 0,
-        heading: 0,
+        heading: heading2D,
         zoom: 17,
       },
       { duration: isSwitching ? 700 : 300 }
     );
   }
-}, [mapMode, location, heading]);
+}, [mapMode, location, heading, autoCompass2DEnabled, autoCompass3DEnabled]);
+
+/** Keep auto-compass responsive per mode without forcing map recenter on every location tick. */
+useEffect(() => {
+  if (!mapRef.current || heading == null) return;
+
+  if (mapMode === '2D') {
+    if (!autoCompass2DEnabled) return;
+    mapRef.current.animateCamera(
+      {
+        heading,
+        pitch: 0,
+      },
+      { duration: 220 }
+    );
+    return;
+  }
+
+  if (mapMode === '3D_Tilt') {
+    if (!autoCompass3DEnabled) return;
+    mapRef.current.animateCamera(
+      {
+        heading,
+        pitch: 60,
+      },
+      { duration: 220 }
+    );
+  }
+}, [heading, mapMode, autoCompass2DEnabled, autoCompass3DEnabled]);
 
   useEffect(() => {
     requestNotificationPermissions();
@@ -338,6 +429,8 @@ useEffect(() => {
       lastOpenDate,
       testDeeds,
       careDiary,
+      resources,
+      drops,
     }).catch((e) => {
       console.warn('Home save error', e);
     });
@@ -364,6 +457,8 @@ useEffect(() => {
   testDeeds,
   careDiary,
   isHydrated,
+  resources,
+  drops,
 ]);
 
   useEffect(() => {
@@ -600,6 +695,36 @@ const mindfulPhrase = selected
       {__DEV__ && showDevPanel && (
         <View style={styles.devPanel}>
           <TouchableOpacity
+            style={[styles.devPanelBtn, devIgnoreInteractionDistance && styles.devPanelBtnActive]}
+            onPress={() => setDevIgnoreInteractionDistance((v) => !v)}
+          >
+            <Text style={styles.devPanelBtnText}>
+              ignore all distance: {devIgnoreInteractionDistance ? 'ON' : 'OFF'}
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.devPanelBtn, autoCompass2DEnabled && styles.devPanelBtnActive]}
+            onPress={() => setAutoCompass2DEnabled((v) => !v)}
+          >
+            <Text style={styles.devPanelBtnText}>
+              auto-compass 2D: {autoCompass2DEnabled ? 'ON' : 'OFF'}
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.devPanelBtn, autoCompass3DEnabled && styles.devPanelBtnActive]}
+            onPress={() => setAutoCompass3DEnabled((v) => !v)}
+          >
+            <Text style={styles.devPanelBtnText}>
+              auto-compass 3D: {autoCompass3DEnabled ? 'ON' : 'OFF'}
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.devPanelBtn}
+            onPress={() => router.push('/three-test')}
+          >
+            <Text style={styles.devPanelBtnText}>open 3D test</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
             style={styles.devPanelBtn}
             onPress={() => addWaterInv(3)}
           >
@@ -668,9 +793,11 @@ const dist = location
     )
   : 999;
 
+  const effectiveDist = devBypassDistance ? 0 : dist;
+
   const interaction = canInteractWithCreature({
     creature: selectedCreature,
-    distance: dist,
+    distance: effectiveDist,
     waterLevel: resources.water,
     lastInteractionTime: lastTime,
     now,
@@ -800,12 +927,28 @@ startFeeding(() => {
             >
               <Text style={styles.mapBtnText}>{mapMode === '3D_Tilt' ? '🧭' : '2D'}</Text>
             </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.mapBtn, isAutoCompassCurrentModeEnabled && styles.mapBtnActive3D]}
+              onPress={() => {
+                if (mapMode === '3D_Tilt') {
+                  setAutoCompass3DEnabled((prev) => !prev);
+                } else {
+                  setAutoCompass2DEnabled((prev) => !prev);
+                }
+              }}
+            >
+              <Text style={styles.mapBtnText}>
+                {mapMode === '3D_Tilt'
+                  ? `🧭${autoCompass3DEnabled ? '✓' : '✕'}`
+                  : `N${autoCompass2DEnabled ? '✓' : '✕'}`}
+              </Text>
+            </TouchableOpacity>
             {location ? (
               <TouchableOpacity
                 style={styles.mapBtn}
                 onPress={() => {
                   if (mapMode === '3D_Tilt') {
-                    const bear = heading ?? 0;
+                    const bear = autoCompass3DEnabled ? (heading ?? 0) : 0;
                     const OFFSET_M = 120;
                     const R = 6371000;
                     const bearRad = (bear * Math.PI) / 180;
@@ -845,7 +988,7 @@ startFeeding(() => {
           
           <WorldMap
   ref={mapRef}
-  region={
+  initialRegion={
     location
       ? {
           latitude: location.latitude,
@@ -892,7 +1035,7 @@ startFeeding(() => {
     )
   : 999;
 
-const isClose = dist <= RESOURCE_INTERACTION_DISTANCE; 
+const isClose = devBypassDistance || dist <= RESOURCE_INTERACTION_DISTANCE; 
 
   return (
     <React.Fragment key={spawn.spawnId}>
@@ -952,7 +1095,9 @@ const isClose = dist <= RESOURCE_INTERACTION_DISTANCE;
     </React.Fragment>
   );
 })}
-{WATER_SPOTS.map((spot, i) => (
+{WATER_SPOTS.map((spot, i) => {
+  if (!isResourceSpotActive(spot.id)) return null;
+  return (
   <Marker
     key={spot.id}
     coordinate={{
@@ -970,7 +1115,7 @@ const isClose = dist <= RESOURCE_INTERACTION_DISTANCE;
     ? getDistance(location.latitude, location.longitude, spotLat, spotLng)
     : 999;
 
-  if (dist > RESOURCE_INTERACTION_DISTANCE) {
+  if (!devBypassDistance && dist > RESOURCE_INTERACTION_DISTANCE) {
     alert(t.alertTooFarWater);
     return;
   }
@@ -981,6 +1126,7 @@ const isClose = dist <= RESOURCE_INTERACTION_DISTANCE;
   }
 
   refillWaterInv();
+  despawnResourceSpot(spot.id);
   alert(t.alertWaterRefilled);
 }}
   >
@@ -988,8 +1134,11 @@ const isClose = dist <= RESOURCE_INTERACTION_DISTANCE;
       <Text style={{ fontSize: 28 }}>💧</Text>
     </View>
   </Marker>
-))}
-{FEED_SPOTS.map((spot, i) => (
+  );
+})}
+{FEED_SPOTS.map((spot, i) => {
+  if (!isResourceSpotActive(spot.id)) return null;
+  return (
   <Marker
     key={spot.id}
     coordinate={{
@@ -1005,7 +1154,7 @@ const isClose = dist <= RESOURCE_INTERACTION_DISTANCE;
         ? getDistance(location.latitude, location.longitude, spotLat, spotLng)
         : 999;
 
-      if (dist > RESOURCE_INTERACTION_DISTANCE) {
+      if (!devBypassDistance && dist > RESOURCE_INTERACTION_DISTANCE) {
         alert(t.alertTooFarFeed);
         return;
       }
@@ -1016,6 +1165,7 @@ const isClose = dist <= RESOURCE_INTERACTION_DISTANCE;
       }
 
       addFeedInv(FEED_PICKUP_AMOUNT);
+      despawnResourceSpot(spot.id);
       alert(t.alertFeedCollected);
     }}
   >
@@ -1027,8 +1177,11 @@ const isClose = dist <= RESOURCE_INTERACTION_DISTANCE;
   />
 </View>
   </Marker> 
-))}
-{TRASH_SPOTS.map((spot, i) => (
+  );
+})}
+{TRASH_SPOTS.map((spot, i) => {
+  if (!isResourceSpotActive(spot.id)) return null;
+  return (
   <Marker
     key={spot.id}
     coordinate={{
@@ -1044,7 +1197,7 @@ const isClose = dist <= RESOURCE_INTERACTION_DISTANCE;
         ? getDistance(location.latitude, location.longitude, spotLat, spotLng)
         : 999;
 
-      if (dist > RESOURCE_INTERACTION_DISTANCE) {
+      if (!devBypassDistance && dist > RESOURCE_INTERACTION_DISTANCE) {
         alert(t.alertTooFarTrash);
         return;
       }
@@ -1074,6 +1227,7 @@ if (spot.type === 'paper') {
   addTrashInv('paper', TRASH_PICKUP_AMOUNT);
 }
 
+despawnResourceSpot(spot.id);
 alert(t.alertTrashCollected);
     }}
   >
@@ -1092,8 +1246,11 @@ alert(t.alertTrashCollected);
   />
 </View>
   </Marker>
-))}
-{BIO_SPOTS.map((spot, i) => (
+  );
+})}
+{BIO_SPOTS.map((spot, i) => {
+  if (!isResourceSpotActive(spot.id)) return null;
+  return (
   <Marker
     key={spot.id}
     coordinate={{
@@ -1109,7 +1266,7 @@ alert(t.alertTrashCollected);
         ? getDistance(location.latitude, location.longitude, spotLat, spotLng)
         : 999;
 
-      if (dist > RESOURCE_INTERACTION_DISTANCE) {
+      if (!devBypassDistance && dist > RESOURCE_INTERACTION_DISTANCE) {
         alert(t.alertTooFarBio);
         return;
       }
@@ -1120,6 +1277,7 @@ alert(t.alertTrashCollected);
       }
 
       addTrashInv('bio', BIO_PICKUP_AMOUNT);
+      despawnResourceSpot(spot.id);
       alert(t.alertBioCollected);
     }}
   >
@@ -1131,7 +1289,8 @@ alert(t.alertTrashCollected);
       />
     </View>
   </Marker>
-))}
+  );
+})}
             
           </WorldMap>
           <CategoryTabs
@@ -1357,6 +1516,11 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     paddingVertical: 8,
     paddingHorizontal: 10,
+  },
+  devPanelBtnActive: {
+    borderWidth: 1,
+    borderColor: '#e8c97a',
+    backgroundColor: '#2a2415',
   },
   devPanelBtnDanger: {
     backgroundColor: '#5c1f1f',
