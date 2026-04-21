@@ -75,6 +75,10 @@ function TabsContent() {
         name="onboarding"
         options={{ href: null }}
       />
+      <Tabs.Screen
+        name="three-test"
+        options={{ href: null }}
+      />
     </Tabs>
   );
 }
