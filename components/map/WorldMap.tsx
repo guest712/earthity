@@ -3,7 +3,7 @@ import * as ImageManipulator from 'expo-image-manipulator';
 import { Image, PixelRatio } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
 import { forwardRef, ReactNode, useEffect, useMemo, useState } from 'react';
-import type { ImageRequireSource, ImageURISource } from 'react-native';
+import type { ImageRequireSource, ImageURISource, ViewStyle } from 'react-native';
 
 import { buildAvatarMarkerUri } from './buildAvatarMarker';
 
@@ -26,6 +26,13 @@ type Props = {
   userLocation?: { latitude: number; longitude: number } | null;
   userAvatarSource?: ImageRequireSource | ImageURISource;
   userAvatarId?: string;
+  /**
+   * When true: don't draw the custom 2D avatar marker AND disable native blue dot.
+   * Use this when an external 3D overlay draws the player avatar instead.
+   */
+  hideUserMarker?: boolean;
+  /** Override default style. Pass `{ flex: 1 }` when wrapping in a sized container. */
+  style?: ViewStyle;
   children?: ReactNode;
 };
 
@@ -110,10 +117,11 @@ async function resolveResizedUri(
 // ─── component ──────────────────────────────────────────────────────────────
 
 const WorldMap = forwardRef<MapView, Props>(function WorldMap(
-  { initialRegion, mapTileStyle, userLocation, userAvatarSource, userAvatarId, children },
+  { initialRegion, mapTileStyle, userLocation, userAvatarSource, userAvatarId, hideUserMarker, style, children },
   ref
 ) {
-  const useNativeUser = userLocation == null;
+  const useNativeUser = !hideUserMarker && userLocation == null;
+  const showCustomMarker = !hideUserMarker && userLocation != null;
 
   /** Final composite PNG data-URI for Marker.image (null while loading) */
   const [markerImageUri, setMarkerImageUri] = useState<string | null>(null);
@@ -144,24 +152,22 @@ const WorldMap = forwardRef<MapView, Props>(function WorldMap(
   return (
     <MapView
       ref={ref}
-      style={{ height: 220, margin: 12, borderRadius: 16 }}
+      style={style ?? { height: 220, margin: 12, borderRadius: 16 }}
       initialRegion={initialRegion}
       showsUserLocation={useNativeUser}
       showsMyLocationButton={useNativeUser}
       followsUserLocation={useNativeUser}
       mapType={mapTileStyle}
     >
-      {userLocation != null && (
-        markerImageUri != null && (
-          <Marker
-            key={userAvatarId ?? markerImageUri}
-            coordinate={userLocation}
-            anchor={{ x: 0.5, y: 0.5 }}
-            zIndex={1001}
-            tracksViewChanges={false}
-            image={{ uri: markerImageUri }}
-          />
-        )
+      {showCustomMarker && markerImageUri != null && (
+        <Marker
+          key={userAvatarId ?? markerImageUri}
+          coordinate={userLocation!}
+          anchor={{ x: 0.5, y: 0.5 }}
+          zIndex={1001}
+          tracksViewChanges={false}
+          image={{ uri: markerImageUri }}
+        />
       )}
       {children}
     </MapView>

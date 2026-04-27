@@ -26,7 +26,11 @@ import { getDistance, getLevelKey, getLevelName } from '../../lib/shared/game-ut
 import { useFocusEffect } from '@react-navigation/native';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import WorldMap from '../../components/map/WorldMap';
+import MapAvatar3D from '../../components/map/MapAvatar3D';
 import RNMapView, { Marker, Circle } from 'react-native-maps';
+
+const PLAYER_MODEL = require('../../assets/models/test_wolf.glb');
+MapAvatar3D.preload(PLAYER_MODEL);
 import {
   applyQuestCompletion,
   canInteractWithCreature,
@@ -131,6 +135,7 @@ function HomeScreenInner() {
   const [devIgnoreInteractionDistance, setDevIgnoreInteractionDistance] = useState(false);
   const [autoCompass2DEnabled, setAutoCompass2DEnabled] = useState(false);
   const [autoCompass3DEnabled, setAutoCompass3DEnabled] = useState(true);
+  const [use3DAvatar, setUse3DAvatar] = useState(false);
   const devBypassDistance = __DEV__ && devIgnoreInteractionDistance;
   const [avatar, setAvatar] = useState(DEFAULT_AVATAR_ID);
   const [dropToast, setDropToast] = useState<{ dropId: DropId; msg: string } | null>(null);
@@ -719,6 +724,14 @@ const mindfulPhrase = selected
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
+            style={[styles.devPanelBtn, use3DAvatar && styles.devPanelBtnActive]}
+            onPress={() => setUse3DAvatar((v) => !v)}
+          >
+            <Text style={styles.devPanelBtnText}>
+              3D avatar: {use3DAvatar ? 'ON' : 'OFF'}
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
             style={styles.devPanelBtn}
             onPress={() => router.push('/three-test')}
           >
@@ -986,8 +999,10 @@ startFeeding(() => {
             ) : null}
           </View>
           
+          <View style={styles.mapWrapper}>
           <WorldMap
   ref={mapRef}
+  style={styles.mapInner}
   initialRegion={
     location
       ? {
@@ -1007,6 +1022,7 @@ startFeeding(() => {
   userLocation={location}
   userAvatarSource={currentAvatar.image}
   userAvatarId={avatar}
+  hideUserMarker={use3DAvatar}
 >
           
             {filteredQuests.map(q => (
@@ -1293,6 +1309,17 @@ alert(t.alertTrashCollected);
 })}
             
           </WorldMap>
+          {use3DAvatar && (
+            <MapAvatar3D
+              mapRef={mapRef}
+              location={location}
+              heading={heading}
+              modelSource={PLAYER_MODEL}
+              mapMode={mapMode}
+              headingOffsetDeg={150}
+            />
+          )}
+          </View>
           <CategoryTabs
   category={category}
   onChange={setCategory}
@@ -1422,6 +1449,8 @@ const styles = StyleSheet.create({
   catText: { fontSize: 12, color: 'rgba(255,255,255,0.4)' },
   catTextActive: { color: '#5aad6a', fontWeight: '500' },
   mapControls: { flexDirection: 'row', gap: 8, paddingHorizontal: 12, paddingTop: 8 },
+  mapWrapper: { height: 220, margin: 12, borderRadius: 16, overflow: 'hidden', position: 'relative' },
+  mapInner: { flex: 1 },
   mapBtn: { paddingVertical: 6, paddingHorizontal: 14, borderRadius: 10, borderWidth: 1, borderColor: '#1e3020', backgroundColor: '#0f1a0f' },
   mapBtnActive: { borderColor: '#3d8b52', backgroundColor: '#1e3020' },
   mapBtnActive3D: { borderColor: '#e8c97a', backgroundColor: '#2a2010' },
