@@ -5,6 +5,7 @@ import { useInventory } from '../../features/inventory/inventory.context';
 import { ITEM_CATEGORY, INVENTORY_CATEGORIES } from '../../features/inventory/inventory.constants';
 import type { InventoryCategory, InventoryItemId } from '../../features/inventory/inventory.types';
 import { DROP_INFO } from '../../lib/shared/game-engine';
+import { CRAFT_RECIPES } from '../../features/crafting/craft.constants';
 import type { DropId } from '../../lib/shared/types';
 import { useMemo, useState } from 'react';
 import { FlatList, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -25,13 +26,14 @@ type InventorySlotItem = {
 
 export default function InventoryScreen() {
   const { t, lang } = useTranslation();
-  const { resources, drops } = useInventory();
+  const { resources, drops, crafted } = useInventory();
   const [category, setCategory] = useState<InventoryCategory>('resources');
 
   const categoryLabel: Record<InventoryCategory, string> = {
     resources: t.invCatResources,
     food: t.invCatFood,
     quest_items: t.invCatQuestItems,
+    crafted: t.invCatCrafted,
   };
 
   const allItems = useMemo<InventorySlotItem[]>(() => {
@@ -85,8 +87,17 @@ export default function InventoryScreen() {
       });
     }
 
+    for (const recipe of CRAFT_RECIPES) {
+      items.push({
+        id: recipe.id,
+        label: recipe.label[lang] ?? recipe.label.en,
+        emoji: recipe.emoji,
+        quantity: crafted[recipe.id] ?? 0,
+      });
+    }
+
     return items;
-  }, [t, resources, drops, lang]);
+  }, [t, resources, drops, crafted, lang]);
 
   const visibleItems = useMemo(() => {
     return allItems.filter((item) => {

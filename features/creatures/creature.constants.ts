@@ -1,5 +1,13 @@
 import type { Creature } from '../../lib/shared/types';
 
+/**
+ * AR test asset: same wolf GLB used for the player avatar and for the 3D
+ * test route. Assigned to a few creatures here so the AR pipeline can be
+ * validated end-to-end before per-creature poly-models are authored.
+ */
+const TEST_MODEL = require('../../assets/models/test_wolf.glb');
+const TEST_HEADING_OFFSET = 150;
+
 export const CREATURES: Creature[] = [
   {
     id: 'flower1',
@@ -10,6 +18,24 @@ export const CREATURES: Creature[] = [
     reward: 8,
     cooldown: 3600000,
     requiredItem: 'water',
+    interactionDistance: 130,
+    stages: [
+      {
+        model: TEST_MODEL,
+        arScale: 16,
+        arHeadingOffsetDeg: TEST_HEADING_OFFSET,
+      },
+      {
+        model: TEST_MODEL,
+        arScale: 22,
+        arHeadingOffsetDeg: TEST_HEADING_OFFSET,
+      },
+      {
+        model: TEST_MODEL,
+        arScale: 30,
+        arHeadingOffsetDeg: TEST_HEADING_OFFSET,
+      },
+    ],
   },
   {
     id: 'flower2',
@@ -30,6 +56,10 @@ export const CREATURES: Creature[] = [
     reward: 15,
     cooldown: 7200000,
     requiredItem: 'feed',
+    model: TEST_MODEL,
+    arScale: 26,
+    arHeadingOffsetDeg: TEST_HEADING_OFFSET,
+    interactionDistance: 210,
   },
   {
     id: 'animal2',
@@ -40,6 +70,7 @@ export const CREATURES: Creature[] = [
     reward: 12,
     cooldown: 7200000,
     requiredItem: 'feed',
+    interactionDistance: 125,
   },
   {
     id: 'animal3',
@@ -50,6 +81,7 @@ export const CREATURES: Creature[] = [
     reward: 10,
     cooldown: 7200000,
     requiredItem: 'feed',
+    interactionDistance: 62,
   },
   {
     id: 'codariocalyx',

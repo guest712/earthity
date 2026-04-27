@@ -26,14 +26,27 @@ import { getDistance, getLevelKey, getLevelName } from '../../lib/shared/game-ut
 import { useFocusEffect } from '@react-navigation/native';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import WorldMap from '../../components/map/WorldMap';
-import MapAvatar3D from '../../components/map/MapAvatar3D';
+import MapARScene, { type ARObject } from '../../components/map/MapARScene';
 import RNMapView, { Marker, Circle } from 'react-native-maps';
 
 const PLAYER_MODEL = require('../../assets/models/test_wolf.glb');
-MapAvatar3D.preload(PLAYER_MODEL);
+
+// Preload all known model sources up-front so the AR scene doesn't hitch
+// on first appearance. Includes the player model + every creature with a
+// `model` field. Duplicates are harmless — `useGLTF.preload` is idempotent.
+MapARScene.preload([
+  PLAYER_MODEL,
+  ...CREATURES.flatMap((c) => [
+    ...(c.stages?.map((s) => s.model) ?? []),
+    c.model,
+  ]).filter((m): m is number | string => m != null),
+]);
 import {
   applyQuestCompletion,
   canInteractWithCreature,
+  getCreatureInteractionRadiusMeters,
+  creatureHasARModel,
+  resolveCreatureARAppearance,
   generateCreatureSpawnsSpread,
   getCreatureRewardResult,
   pruneCreatureSpawns,
@@ -59,6 +72,7 @@ import { useCreatureSystem } from '../../features/creatures/creature.hook';
 import { useAppLanguage } from '../../lib/i18n/LanguageContext';
 import type { SpawnedCreature, CareDiaryEntry, LanguageCode } from '../../lib/shared/types';
 import { useInventory } from '../../features/inventory/inventory.context';
+import { useDailyQuests } from '../../features/dailyQuests/dailyQuests.context';
 import { AVATARS, DEFAULT_AVATAR_ID } from '../../features/profile/avatar.constants';
 
 /**
@@ -104,6 +118,7 @@ function HomeScreenInner() {
   const [onboarded, setOnboarded] = useState(false);
   const [streak, setStreak] = useState(0);
   const { location, isLocationFallback, heading } = useLocationState();
+  const lastWalkPosRef = useRef<{ latitude: number; longitude: number } | null>(null);
   const [lastOpenDate, setLastOpenDate] = useState('');
   const [testDeeds, setTestDeeds] = useState(0);
   
@@ -120,6 +135,7 @@ function HomeScreenInner() {
     refillWater: refillWaterInv,
     reload: reloadInventory,
   } = useInventory();
+  const { increment: incrementDaily, walkTrackingKind } = useDailyQuests();
   const feedCount = resources.feed;
   const plastic = resources.trash.plastic;
   const glass = resources.trash.glass;
@@ -152,6 +168,14 @@ function HomeScreenInner() {
     bio: 0,
   });
   const mapRef = useRef<RNMapView | null>(null);
+  // Counter that increments on every map region change. MapARScene watches
+  // this ref to decide when to refresh per-object screen positions via the
+  // native `pointForCoordinate` (fully accurate). Between bumps no bridge
+  // calls happen — in steady state the AR scene does zero work per frame.
+  const mapRegionTickRef = useRef(0);
+  const onMapRegionChange = useCallback(() => {
+    mapRegionTickRef.current = (mapRegionTickRef.current + 1) | 0;
+  }, []);
   const playRewardSound = async () => {
     try {
       const { sound } = await Audio.Sound.createAsync(
@@ -400,9 +424,12 @@ useEffect(() => {
           const save = await getSave();
           if (!cancelled) {
             setAvatar(save.avatar || DEFAULT_AVATAR_ID);
+            setDobri(save.dobri);
+            setTotalDobri(save.totalDobri || save.dobri || 0);
+            setXp(save.xp);
           }
         } catch {
-          /* keep current avatar */
+          /* keep current */
         }
       })();
       return () => {
@@ -474,6 +501,32 @@ useEffect(() => {
     }
     prevLevelKey.current = currentKey;
   }, [xp]);
+
+  useEffect(() => {
+    if (walkTrackingKind !== 'gps') {
+      lastWalkPosRef.current = location ?? null;
+      return;
+    }
+    if (!location || isLocationFallback) {
+      lastWalkPosRef.current = location ?? null;
+      return;
+    }
+    const prev = lastWalkPosRef.current;
+    if (!prev) {
+      lastWalkPosRef.current = location;
+      return;
+    }
+    const stepMeters = getDistance(
+      prev.latitude,
+      prev.longitude,
+      location.latitude,
+      location.longitude
+    );
+    if (stepMeters >= 10 && stepMeters <= 250) {
+      incrementDaily('walk_meters', Math.round(stepMeters));
+    }
+    lastWalkPosRef.current = location;
+  }, [location, isLocationFallback, incrementDaily, walkTrackingKind]);
 
   useEffect(() => {
   if (!location) return;
@@ -854,8 +907,10 @@ startFeeding(() => {
   setXp(rewardResult.xp);
   if (creature.type === 'flower') {
     consumeWater(1);
+    incrementDaily('water_flowers', 1);
   } else if (creature.type === 'animal') {
     consumeFeed(1);
+    incrementDaily('feed_animals', 1);
   }
 
   setCreatureCooldowns((p) => ({
@@ -1023,6 +1078,8 @@ startFeeding(() => {
   userAvatarSource={currentAvatar.image}
   userAvatarId={avatar}
   hideUserMarker={use3DAvatar}
+  onRegionChange={onMapRegionChange}
+  onRegionChangeComplete={onMapRegionChange}
 >
           
             {filteredQuests.map(q => (
@@ -1042,6 +1099,8 @@ startFeeding(() => {
   const creature = CREATURES.find((c) => c.id === spawn.creatureId);
   if (!creature) return null;
 
+  const interactRadiusM = getCreatureInteractionRadiusMeters(creature);
+
   const dist = location
   ? getDistance(
       location.latitude,
@@ -1051,7 +1110,7 @@ startFeeding(() => {
     )
   : 999;
 
-const isClose = devBypassDistance || dist <= RESOURCE_INTERACTION_DISTANCE; 
+const isClose = devBypassDistance || dist <= interactRadiusM;
 
   return (
     <React.Fragment key={spawn.spawnId}>
@@ -1061,7 +1120,7 @@ const isClose = devBypassDistance || dist <= RESOURCE_INTERACTION_DISTANCE;
     latitude: spawn.latitude,
     longitude: spawn.longitude,
   }}
-  radius={RESOURCE_INTERACTION_DISTANCE}
+  radius={interactRadiusM}
   strokeWidth={2}
   strokeColor={
     isClose
@@ -1081,6 +1140,12 @@ const isClose = devBypassDistance || dist <= RESOURCE_INTERACTION_DISTANCE;
           latitude: spawn.latitude,
           longitude: spawn.longitude,
         }}
+        // When the creature is rendered in MapARScene we keep the native
+        // marker as a frozen invisible hitbox: tracksViewChanges=false stops
+        // RN-Maps from re-snapshotting the (transparent) child every frame,
+        // which is what triggers the Android fallback to the default red pin.
+        tracksViewChanges={!(use3DAvatar && creatureHasARModel(creature))}
+        opacity={use3DAvatar && creatureHasARModel(creature) ? 0 : 1}
         onPress={() => {
           setSelectedCreature(creature);
           setSelectedSpawn(spawn);
@@ -1181,6 +1246,7 @@ const isClose = devBypassDistance || dist <= RESOURCE_INTERACTION_DISTANCE;
       }
 
       addFeedInv(FEED_PICKUP_AMOUNT);
+      incrementDaily('collect_feed', FEED_PICKUP_AMOUNT);
       despawnResourceSpot(spot.id);
       alert(t.alertFeedCollected);
     }}
@@ -1243,6 +1309,7 @@ if (spot.type === 'paper') {
   addTrashInv('paper', TRASH_PICKUP_AMOUNT);
 }
 
+incrementDaily('collect_trash', TRASH_PICKUP_AMOUNT);
 despawnResourceSpot(spot.id);
 alert(t.alertTrashCollected);
     }}
@@ -1293,6 +1360,7 @@ alert(t.alertTrashCollected);
       }
 
       addTrashInv('bio', BIO_PICKUP_AMOUNT);
+      incrementDaily('collect_trash', BIO_PICKUP_AMOUNT);
       despawnResourceSpot(spot.id);
       alert(t.alertBioCollected);
     }}
@@ -1309,14 +1377,67 @@ alert(t.alertTrashCollected);
 })}
             
           </WorldMap>
-          {use3DAvatar && (
-            <MapAvatar3D
+          {use3DAvatar && location && (
+            <MapARScene
               mapRef={mapRef}
-              location={location}
-              heading={heading}
-              modelSource={PLAYER_MODEL}
               mapMode={mapMode}
-              headingOffsetDeg={150}
+              regionTickRef={mapRegionTickRef}
+              objects={[
+                {
+                  id: 'player',
+                  coordinate: location,
+                  modelSource: PLAYER_MODEL,
+                  heading,
+                  headingOffsetDeg: 150,
+                  scale: 30,
+                  pulseRing: true,
+                  nearestSpawnProximity: (() => {
+                    if (activeSpawns.length === 0 || !location) return 0;
+                    let bestDist = Infinity;
+                    let nearest: SpawnedCreature | null = null;
+                    for (const spawn of activeSpawns) {
+                      const d = getDistance(
+                        location.latitude,
+                        location.longitude,
+                        spawn.latitude,
+                        spawn.longitude
+                      );
+                      if (d < bestDist) {
+                        bestDist = d;
+                        nearest = spawn;
+                      }
+                    }
+                    if (!nearest || bestDist === Infinity) return 0;
+                    const c = CREATURES.find((x) => x.id === nearest!.creatureId);
+                    const threshold = c
+                      ? getCreatureInteractionRadiusMeters(c)
+                      : RESOURCE_INTERACTION_DISTANCE;
+                    return threshold / bestDist;
+                  })(),
+                } satisfies ARObject,
+                ...activeSpawns.flatMap((spawn): ARObject[] => {
+                  const creature = CREATURES.find((c) => c.id === spawn.creatureId);
+                  if (!creature) return [];
+                  const interactions =
+                    careDiary.find((e) => e.creatureId === spawn.creatureId)
+                      ?.interactions ?? 0;
+                  const ar = resolveCreatureARAppearance(creature, interactions);
+                  if (!ar) return [];
+                  return [
+                    {
+                      id: spawn.spawnId,
+                      coordinate: {
+                        latitude: spawn.latitude,
+                        longitude: spawn.longitude,
+                      },
+                      modelSource: ar.modelSource,
+                      scale: ar.scale,
+                      headingOffsetDeg: ar.headingOffsetDeg,
+                      heading: 0,
+                    },
+                  ];
+                }),
+              ]}
             />
           )}
           </View>

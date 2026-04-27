@@ -109,4 +109,24 @@ export interface LocaleStrings {
   invCatResources: string;
   invCatFood: string;
   invCatQuestItems: string;
+  invCatCrafted: string;
+  tabCraft: string;
+  craftTitle: string;
+  craftSubtitle: string;
+  craftButton: string;
+  craftNotEnough: string;
+  craftSuccess: string;
+  craftCostHeader: string;
+  craftMissingPlastic: string;
+  craftMissingGlass: string;
+  craftMissingPaper: string;
+  craftMissingBio: string;
+  tabDaily: string;
+  dailyTitle: string;
+  dailySubtitle: string;
+  dailyClaim: string;
+  dailyClaimed: string;
+  dailyRewardToast: string;
+  dailyResetsToday: string;
+  dailyNewDayBannerBody: string;
 }

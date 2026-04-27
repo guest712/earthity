@@ -16,10 +16,17 @@ export const ITEM_CATEGORY: Record<InventoryItemId, InventoryCategory> = {
   scale: 'quest_items',
   petal: 'quest_items',
   seed: 'quest_items',
+
+  flowerpot: 'crafted',
+  paper_lantern: 'crafted',
+  eco_seed: 'crafted',
+  compost_brick: 'crafted',
+  mosaic_tile: 'crafted',
 };
 
 export const INVENTORY_CATEGORIES: InventoryCategory[] = [
   'resources',
   'food',
   'quest_items',
+  'crafted',
 ];

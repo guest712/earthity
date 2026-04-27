@@ -1,6 +1,59 @@
+import { RESOURCE_INTERACTION_DISTANCE } from '../../features/resources/resource.constants';
 import { Quest } from './types';
 import { getDistance } from './game-utils';
-import type { Creature, CreatureGroup, SpawnedCreature, CareDiaryEntry, DropId } from './types';
+import type {
+  Creature,
+  CreatureGroup,
+  CreatureModelSource,
+  SpawnedCreature,
+  CareDiaryEntry,
+  DropId,
+} from './types';
+
+export function getCreatureInteractionRadiusMeters(creature: Creature): number {
+  return creature.interactionDistance ?? RESOURCE_INTERACTION_DISTANCE;
+}
+
+export function creatureHasARModel(creature: Creature): boolean {
+  return creature.model != null || (creature.stages?.length ?? 0) > 0;
+}
+
+export type ResolvedCreatureARAppearance = {
+  modelSource: CreatureModelSource;
+  scale: number;
+  headingOffsetDeg: number;
+};
+
+/**
+ * `careInteractionCount` = `CareDiaryEntry.interactions` for this species
+ * (global per creatureId, not per map spawn).
+ */
+export function resolveCreatureARAppearance(
+  creature: Creature,
+  careInteractionCount: number
+): ResolvedCreatureARAppearance | null {
+  const stages = creature.stages;
+  if (stages?.length) {
+    const idx = Math.min(
+      Math.max(0, careInteractionCount),
+      stages.length - 1
+    );
+    const stage = stages[idx];
+    return {
+      modelSource: stage.model,
+      scale: stage.arScale ?? creature.arScale ?? 22,
+      headingOffsetDeg: stage.arHeadingOffsetDeg ?? creature.arHeadingOffsetDeg ?? 0,
+    };
+  }
+  if (creature.model != null) {
+    return {
+      modelSource: creature.model,
+      scale: creature.arScale ?? 22,
+      headingOffsetDeg: creature.arHeadingOffsetDeg ?? 0,
+    };
+  }
+  return null;
+}
 
 export const DROP_INFO: Record<DropId, { emoji: string; label: Record<string, string> }> = {
   feather: { emoji: '🪶', label: { ru: 'Пёрышко',  en: 'Feather', de: 'Feder',        uk: 'Пір\'ячко', ar: 'ريشة'      } },
@@ -108,7 +161,7 @@ export function getCreaturePosition(
 
 export function isWithinInteractionDistance(
   distance: number,
-  maxDistance = 150
+  maxDistance = RESOURCE_INTERACTION_DISTANCE
 ): boolean {
   return distance <= maxDistance;
 }
@@ -131,8 +184,11 @@ export const canInteractWithCreature = (params: {
     waterLevel,
     lastInteractionTime,
     now,
-    maxDistance = 150,
+    maxDistance: maxDistanceOverride,
   } = params;
+
+  const maxDistance =
+    maxDistanceOverride ?? getCreatureInteractionRadiusMeters(creature);
 
   if (distance > maxDistance) {
     return { ok: false, reason: 'too_far' };

@@ -1,7 +1,7 @@
 import { Asset } from 'expo-asset';
 import * as ImageManipulator from 'expo-image-manipulator';
 import { Image, PixelRatio } from 'react-native';
-import MapView, { Marker } from 'react-native-maps';
+import MapView, { Marker, type Region } from 'react-native-maps';
 import { forwardRef, ReactNode, useEffect, useMemo, useState } from 'react';
 import type { ImageRequireSource, ImageURISource, ViewStyle } from 'react-native';
 
@@ -33,6 +33,10 @@ type Props = {
   hideUserMarker?: boolean;
   /** Override default style. Pass `{ flex: 1 }` when wrapping in a sized container. */
   style?: ViewStyle;
+  /** Fires on every region delta during pan/zoom (high-frequency). */
+  onRegionChange?: (region: Region) => void;
+  /** Fires once when pan/zoom settles (low-frequency, exact). */
+  onRegionChangeComplete?: (region: Region) => void;
   children?: ReactNode;
 };
 
@@ -117,7 +121,18 @@ async function resolveResizedUri(
 // ─── component ──────────────────────────────────────────────────────────────
 
 const WorldMap = forwardRef<MapView, Props>(function WorldMap(
-  { initialRegion, mapTileStyle, userLocation, userAvatarSource, userAvatarId, hideUserMarker, style, children },
+  {
+    initialRegion,
+    mapTileStyle,
+    userLocation,
+    userAvatarSource,
+    userAvatarId,
+    hideUserMarker,
+    style,
+    onRegionChange,
+    onRegionChangeComplete,
+    children,
+  },
   ref
 ) {
   const useNativeUser = !hideUserMarker && userLocation == null;
@@ -158,6 +173,8 @@ const WorldMap = forwardRef<MapView, Props>(function WorldMap(
       showsMyLocationButton={useNativeUser}
       followsUserLocation={useNativeUser}
       mapType={mapTileStyle}
+      onRegionChange={onRegionChange}
+      onRegionChangeComplete={onRegionChangeComplete}
     >
       {showCustomMarker && markerImageUri != null && (
         <Marker

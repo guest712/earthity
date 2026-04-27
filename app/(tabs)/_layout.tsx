@@ -5,6 +5,10 @@ import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { LanguageProvider } from '../../lib/i18n/LanguageContext';
 import { InventoryProvider } from '../../features/inventory/inventory.context';
+import {
+  DailyQuestsProvider,
+  useDailyQuests,
+} from '../../features/dailyQuests/dailyQuests.context';
 import { useTranslation } from '../../lib/i18n/useTranslation';
 import { Tabs, Stack } from 'expo-router';
 import React from 'react';
@@ -13,6 +17,7 @@ import { Text } from 'react-native';
 function TabsContent() {
   const colorScheme = useColorScheme();
   const { t } = useTranslation();
+  const { claimableCount } = useDailyQuests();
 
   return (
     <Tabs
@@ -48,6 +53,27 @@ function TabsContent() {
         options={{
           title: t.tabInventory,
           tabBarIcon: () => <Text style={{ fontSize: 22 }}>🎒</Text>,
+        }}
+      />
+      <Tabs.Screen
+        name="craft"
+        options={{
+          title: t.tabCraft,
+          tabBarIcon: () => <Text style={{ fontSize: 22 }}>♻️</Text>,
+        }}
+      />
+      <Tabs.Screen
+        name="daily"
+        options={{
+          title: t.tabDaily,
+          tabBarBadge: claimableCount > 0 ? claimableCount : undefined,
+          tabBarBadgeStyle: {
+            backgroundColor: '#c9a227',
+            color: '#0c120c',
+            fontSize: 11,
+            fontWeight: '700',
+          },
+          tabBarIcon: () => <Text style={{ fontSize: 22 }}>☀️</Text>,
         }}
       />
       <Tabs.Screen
@@ -87,7 +113,9 @@ export default function TabLayout() {
   return (
     <LanguageProvider>
       <InventoryProvider>
-        <TabsContent />
+        <DailyQuestsProvider>
+          <TabsContent />
+        </DailyQuestsProvider>
       </InventoryProvider>
     </LanguageProvider>
   );

@@ -44,10 +44,27 @@ module.exports = ({ config }) => {
     );
   }
 
+  const basePlugins = config.plugins ?? [];
+  const sensorsPlugin = [
+    'expo-sensors',
+    {
+      motionPermission:
+        'Earthity uses motion to count your steps for daily walk quests when GPS is not used.',
+    },
+  ];
+  const hasSensors = basePlugins.some(
+    (p) => Array.isArray(p) && p[0] === 'expo-sensors'
+  );
+
   return {
     ...config,
+    plugins: hasSensors ? basePlugins : [...basePlugins, sensorsPlugin],
     android: {
       ...config.android,
+      permissions: [
+        ...(config.android?.permissions ?? []),
+        'android.permission.ACTIVITY_RECOGNITION',
+      ],
       config: {
         ...config.android?.config,
         googleMaps: {

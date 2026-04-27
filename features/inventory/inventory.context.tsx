@@ -1,6 +1,6 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { loadSave, updateSave } from '../../lib/storage/storage';
-import type { DropId, TrashId } from '../../lib/shared/types';
+import type { CraftedItemId, DropId, TrashId } from '../../lib/shared/types';
 import type { Resources } from '../resources/resource.types';
 import {
   MAX_WATER,
@@ -8,7 +8,11 @@ import {
   MAX_TRASH_PER_TYPE,
   MAX_BIO,
 } from '../resources/resource.constants';
-import type { InventoryApi, InventoryDrops } from './inventory.types';
+import type {
+  InventoryApi,
+  InventoryCrafted,
+  InventoryDrops,
+} from './inventory.types';
 
 const EMPTY_RESOURCES: Resources = {
   water: MAX_WATER,
@@ -21,6 +25,7 @@ const InventoryContext = createContext<InventoryApi | undefined>(undefined);
 export function InventoryProvider({ children }: { children: React.ReactNode }) {
   const [resources, setResources] = useState<Resources>(EMPTY_RESOURCES);
   const [drops, setDrops] = useState<InventoryDrops>({});
+  const [crafted, setCrafted] = useState<InventoryCrafted>({});
   const [isHydrated, setIsHydrated] = useState(false);
 
   useEffect(() => {
@@ -31,6 +36,7 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
         if (cancelled) return;
         setResources(save.resources);
         setDrops(save.drops ?? {});
+        setCrafted(save.crafted ?? {});
       } catch (e) {
         console.warn('Inventory load error', e);
       } finally {
@@ -48,6 +54,10 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
 
   const persistDrops = useCallback((next: InventoryDrops) => {
     void updateSave({ drops: next });
+  }, []);
+
+  const persistCrafted = useCallback((next: InventoryCrafted) => {
+    void updateSave({ crafted: next });
   }, []);
 
   const addDrop = useCallback(
@@ -137,9 +147,39 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
     });
   }, [persistResources]);
 
+  const setTrash = useCallback(
+    (nextTrash: Resources['trash']) => {
+      setResources((prev) => {
+        const next: Resources = { ...prev, trash: { ...nextTrash } };
+        persistResources(next);
+        return next;
+      });
+    },
+    [persistResources]
+  );
+
+  const addCrafted = useCallback(
+    (id: CraftedItemId, amount = 1) => {
+      setCrafted((prev) => {
+        const next: InventoryCrafted = {
+          ...prev,
+          [id]: (prev[id] ?? 0) + amount,
+        };
+        persistCrafted(next);
+        return next;
+      });
+    },
+    [persistCrafted]
+  );
+
   const getDropCount = useCallback(
     (id: DropId) => drops[id] ?? 0,
     [drops]
+  );
+
+  const getCraftedCount = useCallback(
+    (id: CraftedItemId) => crafted[id] ?? 0,
+    [crafted]
   );
 
   const reload = useCallback(async () => {
@@ -147,6 +187,7 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
       const save = await loadSave();
       setResources(save.resources);
       setDrops(save.drops ?? {});
+      setCrafted(save.crafted ?? {});
     } catch (e) {
       console.warn('Inventory reload error', e);
     }
@@ -156,6 +197,7 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
     () => ({
       resources,
       drops,
+      crafted,
       isHydrated,
       addDrop,
       consumeFeed,
@@ -163,13 +205,17 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
       addFeed,
       addWater,
       addTrash,
+      setTrash,
       refillWater,
+      addCrafted,
       getDropCount,
+      getCraftedCount,
       reload,
     }),
     [
       resources,
       drops,
+      crafted,
       isHydrated,
       addDrop,
       consumeFeed,
@@ -177,8 +223,11 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
       addFeed,
       addWater,
       addTrash,
+      setTrash,
       refillWater,
+      addCrafted,
       getDropCount,
+      getCraftedCount,
       reload,
     ]
   );

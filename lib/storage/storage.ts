@@ -1,8 +1,34 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import type { DropId, EarthitySave } from '../shared/types';
+import type {
+  ActiveDailyQuest,
+  CraftedItemId,
+  DailyQuestKind,
+  DailyQuestsSave,
+  DropId,
+  EarthitySave,
+} from '../shared/types';
+
+const VALID_DAILY_KINDS: DailyQuestKind[] = [
+  'walk_meters',
+  'water_flowers',
+  'feed_animals',
+  'collect_trash',
+  'collect_feed',
+  'do_crafts',
+];
+const VALID_DAILY_KIND_SET = new Set<string>(VALID_DAILY_KINDS);
 
 const VALID_DROP_IDS: DropId[] = ['feather', 'wool', 'pollen', 'scale', 'petal', 'seed'];
 const VALID_DROP_SET = new Set<string>(VALID_DROP_IDS);
+
+const VALID_CRAFTED_IDS: CraftedItemId[] = [
+  'flowerpot',
+  'paper_lantern',
+  'eco_seed',
+  'compost_brick',
+  'mosaic_tile',
+];
+const VALID_CRAFTED_SET = new Set<string>(VALID_CRAFTED_IDS);
 
 const STORAGE_KEY = 'earthity_save';
 const STORAGE_BACKUP_KEY = 'earthity_save_backup';
@@ -103,6 +129,45 @@ function normalizeSave(input: unknown): EarthitySave {
         )
       : {};
 
+  const crafted: EarthitySave['crafted'] =
+    source.crafted && typeof source.crafted === 'object'
+      ? Object.fromEntries(
+          Object.entries(source.crafted)
+            .filter(([k]) => VALID_CRAFTED_SET.has(k))
+            .map(([k, v]) => [k, toNonNegativeNumber(v, 0)])
+        )
+      : {};
+
+  const rawDaily = (source as Partial<EarthitySave>).dailyQuests;
+  let dailyQuests: DailyQuestsSave | null = null;
+  if (
+    rawDaily &&
+    typeof rawDaily === 'object' &&
+    typeof (rawDaily as DailyQuestsSave).date === 'string' &&
+    Array.isArray((rawDaily as DailyQuestsSave).quests)
+  ) {
+    const quests: ActiveDailyQuest[] = (rawDaily as DailyQuestsSave).quests
+      .filter(
+        (q): q is ActiveDailyQuest =>
+          Boolean(
+            q &&
+              typeof q === 'object' &&
+              VALID_DAILY_KIND_SET.has((q as ActiveDailyQuest).kind) &&
+              Number.isFinite((q as ActiveDailyQuest).target) &&
+              Number.isFinite((q as ActiveDailyQuest).progress)
+          )
+      )
+      .map((q) => ({
+        kind: q.kind,
+        target: toNonNegativeNumber(q.target, 1),
+        progress: toNonNegativeNumber(q.progress, 0, q.target),
+        rewardDobri: toNonNegativeNumber(q.rewardDobri, 0),
+        rewardXp: toNonNegativeNumber(q.rewardXp, 0),
+        claimed: Boolean(q.claimed),
+      }));
+    dailyQuests = { date: (rawDaily as DailyQuestsSave).date, quests };
+  }
+
   const totalDobri = Math.max(
     toNonNegativeNumber(source.totalDobri, defaultSave.totalDobri),
     toNonNegativeNumber(source.dobri, defaultSave.dobri)
@@ -146,6 +211,8 @@ function normalizeSave(input: unknown): EarthitySave {
     unlockedTitles,
     careDiary,
     drops,
+    crafted,
+    dailyQuests,
   };
 }
 
@@ -214,6 +281,8 @@ export const defaultSave: EarthitySave = {
   unlockedTitles: [],
   careDiary: [],
   drops: {},
+  crafted: {},
+  dailyQuests: null,
 };
 
 export async function loadSave(): Promise<EarthitySave> {
