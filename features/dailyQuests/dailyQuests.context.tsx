@@ -1,4 +1,3 @@
-import { Pedometer } from 'expo-sensors';
 import React, {
   createContext,
   useCallback,
@@ -25,6 +24,28 @@ import type { DailyQuestKind, DailyQuestsSave, LanguageCode } from '../../lib/sh
 const PEDOMETER_POLL_MS = 12_000;
 const AVG_STEP_LENGTH_M = 0.78;
 const MAX_WALK_DELTA_PER_TICK_M = 800;
+
+type PedometerModule = {
+  isAvailableAsync: () => Promise<boolean>;
+  requestPermissionsAsync: () => Promise<{ status: string }>;
+  getStepCountAsync: (start: Date, end: Date) => Promise<{ steps: number }>;
+};
+
+/** Avoid static import: missing native ExponentPedometer can throw at module load. */
+let pedometerLoad: Promise<PedometerModule | null> | null = null;
+function loadPedometerModule(): Promise<PedometerModule | null> {
+  if (!pedometerLoad) {
+    pedometerLoad = (async () => {
+      try {
+        const m = await import('expo-sensors');
+        return m.Pedometer;
+      } catch {
+        return null;
+      }
+    })();
+  }
+  return pedometerLoad;
+}
 
 type WalkTrackingKind = 'pending' | 'pedometer' | 'gps';
 
@@ -149,6 +170,12 @@ export function DailyQuestsProvider({ children }: { children: React.ReactNode })
         return;
       }
       try {
+        const Pedometer = await loadPedometerModule();
+        if (cancelled) return;
+        if (!Pedometer) {
+          setWalkTrackingKind('gps');
+          return;
+        }
         const avail = await Pedometer.isAvailableAsync();
         if (cancelled) return;
         if (!avail) {
@@ -176,6 +203,8 @@ export function DailyQuestsProvider({ children }: { children: React.ReactNode })
     let cancelled = false;
     const sync = async () => {
       try {
+        const Pedometer = await loadPedometerModule();
+        if (!Pedometer) return;
         const now = new Date();
         const start = new Date(now);
         start.setHours(0, 0, 0, 0);
