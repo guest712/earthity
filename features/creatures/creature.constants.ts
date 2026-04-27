@@ -1,52 +1,96 @@
 import type { Creature } from '../../lib/shared/types';
 
+/**
+ * AR test asset: same wolf GLB used for the player avatar and for the 3D
+ * test route. Assigned to a few creatures here so the AR pipeline can be
+ * validated end-to-end before per-creature poly-models are authored.
+ */
+const TEST_MODEL = require('../../assets/models/test_wolf.glb');
+const TEST_HEADING_OFFSET = 150;
+
 export const CREATURES: Creature[] = [
   {
     id: 'flower1',
     type: 'flower',
+    group: 'flora_flower',
     image: require('../../assets/images/creatures/flower_1.png'),
     label: { ru: 'Цветок', de: 'Blume', uk: 'Квітка', ar: 'زهرة', en: 'Flower' },
     reward: 8,
     cooldown: 3600000,
+    requiredItem: 'water',
+    interactionDistance: 130,
+    stages: [
+      {
+        model: TEST_MODEL,
+        arScale: 16,
+        arHeadingOffsetDeg: TEST_HEADING_OFFSET,
+      },
+      {
+        model: TEST_MODEL,
+        arScale: 22,
+        arHeadingOffsetDeg: TEST_HEADING_OFFSET,
+      },
+      {
+        model: TEST_MODEL,
+        arScale: 30,
+        arHeadingOffsetDeg: TEST_HEADING_OFFSET,
+      },
+    ],
   },
   {
     id: 'flower2',
     type: 'flower',
+    group: 'flora_seed',
     image: require('../../assets/images/creatures/sunflower.png'),
     label: { ru: 'Подсолнух', de: 'Sonnenblume', uk: 'Соняшник', ar: 'عباد الشمس', en: 'Sunflower' },
     reward: 8,
     cooldown: 3600000,
+    requiredItem: 'water',
   },
   {
     id: 'animal1',
     type: 'animal',
+    group: 'mammal',
     image: require('../../assets/images/creatures/fox.png'),
     label: { ru: 'Лисёнок', de: 'Fuchs', uk: 'Лисеня', ar: 'ثعلب', en: 'Fox' },
     reward: 15,
     cooldown: 7200000,
+    requiredItem: 'feed',
+    model: TEST_MODEL,
+    arScale: 26,
+    arHeadingOffsetDeg: TEST_HEADING_OFFSET,
+    interactionDistance: 210,
   },
   {
     id: 'animal2',
     type: 'animal',
+    group: 'reptile',
     image: require('../../assets/images/creatures/turtoise.png'),
     label: { ru: 'Черепашка', de: 'Schildkröte', uk: 'Черепашка', ar: 'سلحفاة', en: 'Turtle' },
     reward: 12,
     cooldown: 7200000,
+    requiredItem: 'feed',
+    interactionDistance: 125,
   },
   {
     id: 'animal3',
     type: 'animal',
+    group: 'insect',
     image: require('../../assets/images/creatures/butterfly.png'),
     label: { ru: 'Бабочка', de: 'Schmetterling', uk: 'Метелик', ar: 'فراشة', en: 'Butterfly' },
     reward: 10,
     cooldown: 7200000,
+    requiredItem: 'feed',
+    interactionDistance: 62,
   },
   {
     id: 'codariocalyx',
     type: 'flower',
+    group: 'flora_seed',
     image: require('../../assets/images/creatures/desmodium.png'),
     label: { ru: 'Кодариокаликс', de: 'Codariocalyx', uk: 'Кодаріокалікс', ar: 'كوداريوكاليكس', en: 'Codariocalyx' },
     reward: 12,
     cooldown: 5400000,
+    requiredItem: 'water',
   },
 ];

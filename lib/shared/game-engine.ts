@@ -1,37 +1,85 @@
+import { RESOURCE_INTERACTION_DISTANCE } from '../../features/resources/resource.constants';
 import { Quest } from './types';
 import { getDistance } from './game-utils';
-import type { Creature, SpawnedCreature, CareDiaryEntry, DropId } from './types';
+import type {
+  Creature,
+  CreatureGroup,
+  CreatureModelSource,
+  SpawnedCreature,
+  CareDiaryEntry,
+  DropId,
+} from './types';
+
+export function getCreatureInteractionRadiusMeters(creature: Creature): number {
+  return creature.interactionDistance ?? RESOURCE_INTERACTION_DISTANCE;
+}
+
+export function creatureHasARModel(creature: Creature): boolean {
+  return creature.model != null || (creature.stages?.length ?? 0) > 0;
+}
+
+export type ResolvedCreatureARAppearance = {
+  modelSource: CreatureModelSource;
+  scale: number;
+  headingOffsetDeg: number;
+};
+
+/**
+ * `careInteractionCount` = `CareDiaryEntry.interactions` for this species
+ * (global per creatureId, not per map spawn).
+ */
+export function resolveCreatureARAppearance(
+  creature: Creature,
+  careInteractionCount: number
+): ResolvedCreatureARAppearance | null {
+  const stages = creature.stages;
+  if (stages?.length) {
+    const idx = Math.min(
+      Math.max(0, careInteractionCount),
+      stages.length - 1
+    );
+    const stage = stages[idx];
+    return {
+      modelSource: stage.model,
+      scale: stage.arScale ?? creature.arScale ?? 22,
+      headingOffsetDeg: stage.arHeadingOffsetDeg ?? creature.arHeadingOffsetDeg ?? 0,
+    };
+  }
+  if (creature.model != null) {
+    return {
+      modelSource: creature.model,
+      scale: creature.arScale ?? 22,
+      headingOffsetDeg: creature.arHeadingOffsetDeg ?? 0,
+    };
+  }
+  return null;
+}
 
 export const DROP_INFO: Record<DropId, { emoji: string; label: Record<string, string> }> = {
-  feather:   { emoji: '🪶', label: { ru: 'Пёрышко',    en: 'Feather',    de: 'Feder',         uk: 'Пір\'ячко',      ar: 'ريشة'  } },
-  petal:     { emoji: '🌸', label: { ru: 'Лепесток',   en: 'Petal',      de: 'Blütenblatt',   uk: 'Пелюстка',       ar: 'بتلة'  } },
-  paw_print: { emoji: '🐾', label: { ru: 'След лапки', en: 'Paw Print',  de: 'Pfote',         uk: 'Відбиток лапи',  ar: 'بصمة'  } },
-  seed:      { emoji: '🌱', label: { ru: 'Семечко',    en: 'Seed',       de: 'Samen',         uk: 'Насінина',       ar: 'بذرة'  } },
-  scale:     { emoji: '🐢', label: { ru: 'Чешуйка',    en: 'Scale',      de: 'Schuppe',       uk: 'Лусочка',        ar: 'قشرة'  } },
+  feather: { emoji: '🪶', label: { ru: 'Пёрышко',  en: 'Feather', de: 'Feder',        uk: 'Пір\'ячко', ar: 'ريشة'      } },
+  wool:    { emoji: '🧶', label: { ru: 'Шерсть',   en: 'Wool',    de: 'Wolle',        uk: 'Вовна',     ar: 'صوف'       } },
+  pollen:  { emoji: '🌼', label: { ru: 'Пыльца',   en: 'Pollen',  de: 'Pollen',       uk: 'Пилок',     ar: 'حبوب اللقاح' } },
+  scale:   { emoji: '🐢', label: { ru: 'Чешуйка',  en: 'Scale',   de: 'Schuppe',      uk: 'Лусочка',   ar: 'قشرة'      } },
+  petal:   { emoji: '🌸', label: { ru: 'Лепесток', en: 'Petal',   de: 'Blütenblatt',  uk: 'Пелюстка',  ar: 'بتلة'      } },
+  seed:    { emoji: '🌱', label: { ru: 'Семечко',  en: 'Seed',    de: 'Samen',        uk: 'Насінина',  ar: 'بذرة'      } },
 };
 
-const CREATURE_DROP_MAP: Partial<Record<string, DropId>> = {
-  animal1:     'feather',
-  animal2:     'scale',
-  animal3:     'paw_print',
-  flower1:     'petal',
-  flower2:     'seed',
-  codariocalyx: 'seed',
+const GROUP_DROP_MAP: Record<CreatureGroup, DropId> = {
+  mammal:       'wool',
+  bird:         'feather',
+  insect:       'pollen',
+  reptile:      'scale',
+  flora_flower: 'petal',
+  flora_seed:   'seed',
 };
 
-const DROP_CHANCE: Partial<Record<string, number>> = {
-  animal1: 0.25,
-  animal2: 0.20,
-  animal3: 0.30,
-  flower1: 0.20,
-  flower2: 0.20,
-  codariocalyx: 0.25,
-};
+export function getCreatureDropId(creature: Creature): DropId | null {
+  return GROUP_DROP_MAP[creature.group] ?? null;
+}
 
 export function rollCreatureDrop(creature: Creature): DropId | null {
-  const chance = DROP_CHANCE[creature.id] ?? 0.20;
-  if (Math.random() > chance) return null;
-  return CREATURE_DROP_MAP[creature.id] ?? null;
+  // Deterministic rewards: every successful care action gives the group item.
+  return getCreatureDropId(creature);
 }
 
 type CompleteQuestResult = {
@@ -113,7 +161,7 @@ export function getCreaturePosition(
 
 export function isWithinInteractionDistance(
   distance: number,
-  maxDistance = 150
+  maxDistance = RESOURCE_INTERACTION_DISTANCE
 ): boolean {
   return distance <= maxDistance;
 }
@@ -136,8 +184,11 @@ export const canInteractWithCreature = (params: {
     waterLevel,
     lastInteractionTime,
     now,
-    maxDistance = 150,
+    maxDistance: maxDistanceOverride,
   } = params;
+
+  const maxDistance =
+    maxDistanceOverride ?? getCreatureInteractionRadiusMeters(creature);
 
   if (distance > maxDistance) {
     return { ok: false, reason: 'too_far' };

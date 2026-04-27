@@ -26,3 +26,4 @@ export const TRASH_PICKUP_AMOUNT = 5;
 export const BIO_PICKUP_AMOUNT = 4;
 export const RESOURCE_INTERACTION_DISTANCE = 150;
 export const ACTION_COOLDOWN_MS = 700;
+export const RESOURCE_SPOT_RESPAWN_MS = 60000;
