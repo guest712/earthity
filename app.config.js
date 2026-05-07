@@ -3,6 +3,9 @@
  * - Put GOOGLE_MAPS_API_KEY in `.env` in the project root (not committed).
  * - We load `.env` here explicitly so `expo prebuild` / `expo run:android` always see it on Windows too.
  *
+ * Native `/android` is gitignored — after a fresh clone run `npm run prebuild:android` or `npm run android:native`
+ * (prebuild + dev client) once; then use `npm run android` / `npx expo run:android`.
+ *
  * Debug signing: `android/app/build.gradle` uses `android/app/debug.keystore` (not ~/.android/debug.keystore).
  * In Google Cloud → API key → Android restrictions, add SHA-1 from THAT file:
  *   keytool -list -v -keystore android/app/debug.keystore -alias androiddebugkey -storepass android -keypass android
@@ -63,6 +66,8 @@ module.exports = ({ config }) => {
       ...config.android,
       permissions: [
         ...(config.android?.permissions ?? []),
+        'android.permission.ACCESS_COARSE_LOCATION',
+        'android.permission.ACCESS_FINE_LOCATION',
         'android.permission.ACTIVITY_RECOGNITION',
       ],
       config: {

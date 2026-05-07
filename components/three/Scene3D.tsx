@@ -34,7 +34,7 @@ function RotatingModel() {
 
   return (
     <group ref={groupRef}>
-      <Model source={WOLF_MODEL} />
+      <Model source={WOLF_MODEL} skinAnimation="idle" />
     </group>
   );
 }

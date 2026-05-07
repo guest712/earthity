@@ -28,6 +28,12 @@
     "plugins": [
       "expo-router",
       [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Earthity uses your location for the map and nearby quests."
+        }
+      ],
+      [
         "expo-splash-screen",
         {
           "image": "./assets/images/splash-icon.png",

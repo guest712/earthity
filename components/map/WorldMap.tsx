@@ -1,6 +1,6 @@
 import { Asset } from 'expo-asset';
 import * as ImageManipulator from 'expo-image-manipulator';
-import { Image, PixelRatio } from 'react-native';
+import { Image, PixelRatio, Platform } from 'react-native';
 import MapView, { Marker, type Region } from 'react-native-maps';
 import { forwardRef, ReactNode, useEffect, useMemo, useState } from 'react';
 import type { ImageRequireSource, ImageURISource, ViewStyle } from 'react-native';
@@ -37,6 +37,8 @@ type Props = {
   onRegionChange?: (region: Region) => void;
   /** Fires once when pan/zoom settles (low-frequency, exact). */
   onRegionChangeComplete?: (region: Region) => void;
+  /** Fires when the native map finishes layout (helps AR overlay call `pointForCoordinate` reliably). */
+  onMapReady?: () => void;
   children?: ReactNode;
 };
 
@@ -131,6 +133,7 @@ const WorldMap = forwardRef<MapView, Props>(function WorldMap(
     style,
     onRegionChange,
     onRegionChangeComplete,
+    onMapReady,
     children,
   },
   ref
@@ -173,8 +176,12 @@ const WorldMap = forwardRef<MapView, Props>(function WorldMap(
       showsMyLocationButton={useNativeUser}
       followsUserLocation={useNativeUser}
       mapType={mapTileStyle}
+      onMapReady={onMapReady}
       onRegionChange={onRegionChange}
       onRegionChangeComplete={onRegionChangeComplete}
+      {...(Platform.OS === 'android'
+        ? { googleRenderer: 'LATEST', liteMode: false }
+        : {})}
     >
       {showCustomMarker && markerImageUri != null && (
         <Marker

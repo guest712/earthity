@@ -7,7 +7,10 @@ import 'react-native-reanimated';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
 if (__DEV__) {
-  LogBox.ignoreLogs([/Unable to activate keep awake/i]);
+  LogBox.ignoreLogs([
+    /Unable to activate keep awake/i,
+    /EXGL: gl\.pixelStorei\(\)/i,
+  ]);
 
   // expo-keep-awake throws an unhandled rejection at startup on Android when
   // the Activity isn't ready yet. LogBox doesn't intercept promise rejections,
@@ -33,7 +36,6 @@ export default function RootLayout() {
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
       <Stack>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
       </Stack>
       <StatusBar style="auto" />
     </ThemeProvider>

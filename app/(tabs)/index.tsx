@@ -24,29 +24,29 @@ import { LANGS, FLAG } from '../../lib/i18n/i18n';
 import { guessDeviceLanguage } from '../../lib/i18n/guess-locale';
 import { getDistance, getLevelKey, getLevelName } from '../../lib/shared/game-utils';
 import { useFocusEffect } from '@react-navigation/native';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import WorldMap from '../../components/map/WorldMap';
-import MapARScene, { type ARObject } from '../../components/map/MapARScene';
+import PlayerModelPreviewPanel from '../../components/map/PlayerModelPreviewPanel';
 import RNMapView, { Marker, Circle } from 'react-native-maps';
+import Model from '../../components/three/Model';
 
 const PLAYER_MODEL = require('../../assets/models/test_wolf.glb');
 
-// Preload all known model sources up-front so the AR scene doesn't hitch
-// on first appearance. Includes the player model + every creature with a
-// `model` field. Duplicates are harmless — `useGLTF.preload` is idempotent.
-MapARScene.preload([
+// Preload all known model sources up-front so GLB views don't hitch on first paint.
+// Duplicates are harmless — `useGLTF.preload` is idempotent.
+for (const src of [
   PLAYER_MODEL,
   ...CREATURES.flatMap((c) => [
     ...(c.stages?.map((s) => s.model) ?? []),
     c.model,
   ]).filter((m): m is number | string => m != null),
-]);
+]) {
+  Model.preload(src);
+}
 import {
   applyQuestCompletion,
   canInteractWithCreature,
   getCreatureInteractionRadiusMeters,
-  creatureHasARModel,
-  resolveCreatureARAppearance,
   generateCreatureSpawnsSpread,
   getCreatureRewardResult,
   pruneCreatureSpawns,
@@ -57,7 +57,7 @@ import {
   DROP_INFO,
 } from '../../lib/shared/game-engine';
 import type { DropId } from '../../lib/shared/types';
-import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View, type ImageSourcePropType } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withRepeat, withSequence, withSpring, withTiming } from 'react-native-reanimated';
 import Onboarding from './onboarding';
@@ -81,6 +81,38 @@ import { AVATARS, DEFAULT_AVATAR_ID } from '../../features/profile/avatar.consta
  */
 const USE_3D_TEST_SCREEN = false;
 
+const CREATURE_MARKER_SIZE = 40;
+
+/** Bitmap `image` on Marker uses full asset pixels — too large. Fixed-size child view + short tracksViewChanges. */
+function CreatureMapMarker(props: {
+  coordinate: { latitude: number; longitude: number };
+  image: ImageSourcePropType;
+  onPress: () => void;
+}) {
+  const { coordinate, image, onPress } = props;
+  const [tracksViewChanges, setTracksViewChanges] = useState(true);
+  useEffect(() => {
+    const t = setTimeout(() => setTracksViewChanges(false), 600);
+    return () => clearTimeout(t);
+  }, []);
+
+  return (
+    <Marker
+      coordinate={coordinate}
+      anchor={{ x: 0.5, y: 0.5 }}
+      tracksViewChanges={tracksViewChanges}
+      onPress={onPress}
+    >
+      <View style={{ alignItems: 'center', justifyContent: 'center' }}>
+        <Image
+          source={image}
+          style={{ width: CREATURE_MARKER_SIZE, height: CREATURE_MARKER_SIZE }}
+          resizeMode="contain"
+        />
+      </View>
+    </Marker>
+  );
+}
 
 
 
@@ -151,7 +183,6 @@ function HomeScreenInner() {
   const [devIgnoreInteractionDistance, setDevIgnoreInteractionDistance] = useState(false);
   const [autoCompass2DEnabled, setAutoCompass2DEnabled] = useState(false);
   const [autoCompass3DEnabled, setAutoCompass3DEnabled] = useState(true);
-  const [use3DAvatar, setUse3DAvatar] = useState(false);
   const devBypassDistance = __DEV__ && devIgnoreInteractionDistance;
   const [avatar, setAvatar] = useState(DEFAULT_AVATAR_ID);
   const [dropToast, setDropToast] = useState<{ dropId: DropId; msg: string } | null>(null);
@@ -168,14 +199,6 @@ function HomeScreenInner() {
     bio: 0,
   });
   const mapRef = useRef<RNMapView | null>(null);
-  // Counter that increments on every map region change. MapARScene watches
-  // this ref to decide when to refresh per-object screen positions via the
-  // native `pointForCoordinate` (fully accurate). Between bumps no bridge
-  // calls happen — in steady state the AR scene does zero work per frame.
-  const mapRegionTickRef = useRef(0);
-  const onMapRegionChange = useCallback(() => {
-    mapRegionTickRef.current = (mapRegionTickRef.current + 1) | 0;
-  }, []);
   const playRewardSound = async () => {
     try {
       const { sound } = await Audio.Sound.createAsync(
@@ -529,55 +552,62 @@ useEffect(() => {
   }, [location, isLocationFallback, incrementDaily, walkTrackingKind]);
 
   useEffect(() => {
-  if (!location) return;
+    if (!location) return;
 
-  const now = Date.now();
+    const now = Date.now();
+    let shouldUpdateSpawnMeta = false;
 
-  setActiveSpawns((prev) => {
-    const cleaned = pruneCreatureSpawns({
-      spawns: prev,
-      userLatitude: location.latitude,
-      userLongitude: location.longitude,
-      now,
-    });
-
-    const needsRefresh = shouldRefreshCreatureSpawns({
-      lastSpawnCenter,
-      currentLatitude: location.latitude,
-      currentLongitude: location.longitude,
-      lastRefreshAt: lastSpawnRefreshAt,
-      now,
-    });
-
-    if (!needsRefresh) {
-      return cleaned;
-    }
-
-    const targetCount = 5;
-    const missingCount = Math.max(0, targetCount - cleaned.length);
-
-    const newSpawns =
-  missingCount > 0
-    ? generateCreatureSpawnsSpread({
-        baseLatitude: location.latitude,
-        baseLongitude: location.longitude,
-        creatureIds: CREATURES.map((c) => c.id),
-        existingSpawns: cleaned,
-        count: missingCount,
-        minGapMeters: 70,
+    setActiveSpawns((prev) => {
+      const cleaned = pruneCreatureSpawns({
+        spawns: prev,
+        userLatitude: location.latitude,
+        userLongitude: location.longitude,
         now,
-      })
-    : [];
+      });
 
-    setLastSpawnCenter({
-      latitude: location.latitude,
-      longitude: location.longitude,
+      const needsRefresh = shouldRefreshCreatureSpawns({
+        lastSpawnCenter,
+        currentLatitude: location.latitude,
+        currentLongitude: location.longitude,
+        lastRefreshAt: lastSpawnRefreshAt,
+        now,
+      });
+
+      const targetCount = 5;
+      const missingCount = Math.max(0, targetCount - cleaned.length);
+
+      if (!needsRefresh && missingCount === 0) {
+        return cleaned;
+      }
+
+      const newSpawns =
+        missingCount > 0
+          ? generateCreatureSpawnsSpread({
+              baseLatitude: location.latitude,
+              baseLongitude: location.longitude,
+              creatureIds: CREATURES.map((c) => c.id),
+              existingSpawns: cleaned,
+              count: missingCount,
+              minGapMeters: 70,
+              now,
+            })
+          : [];
+
+      if (needsRefresh) {
+        shouldUpdateSpawnMeta = true;
+      }
+
+      return [...cleaned, ...newSpawns];
     });
-    setLastSpawnRefreshAt(now);
 
-    return [...cleaned, ...newSpawns];
-  });
-}, [location, lastSpawnCenter, lastSpawnRefreshAt]);
+    if (shouldUpdateSpawnMeta) {
+      setLastSpawnCenter({
+        latitude: location.latitude,
+        longitude: location.longitude,
+      });
+      setLastSpawnRefreshAt(now);
+    }
+  }, [location, lastSpawnCenter, lastSpawnRefreshAt]);
 
 
 
@@ -774,14 +804,6 @@ const mindfulPhrase = selected
           >
             <Text style={styles.devPanelBtnText}>
               auto-compass 3D: {autoCompass3DEnabled ? 'ON' : 'OFF'}
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.devPanelBtn, use3DAvatar && styles.devPanelBtnActive]}
-            onPress={() => setUse3DAvatar((v) => !v)}
-          >
-            <Text style={styles.devPanelBtnText}>
-              3D avatar: {use3DAvatar ? 'ON' : 'OFF'}
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -1077,9 +1099,6 @@ startFeeding(() => {
   userLocation={location}
   userAvatarSource={currentAvatar.image}
   userAvatarId={avatar}
-  hideUserMarker={use3DAvatar}
-  onRegionChange={onMapRegionChange}
-  onRegionChangeComplete={onMapRegionChange}
 >
           
             {filteredQuests.map(q => (
@@ -1135,17 +1154,12 @@ const isClose = devBypassDistance || dist <= interactRadiusM;
 />
       )}
 
-      <Marker
+      <CreatureMapMarker
         coordinate={{
           latitude: spawn.latitude,
           longitude: spawn.longitude,
         }}
-        // When the creature is rendered in MapARScene we keep the native
-        // marker as a frozen invisible hitbox: tracksViewChanges=false stops
-        // RN-Maps from re-snapshotting the (transparent) child every frame,
-        // which is what triggers the Android fallback to the default red pin.
-        tracksViewChanges={!(use3DAvatar && creatureHasARModel(creature))}
-        opacity={use3DAvatar && creatureHasARModel(creature) ? 0 : 1}
+        image={creature.image}
         onPress={() => {
           setSelectedCreature(creature);
           setSelectedSpawn(spawn);
@@ -1157,22 +1171,7 @@ const isClose = devBypassDistance || dist <= interactRadiusM;
             })
           );
         }}
-      >
-        <View style={{ alignItems: 'center' }}>
-          {creature.id === 'animal1' ? (
-            <Image
-              source={require('../../assets/images/creatures/fox.png')}
-              style={{ width: 40, height: 40 }}
-              resizeMode="contain"
-            />
-          ) : (
-            <Image
-              source={creature.image}
-              style={{ width: 40, height: 40 }}
-            />
-          )}
-        </View>
-      </Marker>
+      />
     </React.Fragment>
   );
 })}
@@ -1377,70 +1376,8 @@ alert(t.alertTrashCollected);
 })}
             
           </WorldMap>
-          {use3DAvatar && location && (
-            <MapARScene
-              mapRef={mapRef}
-              mapMode={mapMode}
-              regionTickRef={mapRegionTickRef}
-              objects={[
-                {
-                  id: 'player',
-                  coordinate: location,
-                  modelSource: PLAYER_MODEL,
-                  heading,
-                  headingOffsetDeg: 150,
-                  scale: 30,
-                  pulseRing: true,
-                  nearestSpawnProximity: (() => {
-                    if (activeSpawns.length === 0 || !location) return 0;
-                    let bestDist = Infinity;
-                    let nearest: SpawnedCreature | null = null;
-                    for (const spawn of activeSpawns) {
-                      const d = getDistance(
-                        location.latitude,
-                        location.longitude,
-                        spawn.latitude,
-                        spawn.longitude
-                      );
-                      if (d < bestDist) {
-                        bestDist = d;
-                        nearest = spawn;
-                      }
-                    }
-                    if (!nearest || bestDist === Infinity) return 0;
-                    const c = CREATURES.find((x) => x.id === nearest!.creatureId);
-                    const threshold = c
-                      ? getCreatureInteractionRadiusMeters(c)
-                      : RESOURCE_INTERACTION_DISTANCE;
-                    return threshold / bestDist;
-                  })(),
-                } satisfies ARObject,
-                ...activeSpawns.flatMap((spawn): ARObject[] => {
-                  const creature = CREATURES.find((c) => c.id === spawn.creatureId);
-                  if (!creature) return [];
-                  const interactions =
-                    careDiary.find((e) => e.creatureId === spawn.creatureId)
-                      ?.interactions ?? 0;
-                  const ar = resolveCreatureARAppearance(creature, interactions);
-                  if (!ar) return [];
-                  return [
-                    {
-                      id: spawn.spawnId,
-                      coordinate: {
-                        latitude: spawn.latitude,
-                        longitude: spawn.longitude,
-                      },
-                      modelSource: ar.modelSource,
-                      scale: ar.scale,
-                      headingOffsetDeg: ar.headingOffsetDeg,
-                      heading: 0,
-                    },
-                  ];
-                }),
-              ]}
-            />
-          )}
           </View>
+          <PlayerModelPreviewPanel />
           <CategoryTabs
   category={category}
   onChange={setCategory}

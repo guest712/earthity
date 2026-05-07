@@ -1,17 +1,60 @@
-import { Canvas, useFrame } from '@react-three/fiber/native';
-import { useIsFocused } from '@react-navigation/native';
-import { Suspense, useEffect, useRef, useState } from 'react';
+import { Canvas, useFrame, useThree } from '@react-three/fiber/native';
+import { Suspense, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import {
   AppState,
+  Dimensions,
+  Platform,
   StyleSheet,
   View,
   type AppStateStatus,
   type ViewStyle,
 } from 'react-native';
 import type MapView from 'react-native-maps';
-import { Box3, DoubleSide, Vector3, type Group, type Mesh, type MeshBasicMaterial } from 'three';
+import {
+  Box3,
+  DoubleSide,
+  OrthographicCamera,
+  Vector3,
+  type Group,
+  type Mesh,
+  type MeshBasicMaterial,
+} from 'three';
 
-import Model, { type ModelSource } from '../three/Model';
+/**
+ * R3F default ortho bounds are roughly [-1,1]; our scene uses ~1 GL unit ≈ 1 px (scale groups up to tens).
+ * Without matching the overlay pixel size to the projection, the wolf is clipped and looks "missing".
+ */
+function AlignOrthoToOverlayPx({ width, height }: { width: number; height: number }) {
+  const cam = useThree((s) => s.camera as OrthographicCamera);
+
+  useLayoutEffect(() => {
+    const w = Math.max(1, width);
+    const h = Math.max(1, height);
+    cam.left = -w / 2;
+    cam.right = w / 2;
+    cam.top = h / 2;
+    cam.bottom = -h / 2;
+    cam.near = 0.1;
+    cam.far = 2000;
+    cam.position.set(0, 0, 100);
+    cam.updateProjectionMatrix();
+  }, [cam, width, height]);
+
+  return null;
+}
+
+import { getDistance } from '../../lib/shared/game-utils';
+import Model, {
+  type ModelSource,
+  type SkinLocomotionHints,
+} from '../three/Model';
+
+/** Hysteresis band for locomotion idle/walk flip (must be ENTER > EXIT). */
+const LOC_WALK_BLEND_ENTER = 0.42;
+const LOC_WALK_BLEND_EXIT = 0.26;
+
+/** Player AR debug (inner transform + `Model.debugPlayerGltf`). Must stay `false` for normal map. */
+const DEBUG_PLAYER_AR_MODEL = false;
 
 /**
  * MapARScene — generic AR overlay over a `react-native-maps` MapView.
@@ -69,6 +112,24 @@ export type ARObject = {
    * Controls ring color and pulse speed.
    */
   nearestSpawnProximity?: number;
+  /**
+   * Cross-fade idle ↔ walk from the GLB when the geo coordinate changes
+   * with sufficient speed (GPS-derived; avoids walk during map pan alone).
+   */
+  locomotion?: boolean;
+  /** Match GLTF clip names ahead of defaults (substring match supported). */
+  locomotionClipHints?: SkinLocomotionHints;
+  /**
+   * Play idle/walk without cross-fade (stopAll + weight 1). For dev diagnosis;
+   * see Model `skinLocomotionHardSwitch`.
+   */
+  locomotionHardSwitch?: boolean;
+  /**
+   * After repeated failures of native `pointForCoordinate`, anchor this object at
+   * overlay center `(0,0)` in scene space so it stays visible (approximate geo).
+   * Use for the player; keep false for map props that must match exact coords.
+   */
+  fallbackProjectionCenter?: boolean;
 };
 
 type Props = {
@@ -178,6 +239,7 @@ function resolvePose(pose: ARObjectPose | undefined, mapMode: '2D' | '3D_Tilt' |
  *   scaleGroup   — uniform scale; bbox is measured here (post-scale)
  *
  * useFrame loop:
+ *   0) Locomotion blend (updates skinAnimationRef before child <Model>/mixer).
  *   1) Measure bbox once when the GLTF has populated geometry.
  *   2) Async-poll `pointForCoordinate` (fire-and-forget).
  *   3) Apply transforms based on the latest known screen position + heading.
@@ -205,11 +267,22 @@ function ARNode({
   const inflightRef = useRef(false);
   const measuredRef = useRef(false);
 
+  const walkBlendRef = useRef(0);
+  const locomotionPrevGeoRef = useRef<{
+    lat: number;
+    lng: number;
+    t: number;
+  } | null>(null);
+  const locomotionAnimRef = useRef<'idle' | 'walk'>('idle');
+  /** Wall-clock stamp of last frame where geo jump implied walking speed. Keeps blend high between React updates (~GPS interval / dev sim ticks). */
+  const lastWalkSignalAtRef = useRef<number | null>(null);
+
   // Tick + coordinate captured at the time of the last successful poll.
   // Used to decide whether a new `pointForCoordinate` request is needed.
   const lastTickRef = useRef(-1);
   const lastCoordRef = useRef<{ lat: number; lng: number } | null>(null);
   const lastSizeRef = useRef({ w: 0, h: 0 });
+  const projErrLoggedRef = useRef(false);
 
   const [bottomOffset, setBottomOffset] = useState(0);
 
@@ -220,15 +293,88 @@ function ARNode({
   const coordinate = object.coordinate;
   const modelSource = object.modelSource;
 
+  const playerArDebugLoggedRef = useRef(false);
+  useEffect(() => {
+    if (object.id !== 'player' || playerArDebugLoggedRef.current) return;
+    playerArDebugLoggedRef.current = true;
+    console.log('[AR DEBUG] player node rendered');
+  }, [object.id]);
+
   // If the same ARNode (same key/id) ever receives a different GLB, force a
   // fresh bbox measurement — otherwise the upright pose would keep using the
   // previous model's bottom offset and the new mesh would sink/float.
   useEffect(() => {
     measuredRef.current = false;
     setBottomOffset(0);
+    locomotionPrevGeoRef.current = null;
+    walkBlendRef.current = 0;
+    locomotionAnimRef.current = 'idle';
+    lastWalkSignalAtRef.current = null;
+    posRef.current = null;
+    lastCoordRef.current = null;
+    lastTickRef.current = -1;
   }, [modelSource]);
 
-  useFrame(() => {
+  useFrame((_, delta) => {
+    /** Player fallback: overlay center immediately once layout exists. Native projection overwrites when it works — avoids deadlock when map ref / API is flaky. */
+    if (
+      object.fallbackProjectionCenter &&
+      posRef.current == null &&
+      size.w > 0 &&
+      size.h > 0
+    ) {
+      posRef.current = { x: 0, y: 0 };
+    }
+
+    if (object.locomotion) {
+      const now =
+        typeof globalThis.performance !== 'undefined'
+          ? globalThis.performance.now()
+          : Date.now();
+      const cur = {
+        lat: coordinate.latitude,
+        lng: coordinate.longitude,
+      };
+      const prev = locomotionPrevGeoRef.current;
+
+      if (!prev) {
+        locomotionPrevGeoRef.current = { lat: cur.lat, lng: cur.lng, t: now };
+      } else if (prev.lat !== cur.lat || prev.lng !== cur.lng) {
+        const d = getDistance(prev.lat, prev.lng, cur.lat, cur.lng);
+        const dtMs = Math.max(Math.min(now - prev.t, 30_000), 80);
+        const speed = d / (dtMs / 1000);
+        if (speed > 0.28 && d > 0.55) {
+          lastWalkSignalAtRef.current = now;
+        }
+        locomotionPrevGeoRef.current = { lat: cur.lat, lng: cur.lng, t: now };
+      }
+
+      const HOLD_WALK_SIGNAL_MS = 750;
+      const moveTarget =
+        lastWalkSignalAtRef.current !== null &&
+        now - lastWalkSignalAtRef.current < HOLD_WALK_SIGNAL_MS
+          ? 1
+          : 0;
+
+      const rate = Math.min(delta * 8, 0.55);
+      walkBlendRef.current +=
+        (moveTarget - walkBlendRef.current) * rate;
+
+      const mode = locomotionAnimRef.current;
+      if (mode === 'idle') {
+        if (walkBlendRef.current >= LOC_WALK_BLEND_ENTER) {
+          locomotionAnimRef.current = 'walk';
+        }
+      } else if (walkBlendRef.current <= LOC_WALK_BLEND_EXIT) {
+        locomotionAnimRef.current = 'idle';
+      }
+    } else {
+      walkBlendRef.current = 0;
+      locomotionAnimRef.current = 'idle';
+      locomotionPrevGeoRef.current = null;
+      lastWalkSignalAtRef.current = null;
+    }
+
     if (!measuredRef.current && scaleRef.current) {
       const bbox = new Box3().setFromObject(scaleRef.current);
       const sz = new Vector3();
@@ -268,6 +414,7 @@ function ARNode({
       (mapRef.current as any)
         .pointForCoordinate(requestedCoord)
         .then((p: { x: number; y: number }) => {
+          projErrLoggedRef.current = false;
           posRef.current = {
             x: p.x - requestedSize.w / 2,
             y: -(p.y - requestedSize.h / 2),
@@ -279,7 +426,12 @@ function ARNode({
           };
           lastSizeRef.current = requestedSize;
         })
-        .catch(() => {})
+        .catch((err: unknown) => {
+          if (__DEV__ && !projErrLoggedRef.current) {
+            projErrLoggedRef.current = true;
+            console.warn('[MapARScene] pointForCoordinate failed:', err);
+          }
+        })
         .finally(() => {
           inflightRef.current = false;
         });
@@ -322,7 +474,25 @@ function ARNode({
       )}
       <group ref={poseRef}>
         <group ref={scaleRef} scale={scale}>
-          <Model source={object.modelSource} />
+          <Model
+            source={object.modelSource}
+            {...(object.locomotion
+              ? {
+                  skinAnimationRef: locomotionAnimRef,
+                  skinClipHints: object.locomotionClipHints,
+                  skinLocomotionHardSwitch: object.locomotionHardSwitch,
+                }
+              : {
+                  skinAnimation: 'idle' as const,
+                  skinClipHints: object.locomotionClipHints,
+                })}
+          />
+          {object.id === 'player' && (
+            <mesh position={[0, 0, 10]} scale={[20, 20, 20]}>
+              <boxGeometry args={[1, 1, 1]} />
+              <meshBasicMaterial color="red" />
+            </mesh>
+          )}
         </group>
       </group>
     </group>
@@ -330,9 +500,11 @@ function ARNode({
 }
 
 export default function MapARScene({ mapRef, objects, mapMode, regionTickRef, style }: Props) {
-  const isFocused = useIsFocused();
   const [appActive, setAppActive] = useState(AppState.currentState === 'active');
-  const [size, setSize] = useState({ w: 0, h: 0 });
+  const [size, setSize] = useState(() => {
+    const { width } = Dimensions.get('window');
+    return { w: Math.max(160, width - 40), h: 220 };
+  });
 
   useEffect(() => {
     const sub = AppState.addEventListener(
@@ -342,22 +514,37 @@ export default function MapARScene({ mapRef, objects, mapMode, regionTickRef, st
     return () => sub.remove();
   }, []);
 
-  const shouldRender = isFocused && appActive && objects.length > 0;
+  const runCanvasLoop = appActive && objects.length > 0;
 
   return (
     <View
       pointerEvents="none"
-      style={[StyleSheet.absoluteFill, style]}
+      collapsable={false}
+      renderToHardwareTextureAndroid={Platform.OS === 'android'}
+      style={[
+        StyleSheet.absoluteFill,
+        {
+          zIndex: 16,
+          elevation: Platform.OS === 'android' ? 28 : 16,
+        },
+        style,
+      ]}
       onLayout={(e) =>
-        setSize({
-          w: e.nativeEvent.layout.width,
-          h: e.nativeEvent.layout.height,
-        })
+        setSize((prev) => ({
+          w: Math.max(
+            1,
+            e.nativeEvent.layout.width > 0 ? e.nativeEvent.layout.width : prev.w
+          ),
+          h: Math.max(
+            1,
+            e.nativeEvent.layout.height > 0 ? e.nativeEvent.layout.height : prev.h
+          ),
+        }))
       }
     >
       <Canvas
         style={{ flex: 1, backgroundColor: 'transparent' }}
-        frameloop={shouldRender ? 'always' : 'never'}
+        frameloop={runCanvasLoop ? 'always' : 'never'}
         gl={{
           alpha: true,
           antialias: false,
@@ -373,6 +560,7 @@ export default function MapARScene({ mapRef, objects, mapMode, regionTickRef, st
           gl.debug.checkShaderErrors = false;
         }}
       >
+        <AlignOrthoToOverlayPx width={size.w} height={size.h} />
         <ambientLight intensity={1.2} />
         <hemisphereLight args={['#ffffff', '#445566', 0.8]} />
         <directionalLight position={[0, 0, 100]} intensity={2.0} />
