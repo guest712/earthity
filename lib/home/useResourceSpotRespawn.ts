@@ -1,5 +1,6 @@
-import { RESOURCE_SPOT_RESPAWN_MS } from '../features/resources/resource.constants';
 import { useCallback, useEffect, useRef, useState } from 'react';
+
+import { RESOURCE_SPOT_RESPAWN_MS } from '../../features/resources/resource.constants';
 
 function normalizeRespawnMap(map: Record<string, number>): Record<string, number> {
   const now = Date.now();

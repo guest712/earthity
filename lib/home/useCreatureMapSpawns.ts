@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useState } from 'react';
 
-import { CREATURES } from '../features/creatures/creature.constants';
+import { CREATURES } from '../../features/creatures/creature.constants';
 import {
   generateCreatureSpawnsSpread,
   pruneCreatureSpawns,
   shouldRefreshCreatureSpawns,
-} from '../lib/shared/game-engine';
-import type { CreatureMapSpawnsSave, SpawnedCreature } from '../lib/shared/types';
+} from '../shared/game-engine';
+import type { CreatureMapSpawnsSave, SpawnedCreature } from '../shared/types';
 
 const TARGET_SPAWN_COUNT = 5;
 
