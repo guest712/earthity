@@ -1,52 +1,25 @@
+import '../../lib/home/preloadHomeModels';
+
 import { getSave, patchSave, resetSaveToDefaults } from '../../lib/storage/save.repository';
 import { requestNotificationPermissions, scheduleCreatureNotification } from '../../lib/notifications';
 import { Audio } from 'expo-av';
 import { QUESTS } from '../../features/quests/quest.constants';
 import { MINDFUL_PHRASES } from '../../features/quests/mindful-phrases';
 import { CREATURES } from '../../features/creatures/creature.constants';
-import {
-  WATER_SPOTS,
-  FEED_SPOTS,
-  TRASH_SPOTS,
-  BIO_SPOTS,
-  MAX_WATER,
-  MAX_FEED,
-  MAX_TRASH_PER_TYPE,
-  MAX_BIO,
-  FEED_PICKUP_AMOUNT,
-  TRASH_PICKUP_AMOUNT,
-  BIO_PICKUP_AMOUNT,
-  RESOURCE_INTERACTION_DISTANCE,
-  ACTION_COOLDOWN_MS,
-  RESOURCE_SPOT_RESPAWN_MS,
-} from '../../features/resources/resource.constants';
+import { BIO_PICKUP_AMOUNT, ACTION_COOLDOWN_MS, RESOURCE_SPOT_RESPAWN_MS } from '../../features/resources/resource.constants';
 import { LANGS, FLAG } from '../../lib/i18n/i18n';
 import { guessDeviceLanguage } from '../../lib/i18n/guess-locale';
 import { getDistance, getLevelKey, getLevelName } from '../../lib/shared/game-utils';
 import { useFocusEffect } from '@react-navigation/native';
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import WorldMap from '../../components/map/WorldMap';
 import PlayerModelPreviewPanel from '../../components/map/PlayerModelPreviewPanel';
-import RNMapView, { Marker, Circle } from 'react-native-maps';
-import Model from '../../components/three/Model';
-
-const PLAYER_MODEL = require('../../assets/models/test_wolf.glb');
-
-// Preload all known model sources up-front so GLB views don't hitch on first paint.
-// Duplicates are harmless — `useGLTF.preload` is idempotent.
-for (const src of [
-  PLAYER_MODEL,
-  ...CREATURES.flatMap((c) => [
-    ...(c.stages?.map((s) => s.model) ?? []),
-    c.model,
-  ]).filter((m): m is number | string => m != null),
-]) {
-  Model.preload(src);
-}
+import RNMapView from 'react-native-maps';
+import HomeMapLayer from '../../components/home/HomeMapLayer';
+import { homeScreenStyles as styles } from '../../components/home/homeScreen.styles';
 import {
   applyQuestCompletion,
   canInteractWithCreature,
-  getCreatureInteractionRadiusMeters,
   generateCreatureSpawnsSpread,
   getCreatureRewardResult,
   pruneCreatureSpawns,
@@ -57,7 +30,7 @@ import {
   DROP_INFO,
 } from '../../lib/shared/game-engine';
 import type { DropId } from '../../lib/shared/types';
-import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View, type ImageSourcePropType } from 'react-native';
+import { Image, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withRepeat, withSequence, withSpring, withTiming } from 'react-native-reanimated';
 import Onboarding from './onboarding';
@@ -66,6 +39,7 @@ import HomeHeader from '../../components/home/HomeHeader';
 import CategoryTabs from '../../components/home/CategoryTabs';
 import QuestDetailCard from '../../components/home/QuestDetailCard';
 import CreaturePopup from '../../components/home/CreaturePopup';
+
 import { Creature, Quest } from '../../lib/shared/types';
 import { useLocationState } from '../../features/location/useLocationState';
 import { useCreatureSystem } from '../../features/creatures/creature.hook';
@@ -80,41 +54,6 @@ import { AVATARS, DEFAULT_AVATAR_ID } from '../../features/profile/avatar.consta
  * Toggle to true only when you want to boot directly into the 3D test route.
  */
 const USE_3D_TEST_SCREEN = false;
-
-const CREATURE_MARKER_SIZE = 40;
-
-/** Bitmap `image` on Marker uses full asset pixels — too large. Fixed-size child view + short tracksViewChanges. */
-function CreatureMapMarker(props: {
-  coordinate: { latitude: number; longitude: number };
-  image: ImageSourcePropType;
-  onPress: () => void;
-}) {
-  const { coordinate, image, onPress } = props;
-  const [tracksViewChanges, setTracksViewChanges] = useState(true);
-  useEffect(() => {
-    const t = setTimeout(() => setTracksViewChanges(false), 600);
-    return () => clearTimeout(t);
-  }, []);
-
-  return (
-    <Marker
-      coordinate={coordinate}
-      anchor={{ x: 0.5, y: 0.5 }}
-      tracksViewChanges={tracksViewChanges}
-      onPress={onPress}
-    >
-      <View style={{ alignItems: 'center', justifyContent: 'center' }}>
-        <Image
-          source={image}
-          style={{ width: CREATURE_MARKER_SIZE, height: CREATURE_MARKER_SIZE }}
-          resizeMode="contain"
-        />
-      </View>
-    </Marker>
-  );
-}
-
-
 
 export default function HomeScreen() {
   if (USE_3D_TEST_SCREEN) {
@@ -1100,281 +1039,43 @@ startFeeding(() => {
   userAvatarSource={currentAvatar.image}
   userAvatarId={avatar}
 >
-          
-            {filteredQuests.map(q => (
-              <Marker
-                key={q.id}
-                coordinate={{
-                  latitude: (location?.latitude ?? 52.52) + (q.id * 0.003),
-                  longitude: (location?.longitude ?? 13.405) + (q.id * 0.002),
-                }}
-                title={q.title[lang]}
-                description={`+${q.reward} ${t.reward}`}
-                onPress={() => { setSelected(q); setShowConfirmBtn(false); setTimeout(() => setShowConfirmBtn(true), 1500); }}
-              />
-            ))}
-            
- {activeSpawns.map((spawn) => {
-  const creature = CREATURES.find((c) => c.id === spawn.creatureId);
-  if (!creature) return null;
-
-  const interactRadiusM = getCreatureInteractionRadiusMeters(creature);
-
-  const dist = location
-  ? getDistance(
-      location.latitude,
-      location.longitude,
-      spawn.latitude,
-      spawn.longitude
-    )
-  : 999;
-
-const isClose = devBypassDistance || dist <= interactRadiusM;
-
-  return (
-    <React.Fragment key={spawn.spawnId}>
-      {selectedSpawn?.spawnId === spawn.spawnId && (
-       <Circle
-  center={{
-    latitude: spawn.latitude,
-    longitude: spawn.longitude,
-  }}
-  radius={interactRadiusM}
-  strokeWidth={2}
-  strokeColor={
-    isClose
-      ? "rgba(90,200,120,0.9)"
-      : "rgba(90,173,106,0.5)"
-  }
-  fillColor={
-    isClose
-      ? "rgba(90,200,120,0.25)"
-      : "rgba(90,173,106,0.1)"
-  }
-/>
-      )}
-
-      <CreatureMapMarker
-        coordinate={{
-          latitude: spawn.latitude,
-          longitude: spawn.longitude,
-        }}
-        image={creature.image}
-        onPress={() => {
-          setSelectedCreature(creature);
-          setSelectedSpawn(spawn);
-
-          setCareDiary((prev) =>
-            registerCreatureSeen({
-              diary: prev,
-              creatureId: creature.id,
-            })
-          );
-        }}
-      />
-    </React.Fragment>
-  );
-})}
-{WATER_SPOTS.map((spot, i) => {
-  if (!isResourceSpotActive(spot.id)) return null;
-  return (
-  <Marker
-    key={spot.id}
-    coordinate={{
-      latitude: (location?.latitude ?? 52.52) + (Math.cos(i * 2.1) * 0.005),
-      longitude: (location?.longitude ?? 13.405) + (Math.sin(i * 2.1) * 0.005),
-    }}
-    onPress={() => {
-  if (isActionCoolingDown('water')) return;
-  const spotLat =
-    (location?.latitude ?? 52.52) + (Math.cos(i * 2.1) * 0.005);
-  const spotLng =
-    (location?.longitude ?? 13.405) + (Math.sin(i * 2.1) * 0.005);
-
-  const dist = location
-    ? getDistance(location.latitude, location.longitude, spotLat, spotLng)
-    : 999;
-
-  if (!devBypassDistance && dist > RESOURCE_INTERACTION_DISTANCE) {
-    alert(t.alertTooFarWater);
-    return;
-  }
-
-  if (resources.water >= MAX_WATER) {
-    alert(t.alertWaterFull);
-    return;
-  }
-
-  refillWaterInv();
-  despawnResourceSpot(spot.id);
-  alert(t.alertWaterRefilled);
-}}
-  >
-    <View style={{ alignItems: 'center' }}>
-      <Text style={{ fontSize: 28 }}>💧</Text>
-    </View>
-  </Marker>
-  );
-})}
-{FEED_SPOTS.map((spot, i) => {
-  if (!isResourceSpotActive(spot.id)) return null;
-  return (
-  <Marker
-    key={spot.id}
-    coordinate={{
-      latitude: (location?.latitude ?? 52.52) + (Math.cos(i * 1.7) * 0.004),
-      longitude: (location?.longitude ?? 13.405) + (Math.sin(i * 1.7) * 0.004),
-    }}
-    onPress={() => {
-      if (isActionCoolingDown('feed')) return;
-      const spotLat = (location?.latitude ?? 52.52) + (Math.cos(i * 1.7) * 0.004);
-      const spotLng = (location?.longitude ?? 13.405) + (Math.sin(i * 1.7) * 0.004);
-
-      const dist = location
-        ? getDistance(location.latitude, location.longitude, spotLat, spotLng)
-        : 999;
-
-      if (!devBypassDistance && dist > RESOURCE_INTERACTION_DISTANCE) {
-        alert(t.alertTooFarFeed);
-        return;
-      }
-
-      if (feedCount >= MAX_FEED) {
-        alert(t.alertFeedFull);
-        return;
-      }
-
-      addFeedInv(FEED_PICKUP_AMOUNT);
-      incrementDaily('collect_feed', FEED_PICKUP_AMOUNT);
-      despawnResourceSpot(spot.id);
-      alert(t.alertFeedCollected);
-    }}
-  >
-    <View style={{ alignItems: 'center' }}>
-  <Image
-    source={require('../../assets/images/items/feed.png')}
-    style={{ width: 32, height: 32 }}
-    resizeMode="contain"
-  />
-</View>
-  </Marker> 
-  );
-})}
-{TRASH_SPOTS.map((spot, i) => {
-  if (!isResourceSpotActive(spot.id)) return null;
-  return (
-  <Marker
-    key={spot.id}
-    coordinate={{
-      latitude: (location?.latitude ?? 52.52) + (Math.cos(i * 1.3) * 0.004),
-      longitude: (location?.longitude ?? 13.405) + (Math.sin(i * 1.3) * 0.004),
-    }}
-    onPress={() => {
-      if (isActionCoolingDown('trash')) return;
-      const spotLat = (location?.latitude ?? 52.52) + (Math.cos(i * 1.3) * 0.004)
-      const spotLng = (location?.longitude ?? 13.405) + (Math.sin(i * 1.3) * 0.004)
-
-      const dist = location
-        ? getDistance(location.latitude, location.longitude, spotLat, spotLng)
-        : 999;
-
-      if (!devBypassDistance && dist > RESOURCE_INTERACTION_DISTANCE) {
-        alert(t.alertTooFarTrash);
-        return;
-      }
-
-      // логика ниже 👇
-    if (spot.type === 'plastic') {
-  if (plastic >= MAX_TRASH_PER_TYPE) {
-    alert(t.alertTrashFull);
-    return;
-  }
-  addTrashInv('plastic', TRASH_PICKUP_AMOUNT);
-}
-
-if (spot.type === 'glass') {
-  if (glass >= MAX_TRASH_PER_TYPE) {
-    alert(t.alertTrashFull);
-    return;
-  }
-  addTrashInv('glass', TRASH_PICKUP_AMOUNT);
-}
-
-if (spot.type === 'paper') {
-  if (paper >= MAX_TRASH_PER_TYPE) {
-    alert(t.alertTrashFull);
-    return;
-  }
-  addTrashInv('paper', TRASH_PICKUP_AMOUNT);
-}
-
-incrementDaily('collect_trash', TRASH_PICKUP_AMOUNT);
-despawnResourceSpot(spot.id);
-alert(t.alertTrashCollected);
-    }}
-  >
-    <View style={{ alignItems: 'center', justifyContent: 'center' }}>
-  <Image
-    source={
-      spot.type === 'plastic'
-        ? require('../../assets/images/items/plastictrash.png')
-        : spot.type === 'glass'
-        ? require('../../assets/images/items/glasstrash.png')
-        :spot.type === 'paper'
-        ? require('../../assets/images/items/papertrash.png')
-    : ''}
-    style={{ width: 30, height: 30 }}
-    resizeMode="contain"
-  />
-</View>
-  </Marker>
-  );
-})}
-{BIO_SPOTS.map((spot, i) => {
-  if (!isResourceSpotActive(spot.id)) return null;
-  return (
-  <Marker
-    key={spot.id}
-    coordinate={{
-      latitude: (location?.latitude ?? 52.52) + (Math.cos(i * 2.6) * 0.006),
-      longitude: (location?.longitude ?? 13.405) + (Math.sin(i * 2.6) * 0.006),
-    }}
-    onPress={() => {
-      if (isActionCoolingDown('bio')) return;
-      const spotLat = (location?.latitude ?? 52.52) + (Math.cos(i * 2.6) * 0.006);
-      const spotLng = (location?.longitude ?? 13.405) + (Math.sin(i * 2.6) * 0.006);
-
-      const dist = location
-        ? getDistance(location.latitude, location.longitude, spotLat, spotLng)
-        : 999;
-
-      if (!devBypassDistance && dist > RESOURCE_INTERACTION_DISTANCE) {
-        alert(t.alertTooFarBio);
-        return;
-      }
-
-      if (bio >= MAX_BIO) {
-        alert(t.alertBioFull);
-        return;
-      }
-
-      addTrashInv('bio', BIO_PICKUP_AMOUNT);
-      incrementDaily('collect_trash', BIO_PICKUP_AMOUNT);
-      despawnResourceSpot(spot.id);
-      alert(t.alertBioCollected);
-    }}
-  >
-    <View style={{ alignItems: 'center', justifyContent: 'center' }}>
-      <Image
-        source={require('../../assets/images/items/bio.png')}
-        style={{ width: 30, height: 30 }}
-        resizeMode="contain"
-      />
-    </View>
-  </Marker>
-  );
-})}
-            
+            <HomeMapLayer
+              t={t}
+              lang={lang}
+              location={location}
+              filteredQuests={filteredQuests}
+              activeSpawns={activeSpawns}
+              selectedSpawn={selectedSpawn}
+              devBypassDistance={devBypassDistance}
+              resourcesWater={resources.water}
+              feedCount={feedCount}
+              plastic={plastic}
+              glass={glass}
+              paper={paper}
+              bio={bio}
+              isResourceSpotActive={isResourceSpotActive}
+              despawnResourceSpot={despawnResourceSpot}
+              isActionCoolingDown={isActionCoolingDown}
+              incrementDaily={incrementDaily}
+              refillWaterInv={refillWaterInv}
+              addFeedInv={addFeedInv}
+              addTrashInv={addTrashInv}
+              onQuestMarkerPress={(q) => {
+                setSelected(q);
+                setShowConfirmBtn(false);
+                setTimeout(() => setShowConfirmBtn(true), 1500);
+              }}
+              onCreatureSpawnPress={(creature, spawn) => {
+                setSelectedCreature(creature);
+                setSelectedSpawn(spawn);
+                setCareDiary((prev) =>
+                  registerCreatureSeen({
+                    diary: prev,
+                    creatureId: creature.id,
+                  })
+                );
+              }}
+            />
           </WorldMap>
           </View>
           <PlayerModelPreviewPanel />
@@ -1447,194 +1148,3 @@ alert(t.alertTrashCollected);
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0c120c' },
-  langScreen: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32 },
-  langSymbol: { fontSize: 56, marginBottom: 16 },
-  langTitle: { fontSize: 36, fontWeight: '300', color: '#e8f5ea', letterSpacing: 2, marginBottom: 8 },
-  langSub: { fontSize: 13, color: 'rgba(255,255,255,0.4)', marginBottom: 40, letterSpacing: 1 },
-  langGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, justifyContent: 'center' },
-  langBtn: { width: 80, height: 80, borderRadius: 16, backgroundColor: '#0f1a0f', borderWidth: 1, borderColor: '#1e3020', alignItems: 'center', justifyContent: 'center', gap: 6 },
-  langFlag: { fontSize: 28 },
-  langName: { fontSize: 11, color: 'rgba(255,255,255,0.5)', letterSpacing: 1 },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, borderBottomWidth: 1, borderBottomColor: '#1a2a1a' },
-  brand: { fontSize: 28, fontWeight: '300', color: '#e8f5ea', letterSpacing: 1 },
-  brandGreen: { color: '#5aad6a' },
-  level: { fontSize: 11, color: 'rgba(255,255,255,0.4)', marginTop: 2, letterSpacing: 2 },
-  stats: { flexDirection: 'row', gap: 14, alignItems: 'center' },
-  stat: { alignItems: 'center' },
-  statNum: { fontSize: 20, fontWeight: '600', color: '#e8c97a' },
-  statNumGreen: { fontSize: 20, fontWeight: '600', color: '#5aad6a' },
-  statLabel: { fontSize: 9, color: 'rgba(255,255,255,0.35)', letterSpacing: 1 },
-  list: { flex: 1, padding: 20 },
-  sectionTitle: { fontSize: 16, color: '#e8e4d8', fontWeight: '500', marginBottom: 16 },
-  card: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#0f1a0f', borderRadius: 12, padding: 16, marginBottom: 10, borderWidth: 1, borderColor: '#1e3020' },
-  cardEmoji: { fontSize: 28, marginRight: 14 },
-  cardBody: { flex: 1 },
-  cardTitle: { fontSize: 15, color: '#e8e4d8', fontWeight: '500' },
-  cardDesc: { fontSize: 12, color: 'rgba(255,255,255,0.4)', marginTop: 3 },
-  cardReward: { fontSize: 13, color: '#e8c97a', fontWeight: '600' },
-  detail: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 28 },
-  detailEmoji: { fontSize: 56, marginBottom: 16 },
-  detailTitle: { fontSize: 22, color: '#e8e4d8', fontWeight: '500', textAlign: 'center', marginBottom: 6 },
-  detailDesc: { fontSize: 13, color: 'rgba(255,255,255,0.45)', marginBottom: 14 },
-  detailReward: { fontSize: 17, color: '#e8c97a', fontWeight: '600', marginBottom: 20 },
-  steps: { width: '100%', marginBottom: 24 },
-  stepsLabel: { fontSize: 10, letterSpacing: 2, color: 'rgba(255,255,255,0.3)', marginBottom: 10 },
-  stepRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 8 },
-  stepNum: { width: 22, height: 22, borderRadius: 11, backgroundColor: 'rgba(90,173,106,0.15)', alignItems: 'center', justifyContent: 'center' },
-  stepNumText: { fontSize: 11, color: '#5aad6a', fontWeight: '600' },
-  stepText: { fontSize: 13, color: 'rgba(255,255,255,0.6)' },
-  btnComplete: { backgroundColor: '#2d6a3f', borderRadius: 14, paddingVertical: 14, paddingHorizontal: 40, marginBottom: 10 },
-  btnCompleteText: { color: 'white', fontSize: 15, fontWeight: '600' },
-  confirmRow: { width: '100%', alignItems: 'center', marginBottom: 10 },
-  confirmText: { fontSize: 13, color: 'rgba(255,255,255,0.5)', marginBottom: 12 },
-  confirmBtns: { flexDirection: 'row', gap: 10 },
-  btnNo: { paddingVertical: 12, paddingHorizontal: 24, borderRadius: 12, borderWidth: 1, borderColor: '#1e3020' },
-  btnNoText: { color: 'rgba(255,255,255,0.5)', fontSize: 14 },
-  btnYes: { paddingVertical: 12, paddingHorizontal: 32, borderRadius: 12, backgroundColor: '#2d6a3f' },
-  btnYesText: { color: 'white', fontSize: 14, fontWeight: '600' },
-  btnBack: { padding: 12 },
-  btnBackText: { color: 'rgba(255,255,255,0.4)', fontSize: 14 },
-  empty: { color: 'rgba(255,255,255,0.4)', textAlign: 'center', marginTop: 40, fontSize: 14, lineHeight: 22 },
-  xpBarBg: { height: 18, backgroundColor: '#0f1a0f', marginHorizontal: 12, borderRadius: 9, overflow: 'hidden', justifyContent: 'center' },
-  xpBarFill: { position: 'absolute', left: 0, top: 0, bottom: 0, backgroundColor: '#3d8b52', borderRadius: 9 },
-  xpLabel: { fontSize: 10, color: 'rgba(255,255,255,0.5)', textAlign: 'center', letterSpacing: 1 },
-  catRow: { flexDirection: 'row', gap: 8, paddingHorizontal: 12, paddingVertical: 8 },
-  catBtn: { flex: 1, paddingVertical: 8, borderRadius: 10, borderWidth: 1, borderColor: '#1e3020', alignItems: 'center' },
-  catBtnActive: { backgroundColor: '#1e3020', borderColor: '#3d8b52' },
-  catText: { fontSize: 12, color: 'rgba(255,255,255,0.4)' },
-  catTextActive: { color: '#5aad6a', fontWeight: '500' },
-  mapControls: { flexDirection: 'row', gap: 8, paddingHorizontal: 12, paddingTop: 8 },
-  mapWrapper: { height: 220, margin: 12, borderRadius: 16, overflow: 'hidden', position: 'relative' },
-  mapInner: { flex: 1 },
-  mapBtn: { paddingVertical: 6, paddingHorizontal: 14, borderRadius: 10, borderWidth: 1, borderColor: '#1e3020', backgroundColor: '#0f1a0f' },
-  mapBtnActive: { borderColor: '#3d8b52', backgroundColor: '#1e3020' },
-  mapBtnActive3D: { borderColor: '#e8c97a', backgroundColor: '#2a2010' },
-  mapBtnText: { fontSize: 16 },
-  creaturePopup: { position: 'absolute', bottom: 100, left: 20, right: 20, backgroundColor: '#0f1a0f', borderRadius: 16, padding: 20, alignItems: 'center', borderWidth: 1, borderColor: '#2d6a3f', zIndex: 100 },
-  creatureEmoji: { fontSize: 52, marginBottom: 8 },
-  creatureName: { fontSize: 18, color: '#e8e4d8', fontWeight: '500', marginBottom: 4 },
-  creatureReward: { fontSize: 14, color: '#e8c97a', marginBottom: 16 },
-  creatureBtn: { backgroundColor: '#2d6a3f', borderRadius: 12, paddingVertical: 12, paddingHorizontal: 32, marginBottom: 8 },
-  creatureBtnText: { color: 'white', fontSize: 15, fontWeight: '600' },
-  feedingBarBg: { width: '100%', height: 8, backgroundColor: '#1e3020', borderRadius: 4, overflow: 'hidden', marginBottom: 12 },
-  feedingBarFill: { height: '100%', backgroundColor: '#5aad6a', borderRadius: 4 },
-  streak: { fontSize: 11, color: '#e8c97a', marginTop: 2, letterSpacing: 1 },
-  mindfulBox: { backgroundColor: 'rgba(45,106,63,0.08)', borderLeftWidth: 2, borderLeftColor: '#3d8b52', borderRadius: 4, padding: 14, marginBottom: 20, width: '100%' },
-  mindfulText: { fontSize: 13, color: 'rgba(255,255,255,0.5)', lineHeight: 20, fontStyle: 'italic' },
-  newQuestsText: { color: '#e8e4d8', fontSize: 16 },
-  resourcesStrip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingBottom: 8,
-    gap: 6,
-  },
-  resourcePill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 999,
-    backgroundColor: '#0f1a0f',
-    borderWidth: 1,
-    borderColor: '#1e3020',
-    gap: 4,
-  },
-  resourceEmoji: {
-    fontSize: 14,
-  },
-  resourceText: {
-    fontSize: 12,
-    color: 'rgba(255,255,255,0.8)',
-  },
-  devGeoHint: {
-    marginHorizontal: 16,
-    marginBottom: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 10,
-    backgroundColor: 'rgba(246,188,64,0.2)',
-    borderWidth: 1,
-    borderColor: 'rgba(246,188,64,0.35)',
-  },
-  devGeoHintText: {
-    color: '#f6bc40',
-    fontSize: 11,
-    letterSpacing: 0.3,
-  },
-  devDock: {
-    position: 'absolute',
-    right: 14,
-    bottom: 18,
-    zIndex: 120,
-  },
-  devBtn: {
-    backgroundColor: '#3b235a',
-    borderColor: '#8a4df3',
-    borderWidth: 1,
-    borderRadius: 12,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-  },
-  devBtnText: {
-    color: '#ffffff',
-    fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 0.8,
-  },
-  devPanel: {
-    position: 'absolute',
-    right: 14,
-    bottom: 64,
-    zIndex: 120,
-    backgroundColor: '#101510',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#1e3020',
-    padding: 8,
-    gap: 6,
-    minWidth: 130,
-  },
-  devPanelBtn: {
-    backgroundColor: '#1e3020',
-    borderRadius: 8,
-    paddingVertical: 8,
-    paddingHorizontal: 10,
-  },
-  devPanelBtnActive: {
-    borderWidth: 1,
-    borderColor: '#e8c97a',
-    backgroundColor: '#2a2415',
-  },
-  devPanelBtnDanger: {
-    backgroundColor: '#5c1f1f',
-    borderRadius: 8,
-    paddingVertical: 8,
-    paddingHorizontal: 10,
-  },
-  cardLocked: {
-    flexDirection: 'row', alignItems: 'center',
-    backgroundColor: 'rgba(15,26,15,0.5)',
-    borderRadius: 12, padding: 16, marginBottom: 10,
-    borderWidth: 1, borderColor: 'rgba(30,48,32,0.5)',
-    opacity: 0.55,
-  },
-  cardTitleLocked: { fontSize: 15, color: 'rgba(232,228,216,0.5)', fontWeight: '500' },
-  cardRewardLocked: { fontSize: 13, color: 'rgba(232,201,122,0.4)', fontWeight: '600' },
-  dropToast: {
-    position: 'absolute', bottom: 90, alignSelf: 'center',
-    backgroundColor: '#1a2a1a', borderRadius: 20,
-    paddingHorizontal: 18, paddingVertical: 10,
-    borderWidth: 1, borderColor: '#3d8b52',
-    zIndex: 200,
-  },
-  dropToastText: { color: '#e8e4d8', fontSize: 14, fontWeight: '500' },
-  devPanelBtnText: {
-    color: '#e8e4d8',
-    fontSize: 12,
-    textAlign: 'center',
-  },
-});
