@@ -109,6 +109,13 @@ export type SpawnedCreature = {
   expiresAt: number;
 };
 
+/** Serializable home-map creature spawn state (persisted, variant B). */
+export type CreatureMapSpawnsSave = {
+  activeSpawns: SpawnedCreature[];
+  lastSpawnCenter: { latitude: number; longitude: number } | null;
+  lastSpawnRefreshAt: number;
+};
+
 export type CareDiaryEntry = {
   creatureId: string;
   firstSeenAt: number;
@@ -163,6 +170,9 @@ export type EarthitySave = {
   careDiary: CareDiaryEntry[];
   drops: Partial<Record<DropId, number>>;
   crafted: Partial<Record<CraftedItemId, number>>;
+  /** spotId -> epoch ms when the spot becomes interactable again */
+  resourceRespawnUntil: Record<string, number>;
+  creatureMapSpawns: CreatureMapSpawnsSave;
   dailyQuests: DailyQuestsSave | null;
 };
 

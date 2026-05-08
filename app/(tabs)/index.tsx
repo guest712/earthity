@@ -5,8 +5,7 @@ import { requestNotificationPermissions, scheduleCreatureNotification } from '..
 import { Audio } from 'expo-av';
 import { QUESTS } from '../../features/quests/quest.constants';
 import { MINDFUL_PHRASES } from '../../features/quests/mindful-phrases';
-import { CREATURES } from '../../features/creatures/creature.constants';
-import { BIO_PICKUP_AMOUNT, ACTION_COOLDOWN_MS, RESOURCE_SPOT_RESPAWN_MS } from '../../features/resources/resource.constants';
+import { BIO_PICKUP_AMOUNT, ACTION_COOLDOWN_MS } from '../../features/resources/resource.constants';
 import { LANGS, FLAG } from '../../lib/i18n/i18n';
 import { guessDeviceLanguage } from '../../lib/i18n/guess-locale';
 import { getDistance, getLevelKey, getLevelName } from '../../lib/shared/game-utils';
@@ -20,10 +19,7 @@ import { homeScreenStyles as styles } from '../../components/home/homeScreen.sty
 import {
   applyQuestCompletion,
   canInteractWithCreature,
-  generateCreatureSpawnsSpread,
   getCreatureRewardResult,
-  pruneCreatureSpawns,
-  shouldRefreshCreatureSpawns,
   registerCreatureSeen,
   registerCreatureCared,
   rollCreatureDrop,
@@ -48,6 +44,9 @@ import type { SpawnedCreature, CareDiaryEntry, LanguageCode } from '../../lib/sh
 import { useInventory } from '../../features/inventory/inventory.context';
 import { useDailyQuests } from '../../features/dailyQuests/dailyQuests.context';
 import { AVATARS, DEFAULT_AVATAR_ID } from '../../features/profile/avatar.constants';
+import { useHomeMapCamera } from '../../hooks/useHomeMapCamera';
+import { useCreatureMapSpawns } from '../../hooks/useCreatureMapSpawns';
+import { useResourceSpotRespawn } from '../../hooks/useResourceSpotRespawn';
 
 /**
  * Dev flag: keep false for normal app flow.
@@ -113,9 +112,6 @@ function HomeScreenInner() {
   const paper = resources.trash.paper;
   const bio = resources.trash.bio;
   const [showConfirmBtn, setShowConfirmBtn] = useState(false);
-  const [activeSpawns, setActiveSpawns] = useState<SpawnedCreature[]>([]);
-  const [lastSpawnCenter, setLastSpawnCenter] = useState<{ latitude: number; longitude: number } | null>(null);
-  const [lastSpawnRefreshAt, setLastSpawnRefreshAt] = useState(0);
   const [careDiary, setCareDiary] = useState<CareDiaryEntry[]>([]);
   const [isHydrated, setIsHydrated] = useState(false);
   const [showDevPanel, setShowDevPanel] = useState(false);
@@ -127,8 +123,6 @@ function HomeScreenInner() {
   const [dropToast, setDropToast] = useState<{ dropId: DropId; msg: string } | null>(null);
   const dropToastOpacity = useSharedValue(0);
   const dropToastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [resourceRespawnUntil, setResourceRespawnUntil] = useState<Record<string, number>>({});
-  const resourceRespawnTimersRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
   const autosaveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastActionAtRef = useRef({
     creature: 0,
@@ -138,6 +132,31 @@ function HomeScreenInner() {
     bio: 0,
   });
   const mapRef = useRef<RNMapView | null>(null);
+
+  const { recenterOnUser } = useHomeMapCamera({
+    mapRef,
+    location,
+    heading,
+    mapMode,
+    autoCompass2DEnabled,
+    autoCompass3DEnabled,
+  });
+
+  const {
+    activeSpawns,
+    setActiveSpawns,
+    lastSpawnCenter,
+    lastSpawnRefreshAt,
+    hydrateCreatureMapSpawns,
+  } = useCreatureMapSpawns(location);
+
+  const {
+    resourceRespawnUntil,
+    isResourceSpotActive,
+    despawnResourceSpot,
+    hydrateResourceRespawnUntil,
+  } = useResourceSpotRespawn();
+
   const playRewardSound = async () => {
     try {
       const { sound } = await Audio.Sound.createAsync(
@@ -221,116 +240,6 @@ function triggerDropToast(dropId: DropId, lang: string) {
   }, 2500);
 }
 
-const isResourceSpotActive = useCallback(
-  (spotId: string) => (resourceRespawnUntil[spotId] ?? 0) <= Date.now(),
-  [resourceRespawnUntil]
-);
-
-const despawnResourceSpot = useCallback((spotId: string, respawnMs = RESOURCE_SPOT_RESPAWN_MS) => {
-  const respawnAt = Date.now() + respawnMs;
-  setResourceRespawnUntil((prev) => ({ ...prev, [spotId]: respawnAt }));
-
-  const existingTimer = resourceRespawnTimersRef.current[spotId];
-  if (existingTimer) clearTimeout(existingTimer);
-
-  resourceRespawnTimersRef.current[spotId] = setTimeout(() => {
-    setResourceRespawnUntil((prev) => {
-      if ((prev[spotId] ?? 0) > Date.now()) return prev;
-      const next = { ...prev };
-      delete next[spotId];
-      return next;
-    });
-    delete resourceRespawnTimersRef.current[spotId];
-  }, respawnMs + 100);
-}, []);
-
-useEffect(() => {
-  return () => {
-    Object.values(resourceRespawnTimersRef.current).forEach((timer) => clearTimeout(timer));
-    resourceRespawnTimersRef.current = {};
-  };
-}, []);
-
-const lastMapCameraModeRef = useRef<'2D' | '3D_Tilt' | null>(null);
-
-/** Recenters the map only when switching 2D/3D or when location first becomes available — not on every GPS tick. */
-useEffect(() => {
-  if (!location) return;
-
-  const prevMode = lastMapCameraModeRef.current;
-  const modeChanged = prevMode !== mapMode;
-  if (prevMode !== null && !modeChanged) {
-    return;
-  }
-  const isSwitching = prevMode !== null && prevMode !== mapMode;
-  lastMapCameraModeRef.current = mapMode;
-
-  const bear = heading ?? 0;
-  const heading2D = autoCompass2DEnabled ? bear : 0;
-  const heading3D = autoCompass3DEnabled ? bear : 0;
-
-  if (mapMode === '3D_Tilt') {
-    const OFFSET_M = 120;
-    const R = 6371000;
-    const bearRad = (bear * Math.PI) / 180;
-    const dLat = (OFFSET_M / R) * (180 / Math.PI) * Math.cos(bearRad);
-    const dLng =
-      ((OFFSET_M / R) * (180 / Math.PI) * Math.sin(bearRad)) /
-      Math.cos((location.latitude * Math.PI) / 180);
-
-    mapRef.current?.animateCamera(
-      {
-        center: {
-          latitude: location.latitude + dLat,
-          longitude: location.longitude + dLng,
-        },
-        pitch: 60,
-        heading: heading3D,
-        zoom: 18,
-      },
-      { duration: isSwitching ? 700 : 300 }
-    );
-  } else {
-    mapRef.current?.animateCamera(
-      {
-        center: { latitude: location.latitude, longitude: location.longitude },
-        pitch: 0,
-        heading: heading2D,
-        zoom: 17,
-      },
-      { duration: isSwitching ? 700 : 300 }
-    );
-  }
-}, [mapMode, location, heading, autoCompass2DEnabled, autoCompass3DEnabled]);
-
-/** Keep auto-compass responsive per mode without forcing map recenter on every location tick. */
-useEffect(() => {
-  if (!mapRef.current || heading == null) return;
-
-  if (mapMode === '2D') {
-    if (!autoCompass2DEnabled) return;
-    mapRef.current.animateCamera(
-      {
-        heading,
-        pitch: 0,
-      },
-      { duration: 220 }
-    );
-    return;
-  }
-
-  if (mapMode === '3D_Tilt') {
-    if (!autoCompass3DEnabled) return;
-    mapRef.current.animateCamera(
-      {
-        heading,
-        pitch: 60,
-      },
-      { duration: 220 }
-    );
-  }
-}, [heading, mapMode, autoCompass2DEnabled, autoCompass3DEnabled]);
-
   useEffect(() => {
     requestNotificationPermissions();
   }, []);
@@ -355,6 +264,9 @@ useEffect(() => {
       setCareDiary(save.careDiary || []);
       setAvatar(save.avatar || DEFAULT_AVATAR_ID);
 
+      hydrateResourceRespawnUntil(save.resourceRespawnUntil);
+      hydrateCreatureMapSpawns(save.creatureMapSpawns);
+
       const today = new Date().toDateString();
       const last = save.lastOpenDate || '';
       const yesterday = new Date(Date.now() - 86400000).toDateString();
@@ -376,7 +288,7 @@ useEffect(() => {
   };
 
   loadHome();
-}, []);
+}, [hydrateCreatureMapSpawns, hydrateResourceRespawnUntil]);
 
   useFocusEffect(
     useCallback(() => {
@@ -425,6 +337,12 @@ useEffect(() => {
       careDiary,
       resources,
       drops,
+      resourceRespawnUntil,
+      creatureMapSpawns: {
+        activeSpawns,
+        lastSpawnCenter,
+        lastSpawnRefreshAt,
+      },
     }).catch((e) => {
       console.warn('Home save error', e);
     });
@@ -453,6 +371,10 @@ useEffect(() => {
   isHydrated,
   resources,
   drops,
+  resourceRespawnUntil,
+  activeSpawns,
+  lastSpawnCenter,
+  lastSpawnRefreshAt,
 ]);
 
   useEffect(() => {
@@ -489,64 +411,6 @@ useEffect(() => {
     }
     lastWalkPosRef.current = location;
   }, [location, isLocationFallback, incrementDaily, walkTrackingKind]);
-
-  useEffect(() => {
-    if (!location) return;
-
-    const now = Date.now();
-    let shouldUpdateSpawnMeta = false;
-
-    setActiveSpawns((prev) => {
-      const cleaned = pruneCreatureSpawns({
-        spawns: prev,
-        userLatitude: location.latitude,
-        userLongitude: location.longitude,
-        now,
-      });
-
-      const needsRefresh = shouldRefreshCreatureSpawns({
-        lastSpawnCenter,
-        currentLatitude: location.latitude,
-        currentLongitude: location.longitude,
-        lastRefreshAt: lastSpawnRefreshAt,
-        now,
-      });
-
-      const targetCount = 5;
-      const missingCount = Math.max(0, targetCount - cleaned.length);
-
-      if (!needsRefresh && missingCount === 0) {
-        return cleaned;
-      }
-
-      const newSpawns =
-        missingCount > 0
-          ? generateCreatureSpawnsSpread({
-              baseLatitude: location.latitude,
-              baseLongitude: location.longitude,
-              creatureIds: CREATURES.map((c) => c.id),
-              existingSpawns: cleaned,
-              count: missingCount,
-              minGapMeters: 70,
-              now,
-            })
-          : [];
-
-      if (needsRefresh) {
-        shouldUpdateSpawnMeta = true;
-      }
-
-      return [...cleaned, ...newSpawns];
-    });
-
-    if (shouldUpdateSpawnMeta) {
-      setLastSpawnCenter({
-        latitude: location.latitude,
-        longitude: location.longitude,
-      });
-      setLastSpawnRefreshAt(now);
-    }
-  }, [location, lastSpawnCenter, lastSpawnRefreshAt]);
 
 
 
@@ -784,6 +648,8 @@ const mindfulPhrase = selected
               setPetDeeds(reset.petDeeds);
               setTestDeeds(reset.testDeeds);
               setCareDiary(reset.careDiary);
+              hydrateResourceRespawnUntil(reset.resourceRespawnUntil);
+              hydrateCreatureMapSpawns(reset.creatureMapSpawns);
               await reloadInventory();
               setStreak(reset.streak);
               setLastOpenDate(reset.lastOpenDate);
@@ -973,43 +839,7 @@ startFeeding(() => {
               </Text>
             </TouchableOpacity>
             {location ? (
-              <TouchableOpacity
-                style={styles.mapBtn}
-                onPress={() => {
-                  if (mapMode === '3D_Tilt') {
-                    const bear = autoCompass3DEnabled ? (heading ?? 0) : 0;
-                    const OFFSET_M = 120;
-                    const R = 6371000;
-                    const bearRad = (bear * Math.PI) / 180;
-                    const dLat = (OFFSET_M / R) * (180 / Math.PI) * Math.cos(bearRad);
-                    const dLng =
-                      ((OFFSET_M / R) * (180 / Math.PI) * Math.sin(bearRad)) /
-                      Math.cos((location.latitude * Math.PI) / 180);
-                    mapRef.current?.animateCamera(
-                      {
-                        center: {
-                          latitude: location.latitude + dLat,
-                          longitude: location.longitude + dLng,
-                        },
-                        pitch: 60,
-                        heading: bear,
-                        zoom: 18,
-                      },
-                      { duration: 400 }
-                    );
-                  } else {
-                    mapRef.current?.animateToRegion(
-                      {
-                        latitude: location.latitude,
-                        longitude: location.longitude,
-                        latitudeDelta: 0.02,
-                        longitudeDelta: 0.02,
-                      },
-                      250
-                    );
-                  }
-                }}
-              >
+              <TouchableOpacity style={styles.mapBtn} onPress={recenterOnUser}>
                 <Text style={styles.mapBtnText}>📍</Text>
               </TouchableOpacity>
             ) : null}

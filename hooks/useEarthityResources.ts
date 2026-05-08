@@ -1,0 +1,1 @@
+export { useResourceSpotRespawn } from './useResourceSpotRespawn';

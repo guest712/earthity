@@ -6,6 +6,7 @@ import type {
   DailyQuestsSave,
   DropId,
   EarthitySave,
+  SpawnedCreature,
 } from '../shared/types';
 
 const VALID_DAILY_KINDS: DailyQuestKind[] = [
@@ -54,6 +55,66 @@ function toNonNegativeNumber(value: unknown, fallback: number, max?: number): nu
   if (!Number.isFinite(numeric)) return fallback;
   const clamped = Math.max(0, numeric);
   return typeof max === 'number' ? Math.min(max, clamped) : clamped;
+}
+
+function normalizeResourceRespawnUntil(source: unknown): Record<string, number> {
+  if (!source || typeof source !== 'object') return {};
+  const now = Date.now();
+  const out: Record<string, number> = {};
+  for (const [k, v] of Object.entries(source as Record<string, unknown>)) {
+    if (typeof k !== 'string' || !k) continue;
+    const n = Number(v);
+    if (!Number.isFinite(n) || n <= now) continue;
+    out[k] = n;
+  }
+  return out;
+}
+
+function normalizeSpawnedCreature(raw: unknown): SpawnedCreature | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const o = raw as Record<string, unknown>;
+  if (typeof o.spawnId !== 'string' || typeof o.creatureId !== 'string') return null;
+  if (typeof o.latitude !== 'number' || !Number.isFinite(o.latitude)) return null;
+  if (typeof o.longitude !== 'number' || !Number.isFinite(o.longitude)) return null;
+  if (typeof o.spawnedAt !== 'number' || !Number.isFinite(o.spawnedAt)) return null;
+  if (typeof o.expiresAt !== 'number' || !Number.isFinite(o.expiresAt)) return null;
+  return {
+    spawnId: o.spawnId,
+    creatureId: o.creatureId,
+    latitude: o.latitude,
+    longitude: o.longitude,
+    spawnedAt: o.spawnedAt,
+    expiresAt: o.expiresAt,
+  };
+}
+
+function normalizeCreatureMapSpawnsSave(
+  source: unknown,
+  fallback: EarthitySave['creatureMapSpawns']
+): EarthitySave['creatureMapSpawns'] {
+  if (!source || typeof source !== 'object') {
+    return { ...fallback };
+  }
+  const o = source as Record<string, unknown>;
+  const activeRaw = o.activeSpawns;
+  const activeSpawns = Array.isArray(activeRaw)
+    ? activeRaw.map(normalizeSpawnedCreature).filter((s): s is SpawnedCreature => s !== null)
+    : fallback.activeSpawns;
+
+  let lastSpawnCenter = fallback.lastSpawnCenter;
+  const lc = o.lastSpawnCenter;
+  if (lc && typeof lc === 'object') {
+    const lat = Number((lc as Record<string, unknown>).latitude);
+    const lng = Number((lc as Record<string, unknown>).longitude);
+    if (Number.isFinite(lat) && Number.isFinite(lng)) {
+      lastSpawnCenter = { latitude: lat, longitude: lng };
+    }
+  }
+
+  const lr = Number(o.lastSpawnRefreshAt);
+  const lastSpawnRefreshAt = Number.isFinite(lr) ? Math.max(0, lr) : fallback.lastSpawnRefreshAt;
+
+  return { activeSpawns, lastSpawnCenter, lastSpawnRefreshAt };
 }
 
 function normalizeSave(input: unknown): EarthitySave {
@@ -173,6 +234,9 @@ function normalizeSave(input: unknown): EarthitySave {
     toNonNegativeNumber(source.dobri, defaultSave.dobri)
   );
 
+  const resourceRespawnUntil = normalizeResourceRespawnUntil(source.resourceRespawnUntil);
+  const creatureMapSpawns = normalizeCreatureMapSpawnsSave(source.creatureMapSpawns, defaultSave.creatureMapSpawns);
+
   return {
     saveVersion: SAVE_VERSION,
     dobri: toNonNegativeNumber(source.dobri, defaultSave.dobri),
@@ -212,6 +276,8 @@ function normalizeSave(input: unknown): EarthitySave {
     careDiary,
     drops,
     crafted,
+    resourceRespawnUntil,
+    creatureMapSpawns,
     dailyQuests,
   };
 }
@@ -282,6 +348,12 @@ export const defaultSave: EarthitySave = {
   careDiary: [],
   drops: {},
   crafted: {},
+  resourceRespawnUntil: {},
+  creatureMapSpawns: {
+    activeSpawns: [],
+    lastSpawnCenter: null,
+    lastSpawnRefreshAt: 0,
+  },
   dailyQuests: null,
 };
 
