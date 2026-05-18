@@ -2,6 +2,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { useCallback, useEffect, useRef, type Dispatch, type SetStateAction } from 'react';
 
 import type { EarthitySave, LanguageCode } from '../shared/types';
+import { pushCloudSaveToServer, isCloudPushAllowed } from '../supabase/cloudSave';
 import { getSave, patchSave } from '../storage/save.repository';
 
 const AUTOSAVE_DEBOUNCE_MS = 500;
@@ -33,6 +34,7 @@ export type UseHomeSaveSyncArgs = {
   lang: LanguageCode | null;
   isHydrated: boolean;
   setIsHydrated: Dispatch<SetStateAction<boolean>>;
+  accessToken: string | null;
   onBootstrapSave: (save: EarthitySave) => void;
   onFocusRevalidate: (save: EarthitySave) => void;
   /** When `null`, autosave is skipped (e.g. language not chosen yet). */
@@ -43,6 +45,7 @@ export function useHomeSaveSync({
   lang,
   isHydrated,
   setIsHydrated,
+  accessToken,
   onBootstrapSave,
   onFocusRevalidate,
   autosavePayload,
@@ -102,9 +105,15 @@ export function useHomeSaveSync({
     }
 
     autosaveTimeoutRef.current = setTimeout(() => {
-      patchSave(autosavePayload).catch((e) => {
-        console.warn('Home save error', e);
-      });
+      patchSave(autosavePayload)
+        .then((next) => {
+          if (accessToken && isCloudPushAllowed()) {
+            return pushCloudSaveToServer(next);
+          }
+        })
+        .catch((e) => {
+          console.warn('Home save error', e);
+        });
     }, AUTOSAVE_DEBOUNCE_MS);
 
     return () => {
@@ -112,5 +121,5 @@ export function useHomeSaveSync({
         clearTimeout(autosaveTimeoutRef.current);
       }
     };
-  }, [lang, isHydrated, autosavePayload]);
+  }, [lang, isHydrated, autosavePayload, accessToken]);
 }

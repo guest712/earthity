@@ -9,11 +9,49 @@
 | Область | Состояние |
 |--------|-----------|
 | Стек | React Native, Expo ~54, Expo Router, TypeScript |
-| Данные | Локально: AsyncStorage (`lib/storage`), без бэкенда |
-| Главный экран | `app/(tabs)/index.tsx` + компоненты `components/home/`, хуки `lib/home/` |
+| Данные | Локально: AsyncStorage (`lib/storage`); облако: Supabase `saves` (JSONB), sync `lib/supabase/cloudSave.ts` |
+| Auth | Supabase email/password, `lib/auth/AuthContext.tsx`, экран `app/(auth)/login.tsx`, gate в `app/_layout.tsx` |
+| Главный экран | `app/(app)/(tabs)/index.tsx` + `components/home/`, хуки `lib/home/` |
 | Карта / гео | `react-native-maps`, `expo-location`, хук `features/location/useLocationState` |
 | 3D / AR | `expo-three`, `@react-three/fiber`, маршрут `three-test`, прелоад `lib/home/preloadHomeModels` |
 | i18n | `lib/i18n/`, несколько языков через `LanguageContext` |
+| Секреты | `.env` в gitignore: `EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_ANON_KEY` (anon — публичный, RLS обязателен) |
+
+---
+
+## Supabase / Auth / Cloud save — сделано
+
+- [x] SDK `@supabase/supabase-js`, клиент `lib/supabase/client.ts` (AsyncStorage-сессия).
+- [x] Вход / регистрация / выход, ошибки на экране login, редирект без сессии.
+- [x] Таблица `saves` + RLS (select/insert/update own row).
+- [x] Pull при входе (`CloudSaveGate`, `reconcileCloudSave`), push при autosave.
+- [x] Защита от затирания облака пустым локальным сейвом; pull при «local empty + cloud has progress».
+- [x] Проверено: очистка хранилища → вход → прогресс из облака без онбординга.
+
+---
+
+## Supabase / Auth / Cloud save — очередь (по приоритету)
+
+**P1 — сделать до широкого теста или общего устройства**
+
+- [ ] **Logout / смена аккаунта:** при `signOut` очищать локальный сейв (или при login с другим `user_id` сбрасывать локаль до reconcile). Сейчас прогресс остаётся в AsyncStorage → риск залить чужой сейв в новый аккаунт на том же телефоне. Точки: `AuthContext.signOut`, опционально `reconcileCloudSave` / `CloudSaveGate`.
+
+**P2 — перед релизом / prod**
+
+- [ ] **Confirm email** в Supabase Auth (сейчас удобно выключено для dev).
+- [ ] **Отдельные проекты** Supabase: dev и prod, разные ключи в `.env`.
+- [ ] **`.env.example`** — только имена переменных (`EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_ANON_KEY`, `GOOGLE_MAPS_API_KEY`), без значений.
+- [ ] Сверка **RLS** на `saves` после любых миграций (никаких policy «public read/write»).
+
+**P3 — cleanup (не блокирует релиз)**
+
+- [ ] Удалить мёртвый REST-auth: `lib/api/authLogin.ts`, `lib/api/client.ts`, `lib/auth/tokenStorage.ts` (заменены Supabase SDK).
+- [ ] Убрать или сократить dev-логи `[cloudSave]` в production-сборке (оставить только `__DEV__` — уже так; при желании единый флаг).
+
+**P4 — когда появятся рейтинги / мультиплеер**
+
+- [ ] **Валидация сейва на сервере** (Edge Function или триггер): лимиты dobri/xp, схема `EarthitySave`, защита от подделки JSON с клиента.
+- [ ] **Конфликт двух устройств offline:** осознанная стратегия (last-write-wins сейчас; позже merge или version counter в `saves`).
 
 ---
 
@@ -46,8 +84,8 @@
 
 ## Высший уровень
 
-- [ ] Бэкенд / аккаунты / синхронизация прогресса между устройствами.
-- [ ] Анти-чит и валидация прогресса на сервере (если появится мультиплеер или рейтинги).
+- [x] ~~Бэкенд / аккаунты / синхронизация прогресса между устройствами.~~ **MVP готов** (Supabase Auth + `saves`); см. очередь P1–P4 выше.
+- [ ] Анти-чит и валидация прогресса на сервере (если появится мультиплеер или рейтинги) → **P4** в разделе Supabase.
 - [ ] Наблюдаемость: crash reporting, аналитика воронок без нарушения приватности.
 
 ---

@@ -1,5 +1,5 @@
+import { AuthError } from '@/lib/auth/authErrors';
 import { useAuth } from '@/lib/auth/AuthContext';
-import { AuthLoginError } from '@/lib/api/authLogin';
 import { useTranslation } from '@/lib/i18n/useTranslation';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Colors } from '@/constants/theme';
@@ -18,12 +18,15 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+type AuthMode = 'sign_in' | 'sign_up';
+
 export default function LoginScreen() {
   const { t } = useTranslation();
-  const { signIn } = useAuth();
+  const { signIn, signUp } = useAuth();
   const colorScheme = useColorScheme();
   const palette = Colors[colorScheme ?? 'light'];
 
+  const [mode, setMode] = useState<AuthMode>('sign_in');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -42,15 +45,23 @@ export default function LoginScreen() {
     }
     setSubmitting(true);
     try {
-      await signIn(trimmed, password);
+      if (mode === 'sign_up') {
+        await signUp(trimmed, password);
+      } else {
+        await signIn(trimmed, password);
+      }
     } catch (e) {
-      if (e instanceof AuthLoginError) {
-        if (e.message === 'missing_api_url' || e.status === 0) {
+      if (e instanceof AuthError) {
+        if (e.code === 'missing_supabase_env') {
           setErrorKey('missing_api');
-        } else if (e.status === 401 || e.status === 403) {
+        } else if (e.code === 'bad_credentials') {
           setErrorKey('bad_credentials');
-        } else if (e.message === 'invalid_response') {
-          setErrorKey('unknown');
+        } else if (e.code === 'email_not_confirmed') {
+          setErrorKey('email_not_confirmed');
+        } else if (e.code === 'email_taken') {
+          setErrorKey('email_taken');
+        } else if (e.code === 'network') {
+          setErrorKey('network');
         } else {
           setErrorKey('unknown');
         }
@@ -60,7 +71,7 @@ export default function LoginScreen() {
     } finally {
       setSubmitting(false);
     }
-  }, [email, password, signIn]);
+  }, [email, password, mode, signIn, signUp]);
 
   const errorText =
     errorKey === 'invalid_email'
@@ -71,11 +82,17 @@ export default function LoginScreen() {
           ? t.authErrorMissingApiUrl
           : errorKey === 'bad_credentials'
             ? t.authErrorBadCredentials
-            : errorKey === 'network'
-              ? t.authErrorNetwork
-              : errorKey
-                ? t.authErrorUnknown
-                : null;
+            : errorKey === 'email_not_confirmed'
+              ? t.authErrorEmailNotConfirmed
+              : errorKey === 'email_taken'
+                ? t.authErrorEmailTaken
+                : errorKey === 'network'
+                  ? t.authErrorNetwork
+                  : errorKey
+                    ? t.authErrorUnknown
+                    : null;
+
+  const isSignUp = mode === 'sign_up';
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: palette.background }]}>
@@ -119,11 +136,26 @@ export default function LoginScreen() {
             {submitting ? (
               <View style={styles.buttonBusy}>
                 <ActivityIndicator color="#0c120c" />
-                <Text style={styles.buttonLabel}>{t.authSigningIn}</Text>
+                <Text style={styles.buttonLabel}>
+                  {isSignUp ? t.authSigningUp : t.authSigningIn}
+                </Text>
               </View>
             ) : (
-              <Text style={styles.buttonLabel}>{t.authSignIn}</Text>
+              <Text style={styles.buttonLabel}>{isSignUp ? t.authSignUp : t.authSignIn}</Text>
             )}
+          </Pressable>
+
+          <Pressable
+            style={styles.switchMode}
+            onPress={() => {
+              setErrorKey(null);
+              setMode((prev) => (prev === 'sign_in' ? 'sign_up' : 'sign_in'));
+            }}
+            disabled={submitting}
+          >
+            <Text style={[styles.switchModeText, { color: palette.icon }]}>
+              {isSignUp ? t.authSwitchToSignIn : t.authSwitchToSignUp}
+            </Text>
           </Pressable>
         </View>
       </KeyboardAvoidingView>
@@ -170,4 +202,13 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   buttonLabel: { fontSize: 17, fontWeight: '700', color: '#0c120c' },
+  switchMode: {
+    marginTop: 18,
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  switchModeText: {
+    fontSize: 14,
+    textDecorationLine: 'underline',
+  },
 });

@@ -1,5 +1,6 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { I18nManager } from 'react-native';
+import { onCloudSaveReconciled } from '../supabase/cloudSave';
 import { loadSave, updateSave } from '../storage/storage';
 import type { LanguageCode } from '../shared/types';
 
@@ -16,19 +17,25 @@ const LanguageContext = createContext<LanguageContextValue | undefined>(undefine
 export function LanguageProvider({ children }: { children: React.ReactNode }) {
   const [lang, setLang] = useState<LanguageCode | null>(null);
 
-  useEffect(() => {
-    const loadLang = async () => {
-      try {
-        const save = await loadSave();
-        setLang(save.lang || 'en');
-      } catch (e) {
-        console.warn('Language load error', e);
-        setLang('en');
-      }
-    };
-
-    loadLang();
+  const reloadLangFromSave = useCallback(async () => {
+    try {
+      const save = await loadSave();
+      setLang(save.lang || 'en');
+    } catch (e) {
+      console.warn('Language load error', e);
+      setLang('en');
+    }
   }, []);
+
+  useEffect(() => {
+    void reloadLangFromSave();
+  }, [reloadLangFromSave]);
+
+  useEffect(() => {
+    return onCloudSaveReconciled(() => {
+      void reloadLangFromSave();
+    });
+  }, [reloadLangFromSave]);
 
   useEffect(() => {
     if (lang == null) return;

@@ -39,24 +39,21 @@ export const unstable_settings = {
 };
 
 function RootStackNav() {
-  const { isHydrating } = useAuth();
-  // Экран входа временно отключён, пока не подключим Supabase.
-  // Вернуть редирект на /login и initialRouteName="(auth)" после интеграции SDK.
-  // const { accessToken, isHydrating } = useAuth();
-  // const segments = useSegments();
-  // const router = useRouter();
-  // const navState = useRootNavigationState();
+  const { accessToken, isHydrating } = useAuth();
+  const segments = useSegments();
+  const router = useRouter();
+  const navState = useRootNavigationState();
 
-  // useEffect(() => {
-  //   if (isHydrating || !navState?.key) return;
-  //   const root = String(segments[0] ?? '');
-  //   const inAuth = root === '(auth)';
-  //   if (!accessToken && !inAuth) {
-  //     router.replace('/login' as Href);
-  //   } else if (accessToken && inAuth) {
-  //     router.replace('/' as Href);
-  //   }
-  // }, [accessToken, segments, isHydrating, navState?.key, router]);
+  useEffect(() => {
+    if (isHydrating || !navState?.key) return;
+    const root = String(segments[0] ?? '');
+    const inAuth = root === '(auth)';
+    if (!accessToken && !inAuth) {
+      router.replace('/login' as Href);
+    } else if (accessToken && inAuth) {
+      router.replace('/' as Href);
+    }
+  }, [accessToken, segments, isHydrating, navState?.key, router]);
 
   useEffect(() => {
     if (!isHydrating) {
@@ -65,7 +62,7 @@ function RootStackNav() {
   }, [isHydrating]);
 
   return (
-    <Stack initialRouteName="(app)" screenOptions={{ headerShown: false }}>
+    <Stack initialRouteName="(auth)" screenOptions={{ headerShown: false }}>
       <Stack.Screen name="(auth)" />
       <Stack.Screen name="(app)" />
     </Stack>

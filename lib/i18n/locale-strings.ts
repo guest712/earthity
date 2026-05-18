@@ -139,12 +139,18 @@ export interface LocaleStrings {
   authEmailLabel: string;
   authPasswordLabel: string;
   authSignIn: string;
+  authSignUp: string;
   authSigningIn: string;
+  authSigningUp: string;
+  authSwitchToSignUp: string;
+  authSwitchToSignIn: string;
   authSignOut: string;
   authErrorInvalidEmail: string;
   authErrorShortPassword: string;
   authErrorMissingApiUrl: string;
   authErrorBadCredentials: string;
+  authErrorEmailNotConfirmed: string;
+  authErrorEmailTaken: string;
   authErrorNetwork: string;
   authErrorUnknown: string;
 }

@@ -1,5 +1,6 @@
 import { useCallback, useMemo, type Dispatch, type SetStateAction } from 'react';
 
+import { useAuth } from '../auth/AuthContext';
 import { DEFAULT_AVATAR_ID } from '../../features/profile/avatar.constants';
 
 import type { CareDiaryEntry, CreatureMapSpawnsSave, EarthitySave, LanguageCode } from '../shared/types';
@@ -44,6 +45,7 @@ export function useHomeScreenPersist({
   bootstrap,
   autosaveSnapshot,
 }: UseHomeScreenPersistArgs): void {
+  const { accessToken } = useAuth();
   const {
     setDobri,
     setXp,
@@ -132,6 +134,7 @@ export function useHomeScreenPersist({
     lang,
     isHydrated,
     setIsHydrated,
+    accessToken,
     onBootstrapSave,
     onFocusRevalidate,
     autosavePayload,

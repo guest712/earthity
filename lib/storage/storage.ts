@@ -33,11 +33,35 @@ const VALID_CRAFTED_SET = new Set<string>(VALID_CRAFTED_IDS);
 
 const STORAGE_KEY = 'earthity_save';
 const STORAGE_BACKUP_KEY = 'earthity_save_backup';
+const LOCAL_MODIFIED_KEY = 'earthity_save_local_modified_at';
 const SAVE_VERSION = 1;
 
 type SaveUpdater =
   | Partial<EarthitySave>
   | ((current: EarthitySave) => Partial<EarthitySave> | EarthitySave);
+
+export async function readLocalModifiedAt(): Promise<number> {
+  try {
+    const raw = await AsyncStorage.getItem(LOCAL_MODIFIED_KEY);
+    const n = raw != null ? Number(raw) : 0;
+    return Number.isFinite(n) && n > 0 ? n : 0;
+  } catch {
+    return 0;
+  }
+}
+
+export async function setLocalModifiedAt(epochMs: number): Promise<void> {
+  if (!Number.isFinite(epochMs) || epochMs <= 0) return;
+  try {
+    await AsyncStorage.setItem(LOCAL_MODIFIED_KEY, String(Math.floor(epochMs)));
+  } catch {
+    /* noop */
+  }
+}
+
+async function touchLocalModifiedAt(): Promise<void> {
+  await setLocalModifiedAt(Date.now());
+}
 
 let writeQueue: Promise<void> = Promise.resolve();
 
@@ -372,6 +396,7 @@ export async function saveSave(save: EarthitySave): Promise<void> {
       const normalized = normalizeSave(save);
       await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(normalized));
       await AsyncStorage.setItem(STORAGE_BACKUP_KEY, JSON.stringify(normalized));
+      await touchLocalModifiedAt();
     } catch (error) {
       console.warn('Failed to save data:', error);
     }
@@ -385,6 +410,7 @@ export async function updateSave(updater: SaveUpdater): Promise<EarthitySave> {
     const next = normalizeSave({ ...current, ...patch });
     await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(next));
     await AsyncStorage.setItem(STORAGE_BACKUP_KEY, JSON.stringify(next));
+    await touchLocalModifiedAt();
     return next;
   });
 }
