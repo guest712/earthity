@@ -1,5 +1,4 @@
-import { Suspense } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Platform, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import Scene3D from './Scene3D';
@@ -10,13 +9,8 @@ import Scene3DErrorBoundary from './Scene3DErrorBoundary';
 Scene3D.preload();
 
 /**
- * Test screen for the 3D pipeline. Renders a declarative r3f scene.
- *
- * Layering (outside → inside):
- * - Scene3DErrorBoundary — catches render / GL failures.
- * - <Suspense fallback="Loading..."> — waits for the GLTF to load.
- *   Kept OUTSIDE <Canvas> so the fallback can be a plain RN <Text>.
- * - Scene3D — the <Canvas> with lights + rotating model.
+ * Test screen for the 3D pipeline.
+ * GLTF загрузка и Suspense — **внутри** `Scene3D` / Canvas (иначе RN часто получает пустой кадр).
  */
 export default function ThreeTestScreen() {
   return (
@@ -28,10 +22,14 @@ export default function ThreeTestScreen() {
 
       <View style={styles.stage}>
         <Scene3DErrorBoundary retryLabel="Reload scene">
-          <View style={styles.sceneBox}>
-            <Suspense fallback={<LoadingFallback />}>
-              <Scene3D style={styles.scene} backgroundColor="#1e1e1e" />
-            </Suspense>
+          <View
+            style={styles.sceneBox}
+            collapsable={false}
+            renderToHardwareTextureAndroid={
+              Platform.OS === 'android' ? true : undefined
+            }
+          >
+            <Scene3D style={styles.scene} backgroundColor="#1e1e1e" />
           </View>
         </Scene3DErrorBoundary>
       </View>
@@ -42,14 +40,6 @@ export default function ThreeTestScreen() {
         </Text>
       </View>
     </SafeAreaView>
-  );
-}
-
-function LoadingFallback() {
-  return (
-    <View style={styles.loadingBox}>
-      <Text style={styles.loadingText}>Loading...</Text>
-    </View>
   );
 }
 
@@ -89,17 +79,6 @@ const styles = StyleSheet.create({
   },
   scene: {
     flex: 1,
-  },
-  loadingBox: {
-    ...StyleSheet.absoluteFillObject,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#1e1e1e',
-  },
-  loadingText: {
-    color: 'rgba(232,228,216,0.75)',
-    fontSize: 13,
-    letterSpacing: 0.5,
   },
   footer: {
     paddingVertical: 12,

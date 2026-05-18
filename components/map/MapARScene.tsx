@@ -20,6 +20,13 @@ import {
   type MeshBasicMaterial,
 } from 'three';
 
+import { getDistance } from '../../lib/shared/game-utils';
+import Model, {
+  type ModelSource,
+  type SkinLocomotionHints,
+} from '../three/Model';
+import MapDecorTrees from './MapDecorTrees';
+
 /**
  * R3F default ortho bounds are roughly [-1,1]; our scene uses ~1 GL unit ≈ 1 px (scale groups up to tens).
  * Without matching the overlay pixel size to the projection, the wolf is clipped and looks "missing".
@@ -42,12 +49,6 @@ function AlignOrthoToOverlayPx({ width, height }: { width: number; height: numbe
 
   return null;
 }
-
-import { getDistance } from '../../lib/shared/game-utils';
-import Model, {
-  type ModelSource,
-  type SkinLocomotionHints,
-} from '../three/Model';
 
 /** Hysteresis band for locomotion idle/walk flip (must be ENTER > EXIT). */
 const LOC_WALK_BLEND_ENTER = 0.42;
@@ -135,6 +136,13 @@ export type ARObject = {
 type Props = {
   mapRef: React.RefObject<MapView | null>;
   objects: ARObject[];
+  /** Декор: инстансированные примитивы деревьев (те же проекции, что у AR). */
+  decorTrees?: { latitude: number; longitude: number }[];
+  /**
+   * Увеличивать при `onRegionChangeComplete` и при `onMapReady` карты,
+   * чтобы повторно вызвать `pointForCoordinate` для декора.
+   */
+  decorProjectEpoch?: number;
   mapMode?: '2D' | '3D_Tilt';
   /**
    * Counter that the parent increments on every map `onRegionChange[Complete]`.
@@ -476,30 +484,31 @@ function ARNode({
         <group ref={scaleRef} scale={scale}>
           <Model
             source={object.modelSource}
+            useDreiClone
+            debugPlayerGltf={DEBUG_PLAYER_AR_MODEL}
             {...(object.locomotion
               ? {
                   skinAnimationRef: locomotionAnimRef,
                   skinClipHints: object.locomotionClipHints,
                   skinLocomotionHardSwitch: object.locomotionHardSwitch,
                 }
-              : {
-                  skinAnimation: 'idle' as const,
-                  skinClipHints: object.locomotionClipHints,
-                })}
+              : {})}
           />
-          {object.id === 'player' && (
-            <mesh position={[0, 0, 10]} scale={[20, 20, 20]}>
-              <boxGeometry args={[1, 1, 1]} />
-              <meshBasicMaterial color="red" />
-            </mesh>
-          )}
         </group>
       </group>
     </group>
   );
 }
 
-export default function MapARScene({ mapRef, objects, mapMode, regionTickRef, style }: Props) {
+export default function MapARScene({
+  mapRef,
+  objects,
+  decorTrees,
+  decorProjectEpoch,
+  mapMode,
+  regionTickRef,
+  style,
+}: Props) {
   const [appActive, setAppActive] = useState(AppState.currentState === 'active');
   const [size, setSize] = useState(() => {
     const { width } = Dimensions.get('window');
@@ -514,7 +523,8 @@ export default function MapARScene({ mapRef, objects, mapMode, regionTickRef, st
     return () => sub.remove();
   }, []);
 
-  const runCanvasLoop = appActive && objects.length > 0;
+  const decorCount = decorTrees?.length ?? 0;
+  const runCanvasLoop = appActive && (objects.length > 0 || decorCount > 0);
 
   return (
     <View
@@ -523,24 +533,20 @@ export default function MapARScene({ mapRef, objects, mapMode, regionTickRef, st
       renderToHardwareTextureAndroid={Platform.OS === 'android'}
       style={[
         StyleSheet.absoluteFill,
+        style,
         {
           zIndex: 16,
           elevation: Platform.OS === 'android' ? 28 : 16,
         },
-        style,
       ]}
-      onLayout={(e) =>
+      onLayout={(e) => {
+        const layout = e.nativeEvent?.layout;
+        if (layout == null) return;
         setSize((prev) => ({
-          w: Math.max(
-            1,
-            e.nativeEvent.layout.width > 0 ? e.nativeEvent.layout.width : prev.w
-          ),
-          h: Math.max(
-            1,
-            e.nativeEvent.layout.height > 0 ? e.nativeEvent.layout.height : prev.h
-          ),
-        }))
-      }
+          w: Math.max(1, layout.width > 0 ? layout.width : prev.w),
+          h: Math.max(1, layout.height > 0 ? layout.height : prev.h),
+        }));
+      }}
     >
       <Canvas
         style={{ flex: 1, backgroundColor: 'transparent' }}
@@ -565,6 +571,15 @@ export default function MapARScene({ mapRef, objects, mapMode, regionTickRef, st
         <hemisphereLight args={['#ffffff', '#445566', 0.8]} />
         <directionalLight position={[0, 0, 100]} intensity={2.0} />
         <directionalLight position={[50, 80, 60]} intensity={1.5} />
+        {decorCount > 0 ? (
+          <MapDecorTrees
+            coordinates={decorTrees!}
+            mapRef={mapRef}
+            mapMode={mapMode}
+            projectEpoch={decorProjectEpoch ?? 0}
+            size={size}
+          />
+        ) : null}
         {objects.map((obj) => (
           // Per-object Suspense: while one model loads, all the others stay
           // visible. A single shared boundary would hide the entire scene

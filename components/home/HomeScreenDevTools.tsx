@@ -1,7 +1,6 @@
 import React from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
 
-import { BIO_PICKUP_AMOUNT } from '../../features/resources/resource.constants';
 import { homeScreenStyles as styles } from './homeScreen.styles';
 
 export type HomeScreenDevToolsProps = {
@@ -19,6 +18,11 @@ export type HomeScreenDevToolsProps = {
   onDevAddFeed3: () => void;
   onDevAddBio: () => void;
   onResetSave: () => Promise<void>;
+  mapDecorTreesEnabled?: boolean;
+  onToggleMapDecorTrees?: () => void;
+  /** Player AR (3D-model on map). Drives both the WorldMap marker visibility and `MapARScene` player object. */
+  playerArEnabled?: boolean;
+  onTogglePlayerAr?: () => void;
 };
 
 export default function HomeScreenDevTools(props: HomeScreenDevToolsProps) {
@@ -41,6 +45,10 @@ export default function HomeScreenDevTools(props: HomeScreenDevToolsProps) {
     onDevAddFeed3,
     onDevAddBio,
     onResetSave,
+    mapDecorTreesEnabled,
+    onToggleMapDecorTrees,
+    playerArEnabled,
+    onTogglePlayerAr,
   } = props;
 
   return (
@@ -57,6 +65,26 @@ export default function HomeScreenDevTools(props: HomeScreenDevToolsProps) {
       </View>
       {showDevPanel && (
         <View style={styles.devPanel}>
+          {onTogglePlayerAr != null && playerArEnabled != null ? (
+            <TouchableOpacity
+              style={[styles.devPanelBtn, playerArEnabled && styles.devPanelBtnActive]}
+              onPress={onTogglePlayerAr}
+            >
+              <Text style={styles.devPanelBtnText}>
+                включить 3д-модель: {playerArEnabled ? 'ON' : 'OFF'}
+              </Text>
+            </TouchableOpacity>
+          ) : null}
+          {onToggleMapDecorTrees != null && mapDecorTreesEnabled != null ? (
+            <TouchableOpacity
+              style={[styles.devPanelBtn, mapDecorTreesEnabled && styles.devPanelBtnActive]}
+              onPress={onToggleMapDecorTrees}
+            >
+              <Text style={styles.devPanelBtnText}>
+                map decor trees: {mapDecorTreesEnabled ? 'ON' : 'OFF'}
+              </Text>
+            </TouchableOpacity>
+          ) : null}
           <TouchableOpacity
             style={[styles.devPanelBtn, devIgnoreInteractionDistance && styles.devPanelBtnActive]}
             onPress={onToggleIgnoreDistance}

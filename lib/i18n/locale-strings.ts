@@ -39,6 +39,10 @@ export interface LocaleStrings {
   profileTabProfile: string;
   profileTabStats: string;
   profileTabSettings: string;
+  profileTabProfileDesc: string;
+  profileTabStatsDesc: string;
+  profileTabAchievementsDesc: string;
+  profileTabSettingsDesc: string;
   profileChangeAvatar: string;
   profileChooseTitle: string;
   profileNoTitles: string;
@@ -93,6 +97,7 @@ export interface LocaleStrings {
   alertBioFull: string;
   langPickerSubtitle: string;
   creatureWaterLabel: string;
+  creatureFeedLabel: string;
   creaturePopupWait: string;
   creaturePopupWaterFlower: string;
   creaturePopupFeedAnimal: string;
@@ -129,4 +134,17 @@ export interface LocaleStrings {
   dailyRewardToast: string;
   dailyResetsToday: string;
   dailyNewDayBannerBody: string;
+  authTitle: string;
+  authSubtitle: string;
+  authEmailLabel: string;
+  authPasswordLabel: string;
+  authSignIn: string;
+  authSigningIn: string;
+  authSignOut: string;
+  authErrorInvalidEmail: string;
+  authErrorShortPassword: string;
+  authErrorMissingApiUrl: string;
+  authErrorBadCredentials: string;
+  authErrorNetwork: string;
+  authErrorUnknown: string;
 }

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Image, Text, View } from 'react-native';
-import { Circle, Marker } from 'react-native-maps';
+import { Circle, Marker, Polygon } from 'react-native-maps';
 
 import { CREATURES } from '../../features/creatures/creature.constants';
 import {
@@ -22,6 +22,7 @@ import { getCreatureInteractionRadiusMeters } from '../../lib/shared/game-engine
 import { getDistance } from '../../lib/shared/game-utils';
 import type { Creature, DailyQuestKind, LanguageCode, Quest, SpawnedCreature } from '../../lib/shared/types';
 
+import { getSoftGreenBeltPolygon } from '../../lib/map/softGreenBelt';
 import CreatureMapMarker from '../map/CreatureMapMarker';
 
 type TrashKind = 'plastic' | 'glass' | 'paper' | 'bio';
@@ -54,6 +55,9 @@ export type HomeMapLayerProps = {
 const DEFAULT_LAT = 52.52;
 const DEFAULT_LNG = 13.405;
 
+/** Полупрозрачная «зелёная зона» без 3D; выключить — `false` (производительность / вкус). */
+const SHOW_SOFT_GREEN_ZONE_POLYGON = true;
+
 export default function HomeMapLayer(props: HomeMapLayerProps) {
   const {
     t,
@@ -83,8 +87,20 @@ export default function HomeMapLayer(props: HomeMapLayerProps) {
   const lat0 = location?.latitude ?? DEFAULT_LAT;
   const lng0 = location?.longitude ?? DEFAULT_LNG;
 
+  const softGreenBelt = SHOW_SOFT_GREEN_ZONE_POLYGON ? getSoftGreenBeltPolygon({ latitude: lat0, longitude: lng0 }) : null;
+
   return (
     <>
+      {softGreenBelt != null ? (
+        <Polygon
+          coordinates={softGreenBelt}
+          strokeColor="rgba(74, 124, 89, 0.5)"
+          fillColor="rgba(90, 173, 106, 0.14)"
+          strokeWidth={1}
+          zIndex={0}
+          tappable={false}
+        />
+      ) : null}
       {filteredQuests.map((q) => (
         <Marker
           key={q.id}

@@ -1,11 +1,35 @@
 import { Asset } from 'expo-asset';
 import * as ImageManipulator from 'expo-image-manipulator';
 import { Image, PixelRatio, Platform } from 'react-native';
-import MapView, { Marker, type Region } from 'react-native-maps';
+import MapView, { Marker, type MapStyleElement, type Region } from 'react-native-maps';
 import { forwardRef, ReactNode, useEffect, useMemo, useState } from 'react';
 import type { ImageRequireSource, ImageURISource, ViewStyle } from 'react-native';
 
 import { buildAvatarMarkerUri } from './buildAvatarMarker';
+
+/**
+ * Читаемость слоёв (спокойный базовый вид): 1) игрок / выбранное существо и круг дистанции —
+ * всегда на переднем плане; 2) активные ресурсы и квесты; 3) базовые POI/подписи карты —
+ * приглушены через `customMapStyle` в режиме standard; 4) спутник без стилизации тайлов.
+ */
+
+/** Google Maps JSON style: тише POI/транзит, мягкий фон — только для `mapType="standard"`. */
+export const CALM_STANDARD_MAP_STYLE: MapStyleElement[] = [
+  { featureType: 'poi', elementType: 'labels.icon', stylers: [{ visibility: 'off' }] },
+  { featureType: 'poi', elementType: 'labels.text', stylers: [{ visibility: 'simplified' }] },
+  { featureType: 'poi.business', stylers: [{ visibility: 'off' }] },
+  { featureType: 'transit', stylers: [{ visibility: 'off' }] },
+  { featureType: 'road', elementType: 'labels.icon', stylers: [{ visibility: 'off' }] },
+  { featureType: 'administrative.land_parcel', stylers: [{ visibility: 'off' }] },
+  { featureType: 'administrative.neighborhood', stylers: [{ visibility: 'off' }] },
+  { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#9ebdd4' }, { lightness: 28 }] },
+  { featureType: 'landscape', elementType: 'geometry', stylers: [{ color: '#dfe8db' }, { lightness: 12 }] },
+  { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#f2f2f0' }] },
+  { featureType: 'road', elementType: 'labels.text.fill', stylers: [{ color: '#6b6b68' }] },
+  { featureType: 'road', elementType: 'labels.text.stroke', stylers: [{ color: '#ffffff' }, { lightness: 40 }] },
+];
+
+export type WorldMapChromePadding = { top: number; right: number; bottom: number; left: number };
 
 /**
  * Map marker strategy:
@@ -27,8 +51,9 @@ type Props = {
   userAvatarSource?: ImageRequireSource | ImageURISource;
   userAvatarId?: string;
   /**
-   * When true: don't draw the custom 2D avatar marker AND disable native blue dot.
-   * Use this when an external 3D overlay draws the player avatar instead.
+   * When true: omit the custom 2D avatar `Marker`.
+   * If `userLocation` is set, native blue dot stays on as a fallback (so AR-only
+   * mode never leaves an empty map if the overlay fails).
    */
   hideUserMarker?: boolean;
   /** Override default style. Pass `{ flex: 1 }` when wrapping in a sized container. */
@@ -39,6 +64,11 @@ type Props = {
   onRegionChangeComplete?: (region: Region) => void;
   /** Fires when the native map finishes layout (helps AR overlay call `pointForCoordinate` reliably). */
   onMapReady?: () => void;
+  /**
+   * Отступы для системных элементов карты (лого Google, компас, кнопка «моё местоположение»)
+   * и согласования с HUD поверх `MapView`.
+   */
+  mapChromePadding?: WorldMapChromePadding;
   children?: ReactNode;
 };
 
@@ -134,12 +164,22 @@ const WorldMap = forwardRef<MapView, Props>(function WorldMap(
     onRegionChange,
     onRegionChangeComplete,
     onMapReady,
+    mapChromePadding,
     children,
   },
   ref
 ) {
-  const useNativeUser = !hideUserMarker && userLocation == null;
   const showCustomMarker = !hideUserMarker && userLocation != null;
+  /**
+   * Native dot normally when custom marker unused (no `userLocation`).
+   * If `hideUserMarker` hides the custom avatar but coords exist — still enable
+   * native dot so the map never shows "no user" when an AR overlay fails to draw.
+   */
+  const useNativeUser =
+    (!hideUserMarker && userLocation == null) ||
+    (hideUserMarker && userLocation != null);
+
+  const customMapStyle = mapTileStyle === 'standard' ? CALM_STANDARD_MAP_STYLE : undefined;
 
   /** Final composite PNG data-URI for Marker.image (null while loading) */
   const [markerImageUri, setMarkerImageUri] = useState<string | null>(null);
@@ -170,7 +210,10 @@ const WorldMap = forwardRef<MapView, Props>(function WorldMap(
   return (
     <MapView
       ref={ref}
-      style={style ?? { height: 220, margin: 12, borderRadius: 16 }}
+      style={[
+        style ?? { height: 220, margin: 12, borderRadius: 16 },
+        Platform.OS === 'android' ? { zIndex: 0, elevation: 0 } : null,
+      ]}
       initialRegion={initialRegion}
       showsUserLocation={useNativeUser}
       showsMyLocationButton={useNativeUser}
@@ -179,6 +222,9 @@ const WorldMap = forwardRef<MapView, Props>(function WorldMap(
       onMapReady={onMapReady}
       onRegionChange={onRegionChange}
       onRegionChangeComplete={onRegionChangeComplete}
+      showsCompass
+      customMapStyle={customMapStyle}
+      mapPadding={mapChromePadding}
       {...(Platform.OS === 'android'
         ? { googleRenderer: 'LATEST', liteMode: false }
         : {})}

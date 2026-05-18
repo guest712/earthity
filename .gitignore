@@ -58,3 +58,7 @@ frankintsugi*.ini
 Instruction.ini
 
 backup/
+
+# Локальный экспорт исходников без тяжёлых папок (см. tar/scripts)
+earthity-src.zip
+e_3d.zip

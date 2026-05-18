@@ -1,15 +1,16 @@
 import type { LocaleStrings } from '../../lib/i18n/locale-strings';
 import { formatTemplate } from '../../lib/i18n/formatTemplate';
-import { MAX_WATER } from '../../features/resources/resource.constants';
+import { MAX_FEED, MAX_WATER } from '../../features/resources/resource.constants';
 import { Image, Text, TouchableOpacity, View, StyleSheet } from 'react-native';
 import Animated from 'react-native-reanimated';
-import type { LanguageCode } from '../../lib/shared/types';
+import type { LanguageCode, Creature } from '../../lib/shared/types';
 
 type Props = {
-  selectedCreature: any;
+  selectedCreature: Creature;
   lang: LanguageCode;
   t: LocaleStrings;
   waterLevel: number;
+  feedCount: number;
   isFeeding: boolean;
   feedingProgress: number;
   breathStyle: any;
@@ -23,6 +24,7 @@ export default function CreaturePopup({
   lang,
   t,
   waterLevel,
+  feedCount,
   isFeeding,
   feedingProgress,
   breathStyle,
@@ -34,9 +36,16 @@ export default function CreaturePopup({
     creatureCooldowns[selectedCreature.id] &&
     Date.now() - creatureCooldowns[selectedCreature.id] < selectedCreature.cooldown;
 
+  const req = selectedCreature.requiredItem;
+
   const waterLine =
-    selectedCreature.type === 'flower'
+    req === 'water'
       ? formatTemplate(t.creatureWaterLabel, { current: waterLevel, max: MAX_WATER })
+      : '';
+
+  const feedLine =
+    req === 'feed'
+      ? formatTemplate(t.creatureFeedLabel, { current: feedCount, max: MAX_FEED })
       : '';
 
   return (
@@ -56,9 +65,9 @@ export default function CreaturePopup({
       <Text style={styles.creatureName}>{selectedCreature.label[lang]}</Text>
       <Text style={styles.creatureReward}>+{selectedCreature.reward} 🪙</Text>
 
-      {selectedCreature.type === 'flower' && (
-        <Text style={styles.waterText}>{waterLine}</Text>
-      )}
+      {waterLine ? <Text style={styles.waterText}>{waterLine}</Text> : null}
+
+      {feedLine ? <Text style={styles.feedText}>{feedLine}</Text> : null}
 
       {isFeeding && (
         <View style={styles.feedingBarBg}>
@@ -70,7 +79,7 @@ export default function CreaturePopup({
         <Text style={styles.creatureBtnText}>
           {isCoolingDown
             ? t.creaturePopupWait
-            : selectedCreature.type === 'flower'
+            : req === 'water'
               ? t.creaturePopupWaterFlower
               : t.creaturePopupFeedAnimal}
         </Text>
@@ -111,6 +120,11 @@ const styles = StyleSheet.create({
   waterText: {
     fontSize: 13,
     color: '#7ab8f5',
+    marginBottom: 8,
+  },
+  feedText: {
+    fontSize: 13,
+    color: '#d4b896',
     marginBottom: 8,
   },
   creatureBtn: {

@@ -1,7 +1,8 @@
 import Model from '../../components/three/Model';
 import { CREATURES } from '../../features/creatures/creature.constants';
 
-const PLAYER_MODEL = require('../../assets/models/test_wolf.glb');
+// Должно совпадать с PLAYER_MAP_MODEL в app/(app)/(tabs)/index.tsx.
+const PLAYER_MODEL = require('../../assets/models/test_wolf1.glb');
 
 const sources = [
   PLAYER_MODEL,

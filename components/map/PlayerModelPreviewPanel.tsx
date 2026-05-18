@@ -10,7 +10,7 @@ import { useIsFocused } from '@react-navigation/native';
 
 import Model from '../three/Model';
 
-const PLAYER_MODEL = require('../../assets/models/test_wolf.glb');
+const PLAYER_MODEL = require('../../assets/models/test_wolf1.glb');
 
 function AnimatedPlayerMesh() {
   const locomotionRef = useRef<'idle' | 'walk'>('idle');

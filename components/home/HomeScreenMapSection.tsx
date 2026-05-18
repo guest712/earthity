@@ -1,12 +1,20 @@
-import React, { type RefObject } from 'react';
+import React, { type RefObject, useMemo } from 'react';
 import type { ImageRequireSource, ImageURISource } from 'react-native';
-import { Text, TouchableOpacity, View } from 'react-native';
+import { Platform, ScrollView, Text, TouchableOpacity, useWindowDimensions, View } from 'react-native';
 import type MapView from 'react-native-maps';
+import type { Region } from 'react-native-maps';
 
+import MapARScene, { type ARObject } from '../map/MapARScene';
 import WorldMap from '../map/WorldMap';
-import PlayerModelPreviewPanel from '../map/PlayerModelPreviewPanel';
+// Превью GLB под картой (рендер-бокс). Раскомментировать import + блок ниже для локального теста модели на Home.
+// import PlayerModelPreviewPanel from '../map/PlayerModelPreviewPanel';
+import HomeResourceStrip, { type HomeResourceStripProps } from './HomeResourceStrip';
 import HomeMapLayer, { type HomeMapLayerProps } from './HomeMapLayer';
-import { homeScreenStyles as styles } from './homeScreen.styles';
+import { homeScreenStyles as styles, HOME_MAP_CHROME_PADDING } from './homeScreen.styles';
+
+const HOME_MAP_HEIGHT_MIN = 284;
+const HOME_MAP_HEIGHT_MAX = 400;
+const HOME_MAP_SCREEN_FRACTION = 0.42;
 
 export type HomeScreenMapSectionProps = {
   mapRef: RefObject<MapView | null>;
@@ -24,6 +32,16 @@ export type HomeScreenMapSectionProps = {
   onToggle2D3D: () => void;
   onToggleAutoCompass: () => void;
   onRecenter: () => void;
+  resourceStrip: Omit<HomeResourceStripProps, 'style'>;
+  mapRegionTickRef: RefObject<number>;
+  decorTreeCoordinates: { latitude: number; longitude: number }[];
+  mapDecorEnabled: boolean;
+  decorProjectEpoch: number;
+  mapArObjects: ARObject[];
+  /** Hide custom 2D avatar marker (used when 3D player is rendered through `MapARScene`). */
+  hideUserMarker?: boolean;
+  onMapRegionChangeComplete: (region: Region) => void;
+  onMapLayoutReady: () => void;
 };
 
 export default function HomeScreenMapSection(props: HomeScreenMapSectionProps) {
@@ -43,7 +61,22 @@ export default function HomeScreenMapSection(props: HomeScreenMapSectionProps) {
     onToggle2D3D,
     onToggleAutoCompass,
     onRecenter,
+    resourceStrip,
+    mapRegionTickRef,
+    decorTreeCoordinates,
+    mapDecorEnabled,
+    decorProjectEpoch,
+    mapArObjects,
+    hideUserMarker,
+    onMapRegionChangeComplete,
+    onMapLayoutReady,
   } = props;
+
+  const { height: windowHeight } = useWindowDimensions();
+  const mapHeight = useMemo(() => {
+    const fromScreen = Math.round(windowHeight * HOME_MAP_SCREEN_FRACTION);
+    return Math.min(HOME_MAP_HEIGHT_MAX, Math.max(HOME_MAP_HEIGHT_MIN, fromScreen));
+  }, [windowHeight]);
 
   const initialRegion = location
     ? {
@@ -97,20 +130,56 @@ export default function HomeScreenMapSection(props: HomeScreenMapSectionProps) {
         ) : null}
       </View>
 
-      <View style={styles.mapWrapper}>
+      <View style={[styles.mapWrapper, { height: mapHeight }]}>
         <WorldMap
           ref={mapRef}
           style={styles.mapInner}
           initialRegion={initialRegion}
           mapTileStyle={mapTileStyle}
+          mapChromePadding={HOME_MAP_CHROME_PADDING}
           userLocation={location}
           userAvatarSource={userAvatarSource}
           userAvatarId={userAvatarId}
+          hideUserMarker={hideUserMarker}
+          onRegionChangeComplete={onMapRegionChangeComplete}
+          onMapReady={onMapLayoutReady}
         >
           <HomeMapLayer {...homeMapLayerProps} />
         </WorldMap>
+        {mapArObjects.length > 0 ||
+        (mapDecorEnabled && decorTreeCoordinates.length > 0) ? (
+          <MapARScene
+            mapRef={mapRef}
+            objects={mapArObjects}
+            decorTrees={
+              mapDecorEnabled && decorTreeCoordinates.length > 0
+                ? decorTreeCoordinates
+                : undefined
+            }
+            decorProjectEpoch={decorProjectEpoch}
+            mapMode={mapMode}
+            regionTickRef={mapRegionTickRef}
+          />
+        ) : null}
+        <View
+          style={[styles.mapResourceOverlay, Platform.OS === 'android' && { elevation: 8 }]}
+          pointerEvents="box-none"
+        >
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            nestedScrollEnabled
+            keyboardShouldPersistTaps="handled"
+            style={styles.mapResourceOverlayScroll}
+            contentContainerStyle={styles.mapResourceOverlayScrollContent}
+          >
+            <View style={styles.mapResourcesChipsShell}>
+              <HomeResourceStrip {...resourceStrip} style={styles.resourcesStripOnMap} />
+            </View>
+          </ScrollView>
+        </View>
       </View>
-      <PlayerModelPreviewPanel />
+      {/* <PlayerModelPreviewPanel /> */}
     </>
   );
 }

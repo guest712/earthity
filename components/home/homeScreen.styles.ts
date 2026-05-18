@@ -1,5 +1,15 @@
 import { StyleSheet } from 'react-native';
 
+import type { WorldMapChromePadding } from '../map/WorldMap';
+
+/** Согласовано с `mapResourceOverlay`: отступ для лого/компаса/«моё место» на `MapView`. */
+export const HOME_MAP_CHROME_PADDING: WorldMapChromePadding = {
+  top: 50,
+  right: 56,
+  bottom: 14,
+  left: 10,
+};
+
 export const homeScreenStyles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#0c120c' },
   langScreen: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32 },
@@ -125,8 +135,40 @@ export const homeScreenStyles = StyleSheet.create({
   catText: { fontSize: 12, color: 'rgba(255,255,255,0.4)' },
   catTextActive: { color: '#5aad6a', fontWeight: '500' },
   mapControls: { flexDirection: 'row', gap: 8, paddingHorizontal: 12, paddingTop: 8 },
-  mapWrapper: { height: 220, margin: 12, borderRadius: 16, overflow: 'hidden', position: 'relative' },
+  mapWrapper: { margin: 12, borderRadius: 16, overflow: 'hidden', position: 'relative' },
   mapInner: { flex: 1 },
+  mapResourceOverlay: {
+    position: 'absolute',
+    top: 6,
+    left: 10,
+    right: 60,
+    zIndex: 6,
+    pointerEvents: 'box-none',
+  },
+  mapResourceOverlayScroll: {
+    maxWidth: '100%',
+  },
+  mapResourceOverlayScrollContent: {
+    flexGrow: 1,
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    flexDirection: 'row',
+  },
+  mapResourcesChipsShell: {
+    backgroundColor: 'rgba(12, 18, 12, 0.82)',
+    borderRadius: 999,
+    paddingVertical: 5,
+    paddingLeft: 8,
+    paddingRight: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(30, 48, 32, 0.95)',
+    maxWidth: '100%',
+  },
+  resourcesStripOnMap: {
+    paddingHorizontal: 0,
+    paddingBottom: 0,
+    gap: 5,
+  },
   mapBtn: {
     paddingVertical: 6,
     paddingHorizontal: 14,
