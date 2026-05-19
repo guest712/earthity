@@ -306,11 +306,26 @@ function HomeScreenInner() {
   const mapBridgeT = localeStringsForQuests ?? LANGS.en;
   const mapBridgeLang = (lang ?? 'en') as LanguageCode;
 
+  const onGrantCleanupReward = useCallback(
+    (grant: { dobri: number; xp: number }) => {
+      setDobri((d) => d + grant.dobri);
+      setTotalDobri((d) => d + grant.dobri);
+      setXp((x) => x + grant.xp);
+      setDeeds((d) => d + 1);
+      setOutdoorDeeds((d) => d + 1);
+      incrementDaily('collect_trash', 1);
+      animateReward();
+      playRewardSound();
+    },
+    [animateReward, incrementDaily, playRewardSound]
+  );
+
   const cleanupSpotsMap = useCleanupSpotsMap({
     t: mapBridgeT,
     location,
     mapRegion: mapRegionSnapshot,
     devBypassDistance,
+    onGrantCleanupReward,
   });
 
   const homeMapLayerProps = useHomeMapLayerProps({

@@ -25,8 +25,10 @@ import type { CleanupSpot } from '../../features/cleanupSpots/cleanupSpot.types'
 import type { MapLatLng } from '../../features/cleanupSpots/cleanupSpot.types';
 import type { Creature, DailyQuestKind, LanguageCode, Quest, SpawnedCreature } from '../../lib/shared/types';
 
+import { displayRewardMultiplier } from '../../features/cleanupSpots/cleanupReward';
 import { getSoftGreenBeltPolygon } from '../../lib/map/softGreenBelt';
 import CreatureMapMarker from '../map/CreatureMapMarker';
+import { getCleanupSpotMarkerStyle } from './cleanupSpotMarkerStyle';
 
 type TrashKind = 'plastic' | 'glass' | 'paper' | 'bio';
 
@@ -146,36 +148,58 @@ export default function HomeMapLayer(props: HomeMapLayerProps) {
         </Marker>
       ) : null}
 
-      {cleanupSpots.map((spot) => (
-        <Marker
-          key={`cleanup-${spot.id}`}
-          coordinate={{ latitude: spot.latitude, longitude: spot.longitude }}
-          zIndex={selectedCleanupSpotId === spot.id ? 12 : 8}
-          onPress={(e) => {
-            if (cleanupPlacementMode) {
-              e.stopPropagation?.();
-              return;
-            }
-            onCleanupSpotPress(spot);
-          }}
-        >
-          <View
-            style={{
-              alignItems: 'center',
-              padding: 4,
-              borderRadius: 20,
-              backgroundColor:
-                selectedCleanupSpotId === spot.id
-                  ? 'rgba(232,160,80,0.35)'
-                  : 'rgba(12,18,12,0.55)',
-              borderWidth: selectedCleanupSpotId === spot.id ? 2 : 1,
-              borderColor: selectedCleanupSpotId === spot.id ? '#e8a050' : '#5aad6a',
+      {cleanupSpots.map((spot) => {
+        const selected = selectedCleanupSpotId === spot.id;
+        const markerStyle = getCleanupSpotMarkerStyle(spot, selected);
+        const multLabel = displayRewardMultiplier(spot.rewardMultiplier);
+        const epicTitle =
+          spot.rewardTier === 'epic'
+            ? t.cleanupSpotEpicQuest.replace('{mult}', String(multLabel))
+            : undefined;
+
+        return (
+          <Marker
+            key={`cleanup-${spot.id}`}
+            coordinate={{ latitude: spot.latitude, longitude: spot.longitude }}
+            zIndex={spot.rewardTier === 'epic' ? 10 : selected ? 12 : 8}
+            title={epicTitle}
+            onPress={(e) => {
+              if (cleanupPlacementMode) {
+                e.stopPropagation?.();
+                return;
+              }
+              onCleanupSpotPress(spot);
             }}
           >
-            <Text style={{ fontSize: 26 }}>🗑️</Text>
-          </View>
-        </Marker>
-      ))}
+            <View style={{ alignItems: 'center', maxWidth: 140 }}>
+              <View
+                style={{
+                  alignItems: 'center',
+                  padding: 4,
+                  borderRadius: 20,
+                  ...markerStyle,
+                }}
+              >
+                <Text style={{ fontSize: 26 }}>🗑️</Text>
+              </View>
+              {spot.rewardTier === 'epic' ? (
+                <Text
+                  style={{
+                    marginTop: 2,
+                    fontSize: 9,
+                    fontWeight: '700',
+                    color: '#e8c97a',
+                    textAlign: 'center',
+                  }}
+                  numberOfLines={2}
+                >
+                  {epicTitle}
+                </Text>
+              ) : null}
+            </View>
+          </Marker>
+        );
+      })}
 
       {filteredQuests.map((q) => (
         <Marker

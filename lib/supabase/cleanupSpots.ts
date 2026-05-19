@@ -1,5 +1,6 @@
 import type { Region } from 'react-native-maps';
 
+import { enrichCleanupSpot } from '../../features/cleanupSpots/cleanupReward';
 import {
   CLEANUP_SPOT_MAX_ACTIVE_PER_USER,
   CLEANUP_SPOT_TTL_MS,
@@ -26,7 +27,7 @@ type CleanupSpotRow = {
 };
 
 function mapRow(row: CleanupSpotRow): CleanupSpot {
-  return {
+  return enrichCleanupSpot({
     id: row.id,
     userId: row.user_id,
     latitude: row.latitude,
@@ -38,7 +39,9 @@ function mapRow(row: CleanupSpotRow): CleanupSpot {
     expiresAt: row.expires_at,
     cleanedAt: row.cleaned_at,
     cleanedBy: row.cleaned_by,
-  };
+    rewardMultiplier: 1,
+    rewardTier: 'normal',
+  });
 }
 
 function nowIso(): string {

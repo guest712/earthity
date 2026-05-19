@@ -6,6 +6,7 @@ import {
   CLEANUP_SPOT_PLACE_MAX_DISTANCE_M,
   CLEANUP_SPOTS_FETCH_DEBOUNCE_MS,
 } from '../../features/cleanupSpots/cleanupSpot.constants';
+import { computeCleanupCleaningRewards } from '../../features/cleanupSpots/cleanupReward';
 import type { CleanupSpot, MapLatLng } from '../../features/cleanupSpots/cleanupSpot.types';
 import type { LocaleStrings } from '../i18n/locale-strings';
 import { getDistance } from '../shared/game-utils';
@@ -19,14 +20,27 @@ import {
 } from '../supabase/cleanupSpots';
 import { isSupabaseConfigured } from '../supabase/client';
 
+type CleanupRewardGrant = {
+  dobri: number;
+  xp: number;
+  multiplier: number;
+};
+
 type Args = {
   t: LocaleStrings;
   location: MapLatLng | null;
   mapRegion: Region | null;
   devBypassDistance: boolean;
+  onGrantCleanupReward: (grant: CleanupRewardGrant) => void;
 };
 
-export function useCleanupSpotsMap({ t, location, mapRegion, devBypassDistance }: Args) {
+export function useCleanupSpotsMap({
+  t,
+  location,
+  mapRegion,
+  devBypassDistance,
+  onGrantCleanupReward,
+}: Args) {
   const [spots, setSpots] = useState<CleanupSpot[]>([]);
   const [selectedSpot, setSelectedSpot] = useState<CleanupSpot | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
@@ -213,6 +227,7 @@ export function useCleanupSpotsMap({ t, location, mapRegion, devBypassDistance }
                 Alert.alert(t.cleanupReportError);
                 return;
               }
+              onGrantCleanupReward(computeCleanupCleaningRewards(selectedSpot));
               setSpots((prev) => prev.filter((s) => s.id !== selectedSpot.id));
               setSelectedSpot(null);
               Alert.alert(t.cleanupSpotCleanedSuccess);
@@ -226,7 +241,7 @@ export function useCleanupSpotsMap({ t, location, mapRegion, devBypassDistance }
         },
       },
     ]);
-  }, [mapRegion, refreshSpots, selectedSpot, t]);
+  }, [mapRegion, onGrantCleanupReward, refreshSpots, selectedSpot, t]);
 
   const deleteSelectedOwnSpot = useCallback(() => {
     if (!selectedSpot) return;

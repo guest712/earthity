@@ -174,4 +174,7 @@ export interface LocaleStrings {
   cleanupPlacementTooFarTitle: string;
   cleanupPlacementTooFarBody: string;
   cleanupPlacementPickFirst: string;
+  cleanupSpotEpicQuest: string;
+  cleanupSpotRareQuest: string;
+  cleanupSpotRewardHint: string;
 }

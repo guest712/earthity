@@ -1,46 +1,55 @@
-# Earthity 🌿
+# Earthity
 
-Earthity is a mobile application that connects digital actions with real-world impact.
+Мобильная игра (React Native / Expo), где реальные экологические действия связаны с прогрессом на карте: отметить мусор, помочь убрать, растить существо, выполнять квесты. **Non-violence** — без PvP и агрессии.
 
-The goal of the project is to encourage users to care about the environment by combining in-app interactions with real-life actions. Non-violence system.
+## Документация
 
-## Features
+| Документ | Описание |
+|----------|----------|
+| [docs/README.md](docs/README.md) | Навигатор по всем материалам |
+| [docs/PRODUCT.md](docs/PRODUCT.md) | Продукт: что есть и что в планах |
+| [docs/PITCH.md](docs/PITCH.md) | Текст для презентации (слайды) |
+| [docs/BUSINESS.md](docs/BUSINESS.md) | Бизнес-план (черновик) |
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Архитектура для разработчиков |
+| [docs/SUPABASE.md](docs/SUPABASE.md) | Бэкенд, миграции, `.env` |
+| [ROADMAP.md](ROADMAP.md) | Фазы разработки |
+| [EARTHTY-BACKLOG.md](EARTHTY-BACKLOG.md) | Задачи и техдолг |
 
-- Map-based interaction
-- Task system (digital + real actions)
-- Avatar system
-- Local notifications
-- Progress saving
+## Что уже работает
 
-## Concept
+- **Аккаунты** — Supabase Auth (email/password), облачный сейв прогресса
+- **Карта** — геолокация, AR-слой существ, ресурсные точки
+- **Общие метки мусора** — все игроки видят метки; placement в ~80 м; лимит 3 active; TTL 7 дней
+- **Награды** — dobri / XP с множителем (normal / rare / epic до ×3)
+- **Игра** — квесты, daily, инвентарь, крафт, дневник ухода, 5 языков (ru, en, de, uk, ar)
 
-The app encourages users to take care of the environment by combining in-app actions with real-life activities.
+## Tech stack
 
-## Tech Stack
-
-- React Native (Expo)
-- JavaScript / TypeScript
-- AsyncStorage
-
-## Status
-
-In development
-
-## About
-
-This project is being developed as a learning and experimental product focused on real interaction systems and user engagement.
-
-## Author
-
-Developed independently as a personal project focused on practical learning and system design.
-
-## Screenshots
-
-(soon)
-
+- React Native + **Expo ~54** + TypeScript + Expo Router
+- **Supabase** — Auth, `saves` (JSONB), `cleanup_spots`
+- AsyncStorage — локальный кэш сейва
+- `react-native-maps`, `expo-location`, Three.js / R3F
 
 ## Run locally
 
 ```bash
 npm install
+cp .env.example .env   # заполнить Supabase + Maps
 npx expo start
+```
+
+Android (нативная карта): `npx expo run:android` после prebuild при необходимости.
+
+Подробнее: [docs/SUPABASE.md](docs/SUPABASE.md).
+
+## Status
+
+Активная разработка. Пилот: один город, закрытый тест. Store / EAS — в roadmap.
+
+## Screenshots
+
+_Добавить: карта с меткой, epic-баннер, login, существо, профиль._
+
+## Author
+
+Независимый проект (learning + product). См. [docs/BUSINESS.md](docs/BUSINESS.md) для партнёрств и пилота.

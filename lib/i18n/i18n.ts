@@ -176,6 +176,9 @@ export const LANGS: Record<LanguageCode, LocaleStrings> = {
     cleanupPlacementTooFarTitle: 'Слишком далеко',
     cleanupPlacementTooFarBody: 'Выберите точку ближе к себе — в пределах зелёного круга.',
     cleanupPlacementPickFirst: 'Сначала тапните по карте, где мусор.',
+    cleanupSpotEpicQuest: 'Эпический квест: награда ×{mult}',
+    cleanupSpotRareQuest: 'Редкая уборка: награда ×{mult}',
+    cleanupSpotRewardHint: 'За уборку: +{dobri} 🪙  +{xp} ✨',
   },
 
   de: {
@@ -352,6 +355,9 @@ export const LANGS: Record<LanguageCode, LocaleStrings> = {
     cleanupPlacementTooFarTitle: 'Zu weit',
     cleanupPlacementTooFarBody: 'Wähle einen Punkt näher bei dir — im grünen Kreis.',
     cleanupPlacementPickFirst: 'Tippe zuerst auf die Karte, wo der Müll liegt.',
+    cleanupSpotEpicQuest: 'Epische Quest: Belohnung ×{mult}',
+    cleanupSpotRareQuest: 'Seltene Reinigung: Belohnung ×{mult}',
+    cleanupSpotRewardHint: 'Für Aufräumen: +{dobri} 🪙  +{xp} ✨',
   },
 
   uk: {
@@ -528,6 +534,9 @@ export const LANGS: Record<LanguageCode, LocaleStrings> = {
     cleanupPlacementTooFarTitle: 'Занадто далеко',
     cleanupPlacementTooFarBody: 'Оберіть точку ближче — у зеленому колі.',
     cleanupPlacementPickFirst: 'Спочатку тапніть по карті, де сміття.',
+    cleanupSpotEpicQuest: 'Епічний квест: нагорода ×{mult}',
+    cleanupSpotRareQuest: 'Рідкісне прибирання: нагорода ×{mult}',
+    cleanupSpotRewardHint: 'За прибирання: +{dobri} 🪙  +{xp} ✨',
   },
 
   ar: {
@@ -704,6 +713,9 @@ export const LANGS: Record<LanguageCode, LocaleStrings> = {
     cleanupPlacementTooFarTitle: 'بعيد جداً',
     cleanupPlacementTooFarBody: 'اختر نقطة أقرب إليك — داخل الدائرة الخضراء.',
     cleanupPlacementPickFirst: 'اضغط أولاً على الخريطة حيث النفايات.',
+    cleanupSpotEpicQuest: 'مهمة ملحمية: مكافأة ×{mult}',
+    cleanupSpotRareQuest: 'تنظيف نادر: مكافأة ×{mult}',
+    cleanupSpotRewardHint: 'عند التنظيف: +{dobri} 🪙  +{xp} ✨',
   },
 
   en: {
@@ -880,6 +892,9 @@ export const LANGS: Record<LanguageCode, LocaleStrings> = {
     cleanupPlacementTooFarTitle: 'Too far',
     cleanupPlacementTooFarBody: 'Pick a spot closer to you — inside the green circle.',
     cleanupPlacementPickFirst: 'Tap the map first where the trash is.',
+    cleanupSpotEpicQuest: 'Epic quest: reward ×{mult}',
+    cleanupSpotRareQuest: 'Rare cleanup: reward ×{mult}',
+    cleanupSpotRewardHint: 'For cleaning up: +{dobri} 🪙  +{xp} ✨',
   },
 };
 

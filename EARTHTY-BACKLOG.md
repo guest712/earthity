@@ -2,6 +2,24 @@
 
 Справочник для следующих итераций. Пункты сгруппированы по ожидаемой сложности.
 
+**Карта фаз:** `ROADMAP.md`  
+**Документация (продукт, питч, бизнес):** `docs/README.md`  
+**Идеи без сроков:** `frankintsugi.ini`  
+**Фото / антиспам UGC:** `.E_plans_tasks/validation_check.md`
+
+---
+
+## Сейчас в фокусе (фаза 0 → 1)
+
+См. `ROADMAP.md`. Кратко:
+
+- [ ] Закоммитить незакоммиченное: epic reward, placement, миграция `004`
+- [x] Документация: `docs/` (PRODUCT, PITCH, BUSINESS, ARCHITECTURE, SUPABASE), обновлён `README.md`
+- [x] `.env.example` + `docs/SUPABASE.md` (миграции 001–004)
+- [ ] P3: удалить мёртвый REST-auth
+- [ ] GLB: политика git (тестовые wolf — ignore или LFS)
+- [ ] P2 Supabase + карта A (`customMapStyle`)
+
 ---
 
 ## Контекст (кратко)
@@ -9,13 +27,33 @@
 | Область | Состояние |
 |--------|-----------|
 | Стек | React Native, Expo ~54, Expo Router, TypeScript |
-| Данные | Локально: AsyncStorage (`lib/storage`); облако: Supabase `saves` (JSONB), sync `lib/supabase/cloudSave.ts` |
+| Данные | Локально: AsyncStorage (`lib/storage`); облако: Supabase `saves` (JSONB) + `cleanup_spots` (карта), sync `lib/supabase/cloudSave.ts` |
 | Auth | Supabase email/password, `lib/auth/AuthContext.tsx`, экран `app/(auth)/login.tsx`, gate в `app/_layout.tsx` |
 | Главный экран | `app/(app)/(tabs)/index.tsx` + `components/home/`, хуки `lib/home/` |
 | Карта / гео | `react-native-maps`, `expo-location`, хук `features/location/useLocationState` |
 | 3D / AR | `expo-three`, `@react-three/fiber`, маршрут `three-test`, прелоад `lib/home/preloadHomeModels` |
 | i18n | `lib/i18n/`, несколько языков через `LanguageContext` |
 | Секреты | `.env` в gitignore: `EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_ANON_KEY` (anon — публичный, RLS обязателен) |
+
+---
+
+## Карта / cleanup_spots (общие метки мусора) — сделано
+
+- [x] Таблица `cleanup_spots` + RLS (`supabase/migrations/002_cleanup_spots_rls.sql`).
+- [x] `expires_at` — TTL 7 дней (`003_cleanup_spots_expires_at.sql`).
+- [x] Клиент: `lib/supabase/cleanupSpots.ts`, `lib/home/useCleanupSpotsMap.ts`.
+- [x] UI: маркеры на карте, placement (тап в радиусе ~80 м), sheet, лимит 3 active на пользователя.
+- [x] «Убрал» чужую метку → `status = cleaned`; награда dobri/xp с множителем.
+- [x] Epic/rare/normal: `features/cleanupSpots/cleanupReward.ts` (возраст + дистанция от центра города).
+- [x] SQL-функции множителя (`004_cleanup_reward_multiplier.sql`) — дублируют формулу TS; применить в Supabase вручную.
+- [x] Проверено: два аккаунта видят одни метки; смена аккаунта не смешивает сейв (P1).
+
+## Карта / cleanup_spots — очередь
+
+- [ ] **Регионы:** `game_regions` или конфиг городов вместо константы Berlin в `cleanupSpot.constants.ts` + SQL.
+- [ ] **Фото при уборке:** Storage, камера-only — см. `validation_check.md` (фаза 2 roadmap).
+- [ ] **Рейды:** статус `in_raid`, группировка меток, UI «событие уборки».
+- [ ] **Серверная награда:** Edge Function при `mark cleaned` (античит множителя), пока награда только на клиенте.
 
 ---
 
@@ -90,10 +128,32 @@
 
 ---
 
+## Фаза 0 — порядок в репо (см. ROADMAP)
+
+- [ ] Коммит: epic reward + placement + i18n (если ещё не в `main` / `refactor/home-screen`).
+- [x] `docs/SUPABASE.md`: какие миграции Run, какие таблицы, `.env`.
+- [x] `.env.example` (имена переменных без значений).
+- [ ] Скриншоты в `README.md` (5 кадров с телефона для питча)
+- [ ] Удалить `lib/api/authLogin.ts`, `lib/api/client.ts`, `lib/auth/tokenStorage.ts` (дублирует Supabase).
+- [ ] GLB: `assets/models/test_wolf*.glb` — в `.gitignore` или Git LFS + один production-ассет в репо.
+
+## Игровые петли (фаза 3 roadmap — одна за раз)
+
+| # | Петля | Файлы / заметки |
+|---|--------|------------------|
+| 1 | Стадии существ | `lib/shared/types.ts` `stages`, `creature.constants`, `MapARScene` |
+| 2 | Daily / weekly | `features/dailyQuests/` |
+| 3 | Крафт / апсайклинг | `features/crafting/`, `craft.tsx` |
+| 4 | POI карты (не cleanup) | отдельная таблица или статические зоны |
+| 5 | Пуши | `expo-notifications`, `lib/notifications.ts` |
+
+Идеи: `frankintsugi.ini` — не дублировать сюда простынёй.
+
 ## Заметки
 
 - Рефакторинг главного экрана идёт **инкрементально**: сначала утилитарные хуки с минимальными зависимостями, затем связка с сохранением и UI-оркестрация.
 - Предупреждения lint **не мешают** продолжать разработку; большинство завязано на **3D / react-three-fiber** и разумно чистить при следующем заходе в AR-сцену (или точечно отключать правило для `*.tsx` с R3F).
+- Центр epic для множителя: **52.52, 13.405** (Berlin default) — см. `CITY_CENTER_*` в `features/cleanupSpots/cleanupSpot.constants.ts`.
 
 ---
 

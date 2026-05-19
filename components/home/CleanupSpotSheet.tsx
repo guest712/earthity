@@ -8,6 +8,11 @@ import {
   View,
 } from 'react-native';
 
+import {
+  CLEANUP_BASE_DOBRI,
+  CLEANUP_BASE_XP,
+  displayRewardMultiplier,
+} from '../../features/cleanupSpots/cleanupReward';
 import type { CleanupSpot } from '../../features/cleanupSpots/cleanupSpot.types';
 import type { LocaleStrings } from '../../lib/i18n/locale-strings';
 
@@ -31,6 +36,13 @@ export default function CleanupSpotSheet({
   onDeleteOwn,
 }: Props) {
   const isOwn = currentUserId != null && spot.userId === currentUserId;
+  const multLabel = displayRewardMultiplier(spot.rewardMultiplier);
+  const epicLine =
+    spot.rewardTier === 'epic'
+      ? t.cleanupSpotEpicQuest.replace('{mult}', String(multLabel))
+      : spot.rewardTier === 'rare'
+        ? t.cleanupSpotRareQuest.replace('{mult}', String(multLabel))
+        : null;
 
   return (
     <View style={styles.wrap} pointerEvents="box-none">
@@ -39,6 +51,23 @@ export default function CleanupSpotSheet({
         <Text style={styles.emoji}>🗑️</Text>
         <Text style={styles.title}>{t.cleanupSpotTitle}</Text>
         <Text style={styles.body}>{spot.note ?? t.cleanupReportMessage}</Text>
+        {epicLine ? (
+          <Text
+            style={[
+              styles.rewardLine,
+              spot.rewardTier === 'epic' && styles.rewardLineEpic,
+            ]}
+          >
+            {epicLine}
+          </Text>
+        ) : null}
+        {!isOwn && spot.rewardTier !== 'normal' ? (
+          <Text style={styles.rewardHint}>
+            {t.cleanupSpotRewardHint
+              .replace('{dobri}', String(Math.round(CLEANUP_BASE_DOBRI * spot.rewardMultiplier)))
+              .replace('{xp}', String(Math.round(CLEANUP_BASE_XP * spot.rewardMultiplier)))}
+          </Text>
+        ) : null}
         {isOwn ? (
           <Text style={styles.ownHint}>{t.cleanupSpotYourReport}</Text>
         ) : null}
@@ -114,6 +143,23 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#8ab896',
     marginBottom: 12,
+  },
+  rewardLine: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#d09050',
+    textAlign: 'center',
+    marginBottom: 6,
+  },
+  rewardLineEpic: {
+    color: '#e8c97a',
+    fontSize: 14,
+  },
+  rewardHint: {
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.5)',
+    textAlign: 'center',
+    marginBottom: 10,
   },
   btn: {
     width: '100%',
