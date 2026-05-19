@@ -1,5 +1,9 @@
-import ThreeTestScreen from '../../../components/three/ThreeTestScreen';
+import { Redirect } from 'expo-router';
 
 export default function ThreeTestRoute() {
-  return <ThreeTestScreen />;
+  if (__DEV__) {
+    const ThreeTestScreen = require('../../../components/three/ThreeTestScreen').default;
+    return <ThreeTestScreen />;
+  }
+  return <Redirect href="/" />;
 }

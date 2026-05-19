@@ -49,7 +49,14 @@
     ],
     "experiments": {
       "typedRoutes": true,
-      "reactCompiler": true
-    }
+      "reactCompiler": false
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "72ecaaf3-db5f-408b-b321-694332f382bb"
+      }
+    },
+    "owner": "mare_tranquillitatis"
   }
 }

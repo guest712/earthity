@@ -21,11 +21,12 @@ import {
 } from 'three';
 
 import { getDistance } from '../../lib/shared/game-utils';
-import Model, {
-  type ModelSource,
-  type SkinLocomotionHints,
-} from '../three/Model';
+import Model from '../three/Model';
 import MapDecorTrees from './MapDecorTrees';
+import type { ARObject } from './mapAR.types';
+import type { MapARSceneProps } from './mapARSceneProps';
+
+export type { ARObject, ARObjectPose } from './mapAR.types';
 
 /**
  * R3F default ortho bounds are roughly [-1,1]; our scene uses ~1 GL unit ≈ 1 px (scale groups up to tens).
@@ -86,73 +87,6 @@ const DEBUG_PLAYER_AR_MODEL = false;
  *  - For 'upright' pose we lift the model so its bbox.min.y sits at y=0 of the
  *    pose group → the model's feet land exactly on the geo-anchor point.
  */
-
-export type ARObjectPose = 'flat' | 'upright' | 'auto';
-
-export type ARObject = {
-  id: string;
-  /** Geo position of the object's anchor (= its bottom for upright pose). */
-  coordinate: { latitude: number; longitude: number };
-  modelSource: ModelSource;
-  /** World-unit scale (1 unit = 1 px in this scene's ortho camera). */
-  scale?: number;
-  /** Heading in degrees (0 = north). null/undefined → no rotation. */
-  heading?: number | null;
-  /**
-   * Compensation for non-standard "forward" axis in source GLB
-   * (GLTF spec defines -Z as forward; many Blender exports differ).
-   */
-  headingOffsetDeg?: number;
-  /** See ARObjectPose. Default 'auto'. */
-  pose?: ARObjectPose;
-  /** Show a pulsing proximity ring beneath this object. */
-  pulseRing?: boolean;
-  /**
-   * 0 = no spawn nearby, 1.0 = spawn exactly at interaction-distance
-   * boundary, > 1.0 = spawn is within interaction range.
-   * Controls ring color and pulse speed.
-   */
-  nearestSpawnProximity?: number;
-  /**
-   * Cross-fade idle ↔ walk from the GLB when the geo coordinate changes
-   * with sufficient speed (GPS-derived; avoids walk during map pan alone).
-   */
-  locomotion?: boolean;
-  /** Match GLTF clip names ahead of defaults (substring match supported). */
-  locomotionClipHints?: SkinLocomotionHints;
-  /**
-   * Play idle/walk without cross-fade (stopAll + weight 1). For dev diagnosis;
-   * see Model `skinLocomotionHardSwitch`.
-   */
-  locomotionHardSwitch?: boolean;
-  /**
-   * After repeated failures of native `pointForCoordinate`, anchor this object at
-   * overlay center `(0,0)` in scene space so it stays visible (approximate geo).
-   * Use for the player; keep false for map props that must match exact coords.
-   */
-  fallbackProjectionCenter?: boolean;
-};
-
-type Props = {
-  mapRef: React.RefObject<MapView | null>;
-  objects: ARObject[];
-  /** Декор: инстансированные примитивы деревьев (те же проекции, что у AR). */
-  decorTrees?: { latitude: number; longitude: number }[];
-  /**
-   * Увеличивать при `onRegionChangeComplete` и при `onMapReady` карты,
-   * чтобы повторно вызвать `pointForCoordinate` для декора.
-   */
-  decorProjectEpoch?: number;
-  mapMode?: '2D' | '3D_Tilt';
-  /**
-   * Counter that the parent increments on every map `onRegionChange[Complete]`.
-   * AR objects re-query their screen position via native `pointForCoordinate`
-   * only when this tick advances (or when the object's coordinate changes),
-   * so a still map costs zero bridge calls per frame.
-   */
-  regionTickRef?: React.RefObject<number>;
-  style?: ViewStyle;
-};
 
 /**
  * Pulsing ring rendered beneath the player model.
@@ -508,7 +442,7 @@ export default function MapARScene({
   mapMode,
   regionTickRef,
   style,
-}: Props) {
+}: MapARSceneProps) {
   const [appActive, setAppActive] = useState(AppState.currentState === 'active');
   const [size, setSize] = useState(() => {
     const { width } = Dimensions.get('window');

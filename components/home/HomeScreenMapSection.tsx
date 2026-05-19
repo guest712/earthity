@@ -4,7 +4,8 @@ import { Platform, ScrollView, Text, TouchableOpacity, useWindowDimensions, View
 import type MapView from 'react-native-maps';
 import type { MapPressEvent, Region } from 'react-native-maps';
 
-import MapARScene, { type ARObject } from '../map/MapARScene';
+import type { ARObject } from '../map/mapAR.types';
+import MapARSceneGate from '../map/MapARSceneGate';
 import WorldMap from '../map/WorldMap';
 // Превью GLB под картой (рендер-бокс). Раскомментировать import + блок ниже для локального теста модели на Home.
 // import PlayerModelPreviewPanel from '../map/PlayerModelPreviewPanel';
@@ -194,7 +195,7 @@ export default function HomeScreenMapSection(props: HomeScreenMapSectionProps) {
         ) : null}
         {mapArObjects.length > 0 ||
         (mapDecorEnabled && decorTreeCoordinates.length > 0) ? (
-          <MapARScene
+          <MapARSceneGate
             mapRef={mapRef}
             objects={mapArObjects}
             decorTrees={

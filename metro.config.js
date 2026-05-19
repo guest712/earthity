@@ -5,7 +5,24 @@
 const path = require('path');
 const { getDefaultConfig } = require('expo/metro-config');
 
-const config = getDefaultConfig(__dirname);
+const projectRoot = __dirname;
+const config = getDefaultConfig(projectRoot);
+
+/** @/ — tsconfig paths; explicit chain so export/EAS не теряют алиас при кастомном metro. */
+const defaultResolveRequest = config.resolver.resolveRequest;
+config.resolver.resolveRequest = (context, moduleName, platform) => {
+  if (moduleName.startsWith('@/')) {
+    const target = path.join(projectRoot, moduleName.slice(2));
+    if (defaultResolveRequest) {
+      return defaultResolveRequest(context, target, platform);
+    }
+    return context.resolveRequest(context, target, platform);
+  }
+  if (defaultResolveRequest) {
+    return defaultResolveRequest(context, moduleName, platform);
+  }
+  return context.resolveRequest(context, moduleName, platform);
+};
 
 /** `require.resolve('three/package.json')` throws: `package.json` is not in `exports`. */
 let threeRoot = path.dirname(require.resolve('three'));

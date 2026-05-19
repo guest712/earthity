@@ -12,6 +12,7 @@
 | [docs/BUSINESS.md](docs/BUSINESS.md) | Бизнес-план (черновик) |
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Архитектура для разработчиков |
 | [docs/SUPABASE.md](docs/SUPABASE.md) | Бэкенд, миграции, `.env` |
+| [docs/DISTRIBUTION.md](docs/DISTRIBUTION.md) | Сборка APK для тестеров (EAS) |
 | [ROADMAP.md](ROADMAP.md) | Фазы разработки |
 | [EARTHTY-BACKLOG.md](EARTHTY-BACKLOG.md) | Задачи и техдолг |
 

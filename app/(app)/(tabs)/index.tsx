@@ -16,7 +16,7 @@ import Onboarding from '@/app/(app)/(tabs)/onboarding';
 import { Redirect, useRouter } from 'expo-router';
 import HomeScreenDevTools from '../../../components/home/HomeScreenDevTools';
 import HomeScreenMapSection from '../../../components/home/HomeScreenMapSection';
-import type { ARObject } from '../../../components/map/MapARScene';
+import type { ARObject } from '../../../components/map/mapAR.types';
 import HomeScreenQuestPanel from '../../../components/home/HomeScreenQuestPanel';
 import HomeHeader from '../../../components/home/HomeHeader';
 import QuestDetailCard from '../../../components/home/QuestDetailCard';
@@ -57,7 +57,6 @@ const USE_3D_TEST_SCREEN = false;
 // Используем оригинальную (до merge с walking.glb) модель волка — она единственная
 // гарантированно проигрывает встроенную idle-анимацию на устройстве. Merged-вариант
 // (assets/models/test_wolf.glb) после санитайза треков иногда не оживает на Android.
-const PLAYER_MAP_MODEL = require('../../../assets/models/test_wolf1.glb');
 const PLAYER_MAP_HEADING_OFFSET_DEG = 150;
 
 export default function HomeScreen() {
@@ -361,12 +360,13 @@ function HomeScreenInner() {
   });
 
   const mapArObjects = useMemo<ARObject[]>(() => {
-    if (!playerArEnabled || !location) return [];
+    if (!__DEV__ || !playerArEnabled || !location) return [];
+    const playerMapModel = require('../../../assets/models/test_wolf1.glb');
     return [
       {
         id: 'player',
         coordinate: { latitude: location.latitude, longitude: location.longitude },
-        modelSource: PLAYER_MAP_MODEL,
+        modelSource: playerMapModel,
         scale: 30,
         heading: heading ?? undefined,
         headingOffsetDeg: PLAYER_MAP_HEADING_OFFSET_DEG,

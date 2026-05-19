@@ -118,7 +118,10 @@
 - [ ] Группировка табов / «меню вместо Home» (радиальное меню и т.п.) — дизайн и навигация; затронет `app/(tabs)/_layout.tsx` и UX всех разделов.
 - [ ] Разбиение гигантского состояния главного экрана на reducer + контекст (или feature-слайс) без регрессий автосейва.
 - [ ] Минимальный набор тестов: `game-engine`, нормализация сейва, хуки спавнов/ресурсов.
-- [ ] EAS Build, подпись Android, внутреннее распространение (`eas.json`, политика версий).
+- [x] EAS проект привязан (`app.json` → `extra.eas.projectId`, owner).
+- [x] `eas.json` + `docs/DISTRIBUTION.md`.
+- [ ] Секреты на EAS (Supabase + Maps) + первая успешная `eas build -p android --profile preview`.
+- [ ] SHA-1 EAS keystore в Google Cloud (если карта пустая на APK).
 
 ## Высший уровень
 

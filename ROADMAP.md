@@ -12,7 +12,8 @@
 |------|------|
 | Репо | Закоммитить незакоммиченное (epic reward, placement); решение по GLB в git |
 | Документы | `docs/*` готовы; бэклог синхронизирован; миграции 002–004 применены в Supabase |
-| Код | P3: удалить мёртвый REST-auth; `.env.example`; краткий `docs/SUPABASE.md` |
+| Код | P3: удалить мёртвый REST-auth; `.env.example`; `docs/SUPABASE.md` |
+| Раздача | `eas init` ✓ → секреты EAS → `preview` APK → `docs/DISTRIBUTION.md` |
 
 **Готово, когда:** `git status` чистый (кроме осознанно игнорируемых GLB), новый разработчик понимает Supabase за 10 минут.
 

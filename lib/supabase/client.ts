@@ -28,6 +28,8 @@ export function getSupabase(): SupabaseClient {
       persistSession: true,
       detectSessionInUrl: false,
     },
+    // Hermes release: dynamic import('@opentelemetry/api') in supabase-js ≥2.106 breaks hermesc
+    tracePropagation: { enabled: false },
   });
   return client;
 }
