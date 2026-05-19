@@ -45,7 +45,7 @@ Android (нативная карта): `npx expo run:android` после prebuil
 
 ## Status
 
-Активная разработка. Пилот: один город, закрытый тест. Store / EAS — в roadmap.
+Активная разработка. **Preview APK** (EAS) — пилот в одном городе: карта, auth, общие метки мусора. Сборка: [docs/DISTRIBUTION.md](docs/DISTRIBUTION.md).
 
 ## Screenshots
 

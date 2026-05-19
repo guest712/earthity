@@ -9,7 +9,8 @@
 | [BUSINESS.md](./BUSINESS.md) | Партнёры, гранты, инвестор | Бизнес-модель, рынок, риски (черновик) |
 | [ARCHITECTURE.md](./ARCHITECTURE.md) | Разработчик | Стек, папки, потоки данных |
 | [SUPABASE.md](./SUPABASE.md) | Разработчик / DevOps | Миграции, таблицы, `.env` |
-| [DISTRIBUTION.md](./DISTRIBUTION.md) | Ты + тестеры | EAS Build, APK по ссылке |
+| [DISTRIBUTION.md](./DISTRIBUTION.md) | Ты + тестеры | EAS Build, APK, SHA-1 Maps |
+| [EAS_RELEASE_3D_ROLLBACK.md](./EAS_RELEASE_3D_ROLLBACK.md) | Разработчик | Release без 3D, Hermes, откат |
 
 **Для разработки:** [ROADMAP.md](../ROADMAP.md) · [EARTHTY-BACKLOG.md](../EARTHTY-BACKLOG.md)  
 **Видение без сроков:** [frankintsugi.ini](../frankintsugi.ini)  

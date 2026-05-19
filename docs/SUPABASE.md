@@ -29,6 +29,7 @@ GOOGLE_MAPS_API_KEY=...
 | 002 | `supabase/migrations/002_cleanup_spots_rls.sql` | Таблица `cleanup_spots`, политики read/create/update |
 | 003 | `supabase/migrations/003_cleanup_spots_expires_at.sql` | Колонка `expires_at`, TTL |
 | 004 | `supabase/migrations/004_cleanup_reward_multiplier.sql` | SQL-функции множителя (дубль TS) |
+| 005 | `supabase/migrations/005_cleanup_spots_select_cleaned_by.sql` | SELECT для игрока, отметившего `cleaned` (фикс ложной ошибки клиента) |
 
 После каждой миграции: проверить **Table Editor** и **Authentication → Policies**.
 
@@ -58,7 +59,8 @@ Shared метки на карте.
 | `id` | uuid |
 | `latitude`, `longitude` | координаты |
 | `status` | `open` \| `in_raid` \| `cleaned` |
-| `created_by` | uuid пользователя |
+| `user_id` | uuid автора метки |
+| `cleaned_by` | uuid того, кто отметил уборку |
 | `created_at` | timestamptz |
 | `expires_at` | timestamptz (7 дней по умолчанию) |
 
@@ -82,14 +84,17 @@ Shared метки на карте.
 |--------|---------|
 | `column cleanup_spots.expires_at does not exist` | Run migration **003** |
 | Пустая карта меток | RLS 002; статус `open`; не истёк `expires_at` |
+| **403** на PATCH `cleanup_spots` | Политика **`cleanup_spots_mark_cleaned`**: `user_id <> auth.uid()`, `status = open` |
+| **Could not save marker** при **200** API | Run **005**; UPDATE прошёл, SELECT на строку — нет |
+| Убрать может только автор | Для своей метки — **Delete**; для чужой — **Mark cleaned** (не наоборот) |
 | Сейв не тянется | Run 001; пользователь logged in; проверить `saves` row |
-| Чужой сейв после смены аккаунта | Обновить app (P1 fix); signOut/signIn |
+| Чужой сейв после смены аккаунта | signOut/signIn (P1) |
 
 ---
 
 ## Dev checklist
 
-- [ ] Миграции 001–004 применены
+- [ ] Миграции 001–**005** применены
 - [ ] RLS включён на обеих таблицах
 - [ ] `.env` с URL и anon key
 - [ ] Два тестовых аккаунта: метка видна обоим

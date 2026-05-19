@@ -100,9 +100,14 @@ Shared UGC на карте. Клиент: `lib/supabase/cleanupSpots.ts`, хук
 | `status` | `open`, `in_raid`, `cleaned` |
 | `expires_at` | TTL 7 дней |
 | `latitude`, `longitude` | Позиция |
-| `created_by` | auth user |
+| `user_id` | автор метки |
+| `cleaned_by` | кто отметил уборку |
+
+RLS: автор удаляет свою; чужой — `mark_cleaned` → `cleaned`. Миграция **005** — SELECT для `cleaned_by`.
 
 Награда при clean: `features/cleanupSpots/cleanupReward.ts` (синхрон с SQL `004`).
+
+Release APK: без 3D на карте — см. [EAS_RELEASE_3D_ROLLBACK.md](./EAS_RELEASE_3D_ROLLBACK.md).
 
 ---
 

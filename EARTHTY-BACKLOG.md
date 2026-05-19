@@ -9,16 +9,16 @@
 
 ---
 
-## Сейчас в фокусе (фаза 0 → 1)
+## Сейчас в фокусе (фаза 1)
 
-См. `ROADMAP.md`. Кратко:
+См. `ROADMAP.md`. Фаза 0 (EAS preview, доки, миграция 005) — **закрыта** май 2026.
 
-- [ ] Закоммитить незакоммиченное: epic reward, placement, миграция `004`
-- [x] Документация: `docs/` (PRODUCT, PITCH, BUSINESS, ARCHITECTURE, SUPABASE), обновлён `README.md`
-- [x] `.env.example` + `docs/SUPABASE.md` (миграции 001–004)
+- [x] EAS preview APK: Hermes-бандл, `eas.json`, секреты, upload SHA-1 → Google Maps
+- [x] Миграция `005_cleanup_spots_select_cleaned_by.sql` (уборка чужой метки без ложной ошибки)
+- [x] Коммит EAS/release gate: `2618556` на `refactor/home-screen`
 - [ ] P3: удалить мёртвый REST-auth
 - [ ] GLB: политика git (тестовые wolf — ignore или LFS)
-- [ ] P2 Supabase + карта A (`customMapStyle`)
+- [ ] P2: отдельный Supabase prod, confirm email; отдельные тексты ошибок cleanup в UI
 
 ---
 
@@ -31,7 +31,8 @@
 | Auth | Supabase email/password, `lib/auth/AuthContext.tsx`, экран `app/(auth)/login.tsx`, gate в `app/_layout.tsx` |
 | Главный экран | `app/(app)/(tabs)/index.tsx` + `components/home/`, хуки `lib/home/` |
 | Карта / гео | `react-native-maps`, `expo-location`, хук `features/location/useLocationState` |
-| 3D / AR | `expo-three`, `@react-three/fiber`, маршрут `three-test`, прелоад `lib/home/preloadHomeModels` |
+| 3D / AR | Dev: `MapARSceneGate`, three-test; **preview APK без 3D** (см. `docs/EAS_RELEASE_3D_ROLLBACK.md`) |
+| Раздача | EAS `preview` APK, `docs/DISTRIBUTION.md`, Maps key + upload SHA-1 |
 | i18n | `lib/i18n/`, несколько языков через `LanguageContext` |
 | Секреты | `.env` в gitignore: `EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_ANON_KEY` (anon — публичный, RLS обязателен) |
 
@@ -47,6 +48,7 @@
 - [x] Epic/rare/normal: `features/cleanupSpots/cleanupReward.ts` (возраст + дистанция от центра города).
 - [x] SQL-функции множителя (`004_cleanup_reward_multiplier.sql`) — дублируют формулу TS; применить в Supabase вручную.
 - [x] Проверено: два аккаунта видят одни метки; смена аккаунта не смешивает сейв (P1).
+- [x] Пилот APK: карта, логин, сейв; чужая метка → «убрал» + награда (после RLS **005** и SHA-1 Maps).
 
 ## Карта / cleanup_spots — очередь
 
@@ -78,7 +80,7 @@
 
 - [ ] **Confirm email** в Supabase Auth (сейчас удобно выключено для dev).
 - [ ] **Отдельные проекты** Supabase: dev и prod, разные ключи в `.env`.
-- [ ] **`.env.example`** — только имена переменных (`EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_ANON_KEY`, `GOOGLE_MAPS_API_KEY`), без значений.
+- [x] **`.env.example`** — имена переменных (Supabase + `GOOGLE_MAPS_API_KEY`).
 - [ ] Сверка **RLS** на `saves` после любых миграций (никаких policy «public read/write»).
 
 **P3 — cleanup (не блокирует релиз)**
@@ -119,9 +121,9 @@
 - [ ] Разбиение гигантского состояния главного экрана на reducer + контекст (или feature-слайс) без регрессий автосейва.
 - [ ] Минимальный набор тестов: `game-engine`, нормализация сейва, хуки спавнов/ресурсов.
 - [x] EAS проект привязан (`app.json` → `extra.eas.projectId`, owner).
-- [x] `eas.json` + `docs/DISTRIBUTION.md`.
-- [ ] Секреты на EAS (Supabase + Maps) + первая успешная `eas build -p android --profile preview`.
-- [ ] SHA-1 EAS keystore в Google Cloud (если карта пустая на APK).
+- [x] `eas.json` + `docs/DISTRIBUTION.md` + `docs/EAS_RELEASE_3D_ROLLBACK.md`.
+- [x] Секреты EAS (preview): Supabase + `GOOGLE_MAPS_API_KEY`; успешный `eas build -p android --profile preview`.
+- [x] SHA-1 **upload** keystore (EAS Credentials) в Google Cloud — не debug.keystore с ПК.
 
 ## Высший уровень
 
@@ -131,11 +133,12 @@
 
 ---
 
-## Фаза 0 — порядок в репо (см. ROADMAP)
+## Фаза 0 — порядок в репо (см. ROADMAP) — закрыто
 
-- [ ] Коммит: epic reward + placement + i18n (если ещё не в `main` / `refactor/home-screen`).
-- [x] `docs/SUPABASE.md`: какие миграции Run, какие таблицы, `.env`.
-- [x] `.env.example` (имена переменных без значений).
+- [x] Коммит EAS/Hermes gate + distribution (`2618556`).
+- [x] `docs/SUPABASE.md`: миграции 001–**005**, таблицы, `.env`.
+- [x] `.env.example`.
+- [x] Preview APK: установка, карта, auth, cleanup 2 игрока.
 - [ ] Скриншоты в `README.md` (5 кадров с телефона для питча)
 - [ ] Удалить `lib/api/authLogin.ts`, `lib/api/client.ts`, `lib/auth/tokenStorage.ts` (дублирует Supabase).
 - [ ] GLB: `assets/models/test_wolf*.glb` — в `.gitignore` или Git LFS + один production-ассет в репо.
@@ -198,7 +201,7 @@
    Выписать для себя приоритет: что главное читается всегда (игрок / активный объект), что вторично (остальные спавны, POI карты).
 
 2. **Стилизовать тайловую карту (Google Maps)**  
-   В `WorldMap` / `MapView` добавить свойство **`customMapStyle`** (JSON стилей Google Maps: приглушить POI, подписи, при желании дороги).
+   ~~Добавить `customMapStyle`~~ — **уже есть** `CALM_STANDARD_MAP_STYLE` в `WorldMap.tsx`; при необходимости подкрутить JSON.
 
 3. **Согласовать стиль с режимами**  
    Отдельно или общим пресетом: `standard` и `satellite` — решить, нужен ли мягкий оверлей (полупрозрачность не делают на самой карте, но можно тонировать через стиль там, где применимо).

@@ -3,22 +3,23 @@
 Проект на Expo: **mare_tranquillitatis/earthity**  
 `projectId` в `app.json` → `extra.eas.projectId`
 
+**Статус (май 2026):** preview APK собирается; пилот на Android проверен (карта, auth, cleanup).
+
 ---
 
-## Быстрый путь (первая APK)
+## Быстрый путь
 
 ### 1. Секреты (один раз)
 
-Локальный `.env` в облачную сборку **не попадает**. Задай переменные в [expo.dev](https://expo.dev) → проект **earthity** → **Environment variables** (profile **preview**), либо в терминале:
+Локальный `.env` в облачную сборку **не попадает**. Задай переменные в [expo.dev](https://expo.dev) → проект **earthity** → **Environment variables** (profile **preview**):
 
-```bash
-cd e:\E_DElVl\earthity
-eas secret:create --scope project --name EXPO_PUBLIC_SUPABASE_URL --value "https://xxxx.supabase.co" --type string
-eas secret:create --scope project --name EXPO_PUBLIC_SUPABASE_ANON_KEY --value "eyJ..." --type string
-eas secret:create --scope project --name GOOGLE_MAPS_API_KEY --value "AIza..." --type string
-```
+| Переменная | Назначение |
+|------------|------------|
+| `EXPO_PUBLIC_SUPABASE_URL` | Supabase project URL |
+| `EXPO_PUBLIC_SUPABASE_ANON_KEY` | anon key (RLS обязателен) |
+| `GOOGLE_MAPS_API_KEY` | вшивается в APK при сборке (`app.config.js`) |
 
-Имена должны совпадать с `.env.example`.
+Имена как в `.env.example`.
 
 ### 2. Сборка
 
@@ -26,24 +27,46 @@ eas secret:create --scope project --name GOOGLE_MAPS_API_KEY --value "AIza..." -
 eas build -p android --profile preview
 ```
 
-- Первый раз спросит про Android keystore → **Let Expo manage** (рекомендуется).
-- Ждать ~15–25 мин; ссылка на APK в терминале и на expo.dev → Builds.
+- Keystore → **Let Expo manage**.
+- ~15–25 мин; ссылка в терминале и expo.dev → Builds.
 
 ### 3. Установка тестеру
 
-1. Открыть ссылку на телефоне (Android).
-2. Скачать APK → установить («неизвестные источники», если спросит).
-3. Зарегистрироваться в приложении (тот же Supabase, что в секретах).
+1. Ссылка/QR на телефоне (Android).
+2. Удалить старую версию при смене keystore/подписи.
+3. Включить геолокацию для карты и placement.
 
-### 4. Google Maps после первой сборки
+---
 
-Если карта серая / без тайлов:
+## Google Maps (обязательно для APK)
 
-1. expo.dev → проект → **Credentials** → Android → SHA-1 fingerprint (EAS keystore).
-2. Google Cloud Console → API key → **Android apps** → добавить package `com.anonymous.earthity` + этот SHA-1.
-3. Пересобрать: `eas build -p android --profile preview`.
+Симптом: **серый прямоугольник + логотип Google**, кнопки 🗺️ есть, тайлов нет.
 
-Локальный `debug.keystore` для EAS-сборок **не используется**.
+1. expo.dev → **Credentials** → Android → скопировать **SHA-1** keystore, которым подписан **этот** APK (**upload** / default build — не `debug.keystore` с ПК).
+2. [Google Cloud Console](https://console.cloud.google.com/) → API key → **Android apps**:
+   - package: `com.anonymous.earthity`
+   - SHA-1 из шага 1  
+   Если был первый неудачный билд с **другим** fingerprint — добавьте **оба** SHA-1 или только актуальный upload.
+3. **Maps SDK for Android** включён; billing на проекте GCP.
+4. Подождать 10–15 мин. **Пересборка APK не нужна**, если ключ уже был в env при сборке — достаточно обновить Google и переустановить тот же APK.
+
+Локальный `expo run:android` использует **другой** SHA-1 (debug) — для EAS это не то.
+
+---
+
+## Supabase cleanup (два игрока)
+
+Если «убрал» чужую метку → **Could not save marker** при **200** в API:
+
+- Применить миграцию **`005_cleanup_spots_select_cleaned_by.sql`** (см. `docs/SUPABASE.md`).
+- Проверить политику **`cleanup_spots_mark_cleaned`** (UPDATE, чужая метка, `status → cleaned`).
+
+---
+
+## Release vs dev (3D)
+
+Preview APK **без** Map 3D / волка (`MapARSceneGate`, `__DEV__`). В `expo start` 3D как раньше.  
+Подробности: [EAS_RELEASE_3D_ROLLBACK.md](./EAS_RELEASE_3D_ROLLBACK.md).
 
 ---
 
@@ -51,38 +74,26 @@ eas build -p android --profile preview
 
 | Профиль | Назначение |
 |---------|------------|
-| `preview` | APK для друзей / пилота (основной) |
-| `development` | Dev client с отладкой |
+| `preview` | APK для друзей / пилота |
+| `development` | Dev client |
 | `production` | AAB для Play Store (позже) |
 
 ---
 
 ## Обновление версии
 
-Перед новой раздачей:
-
-1. Поднять `version` в `app.json` (и при необходимости `android.versionCode` через EAS remote version).
+1. Поднять `version` в `app.json`.
 2. `eas build -p android --profile preview`
-3. Отправить новую ссылку тестерам (старый APK можно оставить, но лучше одна актуальная).
-
----
-
-## Что не подходит для пилота
-
-| Способ | Почему |
-|--------|--------|
-| Только Expo Go | Другая среда, не «твоё» приложение |
-| `expo start` без tunnel | Только та же Wi‑Fi сеть |
-| Web | Карта/гео не как на телефоне |
+3. Одна актуальная ссылка тестерам.
 
 ---
 
 ## Чеклист «готово к пилоту»
 
-- [ ] Секреты заданы на EAS (3 переменные)
-- [ ] `preview` сборка успешна
-- [ ] APK ставится на **чужой** Android (не только твой dev)
-- [ ] Карта, логин, метка мусора, сейв работают
-- [ ] Ссылка на сборку сохранена в чате тестеров
+- [x] Секреты на EAS (3 переменные, profile preview)
+- [x] `preview` сборка успешна
+- [x] APK на Android: карта (после upload SHA-1), логин, сейв
+- [x] Два аккаунта: метка → уборка чужим → награда (миграция 005)
+- [ ] Скриншоты / ссылка в чате расширенного круга тестеров
 
-См. также [SUPABASE.md](./SUPABASE.md), [PRODUCT.md](./PRODUCT.md).
+См. [SUPABASE.md](./SUPABASE.md), [PRODUCT.md](./PRODUCT.md).
