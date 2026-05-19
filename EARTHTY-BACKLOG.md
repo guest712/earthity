@@ -34,7 +34,7 @@
 
 **P1 — сделать до широкого теста или общего устройства**
 
-- [ ] **Logout / смена аккаунта:** при `signOut` очищать локальный сейв (или при login с другим `user_id` сбрасывать локаль до reconcile). Сейчас прогресс остаётся в AsyncStorage → риск залить чужой сейв в новый аккаунт на том же телефоне. Точки: `AuthContext.signOut`, опционально `reconcileCloudSave` / `CloudSaveGate`.
+- [x] **Logout / смена аккаунта:** при `signOut` — `clearLocalGameSave` + `clearCloudSyncUserBinding`; при reconcile с другим `user_id` — сброс локали до merge. Автосейв home не пишет без `accessToken`.
 
 **P2 — перед релизом / prod**
 

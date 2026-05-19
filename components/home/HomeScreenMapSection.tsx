@@ -2,7 +2,7 @@ import React, { type RefObject, useMemo } from 'react';
 import type { ImageRequireSource, ImageURISource } from 'react-native';
 import { Platform, ScrollView, Text, TouchableOpacity, useWindowDimensions, View } from 'react-native';
 import type MapView from 'react-native-maps';
-import type { Region } from 'react-native-maps';
+import type { MapPressEvent, Region } from 'react-native-maps';
 
 import MapARScene, { type ARObject } from '../map/MapARScene';
 import WorldMap from '../map/WorldMap';
@@ -42,6 +42,14 @@ export type HomeScreenMapSectionProps = {
   hideUserMarker?: boolean;
   onMapRegionChangeComplete: (region: Region) => void;
   onMapLayoutReady: () => void;
+  onPressReportCleanup: () => void;
+  isCleanupSubmitting: boolean;
+  cleanupPlacementMode: boolean;
+  cleanupPlacementHint: string;
+  cleanupDraftReady: boolean;
+  onMapPressPlacement: (coord: { latitude: number; longitude: number }) => void;
+  onConfirmPlacement: () => void;
+  onCancelPlacement: () => void;
 };
 
 export default function HomeScreenMapSection(props: HomeScreenMapSectionProps) {
@@ -70,7 +78,21 @@ export default function HomeScreenMapSection(props: HomeScreenMapSectionProps) {
     hideUserMarker,
     onMapRegionChangeComplete,
     onMapLayoutReady,
+    onPressReportCleanup,
+    isCleanupSubmitting,
+    cleanupPlacementMode,
+    cleanupPlacementHint,
+    cleanupDraftReady,
+    onMapPressPlacement,
+    onConfirmPlacement,
+    onCancelPlacement,
   } = props;
+
+  const handleMapPress = (event: MapPressEvent) => {
+    if (!cleanupPlacementMode) return;
+    const { coordinate } = event.nativeEvent;
+    onMapPressPlacement(coordinate);
+  };
 
   const { height: windowHeight } = useWindowDimensions();
   const mapHeight = useMemo(() => {
@@ -143,9 +165,33 @@ export default function HomeScreenMapSection(props: HomeScreenMapSectionProps) {
           hideUserMarker={hideUserMarker}
           onRegionChangeComplete={onMapRegionChangeComplete}
           onMapReady={onMapLayoutReady}
+          onPress={cleanupPlacementMode ? handleMapPress : undefined}
         >
           <HomeMapLayer {...homeMapLayerProps} />
         </WorldMap>
+        {cleanupPlacementMode ? (
+          <View style={styles.cleanupPlacementBanner} pointerEvents="box-none">
+            <Text style={styles.cleanupPlacementBannerText}>{cleanupPlacementHint}</Text>
+            <View style={styles.cleanupPlacementActions}>
+              {cleanupDraftReady ? (
+                <TouchableOpacity
+                  style={[styles.cleanupPlacementActionBtn, styles.cleanupPlacementConfirmBtn]}
+                  onPress={onConfirmPlacement}
+                  disabled={isCleanupSubmitting}
+                >
+                  <Text style={styles.cleanupPlacementConfirmText}>✓</Text>
+                </TouchableOpacity>
+              ) : null}
+              <TouchableOpacity
+                style={styles.cleanupPlacementActionBtn}
+                onPress={onCancelPlacement}
+                disabled={isCleanupSubmitting}
+              >
+                <Text style={styles.cleanupPlacementCancelText}>✕</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        ) : null}
         {mapArObjects.length > 0 ||
         (mapDecorEnabled && decorTreeCoordinates.length > 0) ? (
           <MapARScene
@@ -161,6 +207,17 @@ export default function HomeScreenMapSection(props: HomeScreenMapSectionProps) {
             regionTickRef={mapRegionTickRef}
           />
         ) : null}
+        <TouchableOpacity
+          style={[
+            styles.cleanupReportBtn,
+            cleanupPlacementMode && styles.cleanupReportBtnActive,
+          ]}
+          onPress={onPressReportCleanup}
+          disabled={isCleanupSubmitting}
+          activeOpacity={0.85}
+        >
+          <Text style={styles.cleanupReportBtnText}>🗑️</Text>
+        </TouchableOpacity>
         <View
           style={[styles.mapResourceOverlay, Platform.OS === 'android' && { elevation: 8 }]}
           pointerEvents="box-none"

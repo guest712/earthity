@@ -1,7 +1,12 @@
 import { Asset } from 'expo-asset';
 import * as ImageManipulator from 'expo-image-manipulator';
 import { Image, PixelRatio, Platform } from 'react-native';
-import MapView, { Marker, type MapStyleElement, type Region } from 'react-native-maps';
+import MapView, {
+  Marker,
+  type MapPressEvent,
+  type MapStyleElement,
+  type Region,
+} from 'react-native-maps';
 import { forwardRef, ReactNode, useEffect, useMemo, useState } from 'react';
 import type { ImageRequireSource, ImageURISource, ViewStyle } from 'react-native';
 
@@ -64,6 +69,7 @@ type Props = {
   onRegionChangeComplete?: (region: Region) => void;
   /** Fires when the native map finishes layout (helps AR overlay call `pointForCoordinate` reliably). */
   onMapReady?: () => void;
+  onPress?: (event: MapPressEvent) => void;
   /**
    * Отступы для системных элементов карты (лого Google, компас, кнопка «моё местоположение»)
    * и согласования с HUD поверх `MapView`.
@@ -164,6 +170,7 @@ const WorldMap = forwardRef<MapView, Props>(function WorldMap(
     onRegionChange,
     onRegionChangeComplete,
     onMapReady,
+    onPress,
     mapChromePadding,
     children,
   },
@@ -220,6 +227,7 @@ const WorldMap = forwardRef<MapView, Props>(function WorldMap(
       followsUserLocation={useNativeUser}
       mapType={mapTileStyle}
       onMapReady={onMapReady}
+      onPress={onPress}
       onRegionChange={onRegionChange}
       onRegionChangeComplete={onRegionChangeComplete}
       showsCompass

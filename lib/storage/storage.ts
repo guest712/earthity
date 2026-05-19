@@ -390,6 +390,17 @@ export async function loadSave(): Promise<EarthitySave> {
   }
 }
 
+/** Wipes local progress (e.g. on sign-out) so the next account cannot inherit it. */
+export async function clearLocalGameSave(): Promise<void> {
+  await enqueueWrite(async () => {
+    try {
+      await AsyncStorage.multiRemove([STORAGE_KEY, STORAGE_BACKUP_KEY, LOCAL_MODIFIED_KEY]);
+    } catch (error) {
+      console.warn('Failed to clear local save:', error);
+    }
+  });
+}
+
 export async function saveSave(save: EarthitySave): Promise<void> {
   await enqueueWrite(async () => {
     try {

@@ -1,8 +1,8 @@
-﻿node_modules/
+node_modules/
 android/
 ios/
 .expo/
 *.log
 package-lock.json
-assets/fonts/
-backup/
+
+.env

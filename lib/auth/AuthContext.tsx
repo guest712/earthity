@@ -1,7 +1,8 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 
 import { AuthError, mapSupabaseAuthError } from './authErrors';
-import { resetCloudSyncSession } from '../supabase/cloudSave';
+import { clearCloudSyncUserBinding, resetCloudSyncSession } from '../supabase/cloudSave';
+import { clearLocalGameSave } from '../storage/storage';
 import { getSupabase, isSupabaseConfigured } from '../supabase/client';
 
 type AuthContextValue = {
@@ -78,6 +79,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = useCallback(async () => {
     resetCloudSyncSession();
+    await clearLocalGameSave();
+    await clearCloudSyncUserBinding();
     if (isSupabaseConfigured()) {
       await getSupabase().auth.signOut();
     }

@@ -96,7 +96,7 @@ export function useHomeSaveSync({
   );
 
   useEffect(() => {
-    if (!lang || !isHydrated || !autosavePayload) {
+    if (!accessToken || !lang || !isHydrated || !autosavePayload) {
       return;
     }
 

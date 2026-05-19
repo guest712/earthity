@@ -1,11 +1,16 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
 import type { EarthitySave } from '../shared/types';
 import {
+  clearLocalGameSave,
   loadSave,
   readLocalModifiedAt,
   setLocalModifiedAt,
   updateSave,
 } from '../storage/storage';
 import { getSupabase, isSupabaseConfigured } from './client';
+
+const LAST_SYNC_USER_ID_KEY = 'earthity_cloud_sync_user_id';
 
 type CloudSaveRow = {
   data: EarthitySave;
@@ -36,6 +41,32 @@ function sleep(ms: number): Promise<void> {
 
 export function resetCloudSyncSession(): void {
   cloudReconcileDone = false;
+}
+
+async function readLastSyncUserId(): Promise<string | null> {
+  try {
+    const raw = await AsyncStorage.getItem(LAST_SYNC_USER_ID_KEY);
+    return raw && raw.length > 0 ? raw : null;
+  } catch {
+    return null;
+  }
+}
+
+async function setLastSyncUserId(userId: string): Promise<void> {
+  try {
+    await AsyncStorage.setItem(LAST_SYNC_USER_ID_KEY, userId);
+  } catch {
+    /* noop */
+  }
+}
+
+/** Clears which Supabase user last completed cloud reconcile (call on sign-out). */
+export async function clearCloudSyncUserBinding(): Promise<void> {
+  try {
+    await AsyncStorage.removeItem(LAST_SYNC_USER_ID_KEY);
+  } catch {
+    /* noop */
+  }
 }
 
 export function isCloudPushAllowed(): boolean {
@@ -179,6 +210,24 @@ function logPulledCloud(reason: string, merged: EarthitySave, extra?: Record<str
 export async function reconcileCloudSave(): Promise<EarthitySave> {
   cloudReconcileDone = false;
 
+  const userId = await getAuthedUserId();
+  if (!userId) {
+    cloudReconcileDone = true;
+    notifyCloudSaveReconciled();
+    return loadSave();
+  }
+
+  const lastUserId = await readLastSyncUserId();
+  if (lastUserId && lastUserId !== userId) {
+    await clearLocalGameSave();
+    if (__DEV__) {
+      console.log('[cloudSave] reconcile: cleared local (different user)', {
+        lastUserId,
+        userId,
+      });
+    }
+  }
+
   try {
     const local = await loadSave();
     const localModifiedAt = await readLocalModifiedAt();
@@ -239,6 +288,7 @@ export async function reconcileCloudSave(): Promise<EarthitySave> {
     }
     return local;
   } finally {
+    await setLastSyncUserId(userId);
     cloudReconcileDone = true;
     notifyCloudSaveReconciled();
   }

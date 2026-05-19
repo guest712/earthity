@@ -20,6 +20,9 @@ import {
 import type { LocaleStrings } from '../../lib/i18n/locale-strings';
 import { getCreatureInteractionRadiusMeters } from '../../lib/shared/game-engine';
 import { getDistance } from '../../lib/shared/game-utils';
+import { CLEANUP_SPOT_PLACE_MAX_DISTANCE_M } from '../../features/cleanupSpots/cleanupSpot.constants';
+import type { CleanupSpot } from '../../features/cleanupSpots/cleanupSpot.types';
+import type { MapLatLng } from '../../features/cleanupSpots/cleanupSpot.types';
 import type { Creature, DailyQuestKind, LanguageCode, Quest, SpawnedCreature } from '../../lib/shared/types';
 
 import { getSoftGreenBeltPolygon } from '../../lib/map/softGreenBelt';
@@ -50,6 +53,11 @@ export type HomeMapLayerProps = {
   addTrashInv: (kind: TrashKind, n: number) => void;
   onQuestMarkerPress: (q: Quest) => void;
   onCreatureSpawnPress: (creature: Creature, spawn: SpawnedCreature) => void;
+  cleanupSpots: CleanupSpot[];
+  selectedCleanupSpotId: string | null;
+  onCleanupSpotPress: (spot: CleanupSpot) => void;
+  cleanupPlacementMode: boolean;
+  cleanupDraftCoordinate: MapLatLng | null;
 };
 
 const DEFAULT_LAT = 52.52;
@@ -82,6 +90,11 @@ export default function HomeMapLayer(props: HomeMapLayerProps) {
     addTrashInv,
     onQuestMarkerPress,
     onCreatureSpawnPress,
+    cleanupSpots,
+    selectedCleanupSpotId,
+    onCleanupSpotPress,
+    cleanupPlacementMode,
+    cleanupDraftCoordinate,
   } = props;
 
   const lat0 = location?.latitude ?? DEFAULT_LAT;
@@ -101,6 +114,69 @@ export default function HomeMapLayer(props: HomeMapLayerProps) {
           tappable={false}
         />
       ) : null}
+      {cleanupPlacementMode && location ? (
+        <Circle
+          center={{ latitude: location.latitude, longitude: location.longitude }}
+          radius={CLEANUP_SPOT_PLACE_MAX_DISTANCE_M}
+          strokeWidth={2}
+          strokeColor="rgba(90, 200, 120, 0.85)"
+          fillColor="rgba(90, 173, 106, 0.12)"
+          zIndex={2}
+        />
+      ) : null}
+
+      {cleanupDraftCoordinate ? (
+        <Marker
+          coordinate={cleanupDraftCoordinate}
+          zIndex={15}
+          anchor={{ x: 0.5, y: 0.5 }}
+        >
+          <View
+            style={{
+              alignItems: 'center',
+              padding: 6,
+              borderRadius: 22,
+              backgroundColor: 'rgba(232, 160, 80, 0.45)',
+              borderWidth: 2,
+              borderColor: '#e8a050',
+            }}
+          >
+            <Text style={{ fontSize: 28 }}>🗑️</Text>
+          </View>
+        </Marker>
+      ) : null}
+
+      {cleanupSpots.map((spot) => (
+        <Marker
+          key={`cleanup-${spot.id}`}
+          coordinate={{ latitude: spot.latitude, longitude: spot.longitude }}
+          zIndex={selectedCleanupSpotId === spot.id ? 12 : 8}
+          onPress={(e) => {
+            if (cleanupPlacementMode) {
+              e.stopPropagation?.();
+              return;
+            }
+            onCleanupSpotPress(spot);
+          }}
+        >
+          <View
+            style={{
+              alignItems: 'center',
+              padding: 4,
+              borderRadius: 20,
+              backgroundColor:
+                selectedCleanupSpotId === spot.id
+                  ? 'rgba(232,160,80,0.35)'
+                  : 'rgba(12,18,12,0.55)',
+              borderWidth: selectedCleanupSpotId === spot.id ? 2 : 1,
+              borderColor: selectedCleanupSpotId === spot.id ? '#e8a050' : '#5aad6a',
+            }}
+          >
+            <Text style={{ fontSize: 26 }}>🗑️</Text>
+          </View>
+        </Marker>
+      ))}
+
       {filteredQuests.map((q) => (
         <Marker
           key={q.id}

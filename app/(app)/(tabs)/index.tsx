@@ -45,6 +45,8 @@ import { useHomeMapLayerProps } from '../../../lib/home/useHomeMapLayerProps';
 import { useHomeCreatureCareActions } from '../../../lib/home/useHomeCreatureCareActions';
 import { syncHomeBootstrapFromEarthitySave } from '../../../lib/home/syncHomeBootstrapFromEarthitySave';
 import { useMapDecorTreeCoordinates } from '../../../lib/home/useMapDecorTreeCoordinates';
+import { useCleanupSpotsMap } from '../../../lib/home/useCleanupSpotsMap';
+import CleanupSpotSheet from '../../../components/home/CleanupSpotSheet';
 
 /**
  * Dev flag: keep false for normal app flow.
@@ -304,6 +306,13 @@ function HomeScreenInner() {
   const mapBridgeT = localeStringsForQuests ?? LANGS.en;
   const mapBridgeLang = (lang ?? 'en') as LanguageCode;
 
+  const cleanupSpotsMap = useCleanupSpotsMap({
+    t: mapBridgeT,
+    location,
+    mapRegion: mapRegionSnapshot,
+    devBypassDistance,
+  });
+
   const homeMapLayerProps = useHomeMapLayerProps({
     t: mapBridgeT,
     lang: mapBridgeLang,
@@ -329,6 +338,11 @@ function HomeScreenInner() {
     setSelectedCreature,
     setSelectedSpawn,
     setCareDiary,
+    cleanupSpots: cleanupSpotsMap.cleanupSpots,
+    selectedCleanupSpotId: cleanupSpotsMap.selectedCleanupSpot?.id ?? null,
+    onCleanupSpotPress: cleanupSpotsMap.onPressCleanupSpot,
+    cleanupPlacementMode: cleanupSpotsMap.cleanupPlacementMode,
+    cleanupDraftCoordinate: cleanupSpotsMap.cleanupDraftCoordinate,
   });
 
   const mapArObjects = useMemo<ARObject[]>(() => {
@@ -524,6 +538,14 @@ function HomeScreenInner() {
             decorProjectEpoch={mapDecorProjectEpoch}
             onMapRegionChangeComplete={onMapRegionChangeComplete}
             onMapLayoutReady={onMapLayoutReady}
+            onPressReportCleanup={cleanupSpotsMap.onPressReportTrash}
+            isCleanupSubmitting={cleanupSpotsMap.isCleanupSubmitting}
+            cleanupPlacementMode={cleanupSpotsMap.cleanupPlacementMode}
+            cleanupPlacementHint={t.cleanupPlacementHint}
+            cleanupDraftReady={cleanupSpotsMap.cleanupDraftCoordinate != null}
+            onMapPressPlacement={cleanupSpotsMap.onMapPressPlacement}
+            onConfirmPlacement={cleanupSpotsMap.confirmPlacementDraft}
+            onCancelPlacement={cleanupSpotsMap.cancelPlacementMode}
             resourceStrip={{
               water: resources.water,
               feedCount,
@@ -551,6 +573,17 @@ function HomeScreenInner() {
           />
         </>
       )}
+      {cleanupSpotsMap.selectedCleanupSpot ? (
+        <CleanupSpotSheet
+          t={t}
+          spot={cleanupSpotsMap.selectedCleanupSpot}
+          currentUserId={cleanupSpotsMap.currentUserId}
+          isSubmitting={cleanupSpotsMap.isCleanupSubmitting}
+          onClose={cleanupSpotsMap.dismissCleanupSpot}
+          onMarkCleaned={cleanupSpotsMap.markSelectedCleanupCleaned}
+          onDeleteOwn={cleanupSpotsMap.deleteSelectedOwnCleanupSpot}
+        />
+      ) : null}
       {dropToast && (
         <Animated.View style={[styles.dropToast, dropToastStyle]} pointerEvents="none">
           <Text style={styles.dropToastText}>{t.dropToastPrefix} {dropToast.msg}</Text>

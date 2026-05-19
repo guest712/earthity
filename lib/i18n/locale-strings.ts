@@ -153,4 +153,25 @@ export interface LocaleStrings {
   authErrorEmailTaken: string;
   authErrorNetwork: string;
   authErrorUnknown: string;
+  cleanupReportBtn: string;
+  cleanupReportTitle: string;
+  cleanupReportMessage: string;
+  cleanupReportConfirm: string;
+  cleanupReportCancel: string;
+  cleanupReportSuccess: string;
+  cleanupReportNoLocation: string;
+  cleanupReportError: string;
+  cleanupSpotTitle: string;
+  cleanupSpotMarkCleaned: string;
+  cleanupSpotMarkCleanedConfirm: string;
+  cleanupSpotCleanedSuccess: string;
+  cleanupSpotYourReport: string;
+  cleanupSpotDelete: string;
+  cleanupSpotDeleteConfirm: string;
+  cleanupReportActiveLimitTitle: string;
+  cleanupReportActiveLimitBody: string;
+  cleanupPlacementHint: string;
+  cleanupPlacementTooFarTitle: string;
+  cleanupPlacementTooFarBody: string;
+  cleanupPlacementPickFirst: string;
 }
